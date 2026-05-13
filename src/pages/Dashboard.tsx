@@ -75,6 +75,19 @@ export default function Dashboard() {
         </div>
       )}
 
+      {teams.length === 0 && (
+        <div className="glass-card p-6 text-center bg-gradient-to-br from-primary/10 to-transparent hover:border-primary/40 transition-colors">
+          <h3 className="font-semibold">Get started</h3>
+          <p className="text-sm text-muted-foreground mt-1 mb-4">
+            Create your first team to start adding players and tests.
+          </p>
+          <Link to="/app/teams">
+            <Button className="bg-gradient-primary text-primary-foreground font-semibold">
+              <Plus className="w-4 h-4 mr-1" /> Create a team
+            </Button>
+          </Link>
+        </div>
+      )}
     </div>
   );
 }
