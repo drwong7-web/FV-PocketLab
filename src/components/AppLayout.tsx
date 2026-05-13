@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useSettings, type Lang, type Theme } from "@/lib/settings";
+import { OnboardingGate } from "@/components/OnboardingGate";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -190,7 +191,9 @@ export default function AppLayout() {
       </Dialog>
 
       <main className="flex-1 container max-w-5xl pb-28 pt-4 animate-fade-in">
-        <Outlet />
+        <OnboardingGate>
+          <Outlet />
+        </OnboardingGate>
       </main>
 
       <nav
