@@ -201,14 +201,17 @@ export default function JumpTest() {
             <span></span>
           </div>
           {trials.map((tr, i) => (
-            <div key={i} className="mt-2 grid grid-cols-[1fr_1fr_auto_auto_auto] gap-2">
+            <div key={i} className="mt-2 grid grid-cols-[1fr_1fr_auto_auto_auto_auto] gap-2">
               <Input type="number" step="0.5" placeholder="kg" value={tr.load || ""} onChange={(e) => updateTrial(i, "load", e.target.value)} />
               <Input type="number" step="0.1" placeholder="cm" value={tr.jumpHeight || ""} onChange={(e) => updateTrial(i, "jumpHeight", e.target.value)} />
-              <Button size="icon" variant="outline" onClick={() => setAiIndex(i)} aria-label="AI auto-detect" title="AI auto-detect (flight time)">
+              <Button size="icon" variant="outline" onClick={() => setAiIndex(i)} aria-label="AI auto-detect" title="AI auto-detect (record video)">
                 <Sparkles className="h-4 w-4 text-primary" />
               </Button>
               <Button size="icon" variant="outline" onClick={() => setCameraIndex(i)} aria-label="Camera" disabled={!pxPerCm} title="Manual marker (needs calibration)">
                 <Camera className="h-4 w-4 text-primary" />
+              </Button>
+              <Button size="icon" variant="outline" onClick={() => setUploadIndex(i)} aria-label="Import video" title="Import a video from your device (AI analysis)">
+                <Upload className="h-4 w-4 text-primary" />
               </Button>
               <Button size="icon" variant="ghost" onClick={() => setTrials(trials.filter((_, j) => j !== i))} aria-label="Delete">
                 <Trash2 className="h-4 w-4 text-destructive" />
