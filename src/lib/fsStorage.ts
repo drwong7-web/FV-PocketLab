@@ -201,8 +201,7 @@ async function writeFileRaw(dirPath: string, name: string, data: BlobPart) {
   const dir = await getDir(dirPath, true);
   if (!dir) return;
   const fileHandle = await dir.getFileHandle(name, { create: true });
-  // @ts-expect-error - createWritable not in TS lib
-  const w = await fileHandle.createWritable();
+  const w = await (fileHandle as unknown as { createWritable: () => Promise<{ write: (d: BlobPart) => Promise<void>; close: () => Promise<void> }> }).createWritable();
   await w.write(data);
   await w.close();
 }
