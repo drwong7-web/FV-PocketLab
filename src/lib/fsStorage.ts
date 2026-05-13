@@ -110,10 +110,9 @@ export async function restoreRoot(silent = true): Promise<boolean> {
   const stored = await idbGet<AnyHandle>(HANDLE_KEY);
   if (!stored) return false;
   try {
+    const h = stored as unknown as { queryPermission?: (o: { mode: string }) => Promise<PermissionState> };
     const ok = silent
-      ? // only check, don't prompt
-        // @ts-expect-error
-        ((await stored.queryPermission?.({ mode: "readwrite" })) === "granted")
+      ? (await h.queryPermission?.({ mode: "readwrite" })) === "granted"
       : await ensurePermission(stored, "readwrite");
     if (!ok) return false;
     rootHandle = stored;
