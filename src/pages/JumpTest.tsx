@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Camera, Check, Plus, Ruler, Sparkles, Trash2, Zap } from "lucide-react";
+import { Camera, Check, Plus, Ruler, Sparkles, Trash2, Upload, Zap } from "lucide-react";
 import { calculateJumpProfile, type JumpTrial } from "@/lib/fvCalculations";
 import { CameraDistance } from "@/components/camera/CameraDistance";
 import { CameraCalibration } from "@/components/camera/CameraCalibration";
