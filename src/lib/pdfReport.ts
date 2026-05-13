@@ -2,6 +2,7 @@ import jsPDF from "jspdf";
 import type { TestSession } from "./types";
 import type { Player } from "./types";
 import { generateRecommendations } from "./sprintEngine";
+import { isConnected, writeBinaryFile } from "./fsStorage";
 
 export function exportTestPDF(test: TestSession, player: Player) {
   const doc = new jsPDF({ unit: "pt", format: "a4" });
