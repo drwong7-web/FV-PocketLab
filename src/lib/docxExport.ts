@@ -171,16 +171,6 @@ export function downloadBlob(blob: Blob, filename: string) {
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
-  // Mirror to chosen folder if connected
-  void (async () => {
-    try {
-      const fs = await import("./fsStorage");
-      if (fs.isConnected()) {
-        const sub = filename.toLowerCase().endsWith(".pdf") ? "exports/pdf" : "exports/docx";
-        await fs.writeBinaryFile(sub, filename, blob);
-      }
-    } catch { /* */ }
-  })();
 }
 
 const DB_NAME = "fv-exports";

@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useSettings, type Lang, type Theme } from "@/lib/settings";
 import { cn } from "@/lib/utils";
-import StorageBanner from "@/components/StorageBanner";
 
 const navItems = [
   { to: "/app", label: "Dashboard", icon: Home, end: true },
@@ -44,7 +43,6 @@ export default function AppLayout() {
 
   return (
     <div className="min-h-svh flex flex-col">
-      <StorageBanner />
       <header className="sticky top-0 z-30 border-b border-border bg-background/80 backdrop-blur-xl">
         <div className="container flex items-center justify-between h-14 max-w-5xl">
           <Link to="/app" className="flex items-center gap-2">

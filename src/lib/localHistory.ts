@@ -1,5 +1,4 @@
 import type { JumpResults, SprintResults } from "./fvCalculations";
-import { mirrorJson, isConnected } from "./fsStorage";
 
 const KEY = "fv:local-tests:v1";
 
@@ -23,7 +22,6 @@ function read(): LocalTest[] {
 
 function write(items: LocalTest[]) {
   try { localStorage.setItem(KEY, JSON.stringify(items)); } catch { /* */ }
-  if (isConnected()) mirrorJson("tests", "local-index.json", items);
 }
 
 export function saveLocalTest(t: Omit<LocalTest, "id"> & { id?: string }): LocalTest {
@@ -32,7 +30,6 @@ export function saveLocalTest(t: Omit<LocalTest, "id"> & { id?: string }): Local
   const full: LocalTest = { ...t, id } as LocalTest;
   items.unshift(full);
   write(items);
-  if (isConnected()) mirrorJson("tests", `${id}.json`, full);
   return full;
 }
 
@@ -84,5 +81,4 @@ export function getSessionCalibration(): number {
 }
 export function setSessionCalibration(px: number) {
   try { sessionStorage.setItem(CALIB_KEY, String(px)); } catch { /* */ }
-  if (isConnected()) mirrorJson("settings", "calibration.json", { pxPerCm: px, savedAt: new Date().toISOString() });
 }
