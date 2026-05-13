@@ -39,6 +39,7 @@ export default function JumpTest() {
   const [error, setError] = useState("");
   const [cameraIndex, setCameraIndex] = useState<number | null>(null);
   const [aiIndex, setAiIndex] = useState<number | null>(null);
+  const [uploadIndex, setUploadIndex] = useState<number | null>(null);
   const [pxPerCm, setPxPerCm] = useState<number>(0);
   const [calibrating, setCalibrating] = useState(false);
   const [measuringHpo, setMeasuringHpo] = useState(false);
