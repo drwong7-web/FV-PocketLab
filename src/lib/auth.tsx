@@ -17,6 +17,8 @@ interface AuthContextValue {
   signUp: (email: string, password: string, name: string, org: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signInWithApple: () => Promise<void>;
+  requestPasswordReset: (email: string) => Promise<void>;
+  updatePassword: (newPassword: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -95,6 +97,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         redirect_uri: `${window.location.origin}/app`,
       });
       if (result.error) throw result.error instanceof Error ? result.error : new Error(String(result.error));
+    },
+    requestPasswordReset: async (email) => {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) throw error;
+    },
+    updatePassword: async (newPassword) => {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
     },
     signOut: async () => {
       await supabase.auth.signOut();

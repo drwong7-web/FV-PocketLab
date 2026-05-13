@@ -125,7 +125,14 @@ export default function Auth() {
               <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
             </div>
             <div>
-              <Label htmlFor="password">Password</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">Password</Label>
+                {mode === "signin" && (
+                  <Link to="/forgot-password" className="text-xs text-muted-foreground hover:text-foreground">
+                    Forgot password?
+                  </Link>
+                )}
+              </div>
               <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete={mode === "signin" ? "current-password" : "new-password"} />
             </div>
 

@@ -1,42 +1,55 @@
 ## Goal
-After a fresh signup, walk the user through creating their first team and adding their first player before they reach the dashboard or any test flow.
+Let users request a password reset email from the auth screen and set a new password via a dedicated reset page.
 
 ## Flow
 
 ```text
-Signup ──▶ /app/onboarding ──▶ Step 1: Create team ──▶ Step 2: Add first player ──▶ /app
-                  │
-                  └─ Skip allowed only on step 2 (team is required)
+/auth ──▶ "Forgot password?" link ──▶ /forgot-password
+              │                              │
+              │                              └─ enters email ──▶ Supabase sends reset email
+              │                                                         │
+              │                                                         ▼
+              │                                          User clicks link in email
+              │                                                         │
+              │                                                         ▼
+              │                                                /reset-password
+              │                                                         │
+              │                                                         └─ sets new password ──▶ /app
 ```
-
-The onboarding screen shows when the authenticated user has zero teams (and zero players). Once they create one team + one player, they never see it again. Existing users with data are unaffected.
 
 ## Changes
 
-### 1. New page `src/pages/Onboarding.tsx`
-- Two-step wizard inside the existing `AppLayout` (full screen, centered card).
-- Step 1 — Team: name (required), sport (optional). Reuses `createTeam(orgId, name, sport)`.
-- Step 2 — Player: first name, last name, mass (kg, required), height (cm, optional), position (optional). Reuses `createPlayer({...})` with the just-created `teamId`.
-- Progress dots at top ("1 of 2", "2 of 2"), back button on step 2.
-- On finish: `navigate("/app", { replace: true })` + success toast.
-- Optional "Skip for now" link on step 2 that still navigates to `/app` (team already saved). No skip on step 1.
+### 1. Auth provider `src/lib/auth.tsx`
+Add two methods to `AuthContextValue`:
+- `requestPasswordReset(email)` → `supabase.auth.resetPasswordForEmail(email, { redirectTo: ${origin}/reset-password })`
+- `updatePassword(newPassword)` → `supabase.auth.updateUser({ password })`
 
-### 2. Routing `src/App.tsx`
-- Add `<Route path="onboarding" element={<Onboarding />} />` inside the `/app` protected layout.
+### 2. New page `src/pages/ForgotPassword.tsx` (public route)
+- Single email input, "Send reset link" button.
+- On success: shows a confirmation card ("Check your inbox at <email>") instead of redirecting, with a "Back to sign in" link.
+- Error toast on failure.
+- Same visual style as `Auth.tsx` (full-screen, centered glass card).
 
-### 3. Gate in `src/components/ProtectedRoute.tsx` (or a small new `OnboardingGate` wrapper)
-- After auth resolves, if `listTeams(user.organizationId).length === 0` and current path is not `/app/onboarding`, redirect to `/app/onboarding`.
-- Conversely, if user already has at least one team and lands on `/app/onboarding`, redirect to `/app`.
-- Implement as a tiny wrapper component used inside the `/app` layout so the check runs on every protected navigation, not just initial load.
+### 3. New page `src/pages/ResetPassword.tsx` (public route)
+- On mount: rely on Supabase's automatic recovery-session detection from the URL hash (the listener in `AuthProvider` already handles `onAuthStateChange` — recovery links create a temporary session).
+- Guard: if no active session after a brief load, show "This reset link is invalid or has expired" with a link back to `/forgot-password`.
+- Form: new password + confirm password fields, both required, min 8 chars, must match.
+- On submit: call `updatePassword`, then `signOut()` (so the recovery session can't linger), toast success, navigate to `/auth` with a success message — OR keep them signed in and navigate to `/app`. **Decision: keep them signed in and go to `/app`** (less friction, matches standard SaaS UX).
 
-### 4. Dashboard empty state
-- Remove the duplicate "Get started / Create a team" card in `src/pages/Dashboard.tsx` since onboarding now guarantees at least one team. (Keep the rest of the dashboard intact.)
+### 4. Routing `src/App.tsx`
+- Add `<Route path="/forgot-password" element={<ForgotPassword />} />`
+- Add `<Route path="/reset-password" element={<ResetPassword />} />`
+- Both PUBLIC (outside `ProtectedRoute`) so the recovery link works whether or not the user is signed in.
+
+### 5. Auth page `src/pages/Auth.tsx`
+- Add a small "Forgot password?" link under the password field on the sign-in tab, linking to `/forgot-password`.
 
 ## Out of scope
-- Persisting teams/players to the database (still localStorage, per current architecture).
-- Editing or re-running onboarding from settings.
-- Importing players in bulk.
+- Custom-branded auth email templates (default Lovable Cloud reset email is used). Can be added later via a separate request.
+- Rate-limiting UI for repeated requests (Supabase enforces server-side).
+- Password strength meter.
 
 ## Technical notes
-- Teams/players still come from `src/lib/storage.ts` (localStorage), so the gate check is synchronous and cheap.
-- Onboarding only triggers when `user.organizationId` is set; the existing auth flow already ensures that via the `handle_new_user` trigger.
+- `redirectTo` must be an absolute URL using `window.location.origin` so it works in preview, custom domain, and local dev.
+- Recovery session is established by Supabase parsing the URL hash on load — no extra code needed beyond the existing `onAuthStateChange` listener.
+- `ProtectedRoute` is unaffected; `/reset-password` lives outside it.
