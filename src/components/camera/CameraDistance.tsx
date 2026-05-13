@@ -242,14 +242,6 @@ export function CameraDistance({
           </div>
         )}
       </div>
-
-      <Card className="m-2 rounded-lg">
-        <div className="space-y-1 p-2 text-xs">
-          <p>⚠ Do not move the camera between calibration and the trial. Same framing and zoom.</p>
-          <p>Use <strong>Playback</strong> to scrub, then <strong>Mark</strong> to place the 2 ankle markers.</p>
-        </div>
-      </Card>
-
       {error && <p className="bg-destructive px-3 py-1.5 text-xs text-destructive-foreground">{error}</p>}
 
       <div className="flex gap-2 bg-black/80 p-3">
