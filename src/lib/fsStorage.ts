@@ -100,8 +100,7 @@ async function ensurePermission(handle: AnyHandle, mode: "read" | "readwrite" = 
   };
   const q = await h.queryPermission?.(opts);
   if (q === "granted") return true;
-  // @ts-expect-error - requestPermission not in TS lib
-  const r = await handle.requestPermission?.(opts);
+  const r = await h.requestPermission?.(opts);
   return r === "granted";
 }
 
