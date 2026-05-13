@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+
 import { Camera, CircleStop, Hand, MousePointer2, Play, RotateCcw, Video, X } from "lucide-react";
 
 interface CameraDistanceProps {
