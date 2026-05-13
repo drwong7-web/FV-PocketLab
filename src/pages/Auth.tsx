@@ -8,10 +8,11 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 
 export default function Auth() {
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, signInWithGoogle, signInWithApple } = useAuth();
   const navigate = useNavigate();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [loading, setLoading] = useState(false);
+  const [oauthLoading, setOauthLoading] = useState<"google" | "apple" | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -23,16 +24,29 @@ export default function Auth() {
     try {
       if (mode === "signin") {
         await signIn(email, password);
+        navigate("/app");
       } else {
         if (password.length < 6) throw new Error("Password must be at least 6 characters.");
         if (!name.trim() || !org.trim()) throw new Error("Name and organization are required.");
         await signUp(email, password, name.trim(), org.trim());
+        toast.success("Account created. Check your inbox to verify your email, then sign in.");
+        setMode("signin");
       }
-      navigate("/app");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Authentication failed");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const onOAuth = async (provider: "google" | "apple") => {
+    setOauthLoading(provider);
+    try {
+      if (provider === "google") await signInWithGoogle();
+      else await signInWithApple();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Sign-in failed");
+      setOauthLoading(null);
     }
   };
 
@@ -66,6 +80,33 @@ export default function Auth() {
             ))}
           </div>
 
+          <div className="space-y-2 mb-4">
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full font-medium"
+              onClick={() => onOAuth("google")}
+              disabled={oauthLoading !== null}
+            >
+              {oauthLoading === "google" ? <Loader2 className="w-4 h-4 animate-spin" /> : "Continue with Google"}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full font-medium"
+              onClick={() => onOAuth("apple")}
+              disabled={oauthLoading !== null}
+            >
+              {oauthLoading === "apple" ? <Loader2 className="w-4 h-4 animate-spin" /> : "Continue with Apple"}
+            </Button>
+          </div>
+
+          <div className="flex items-center gap-3 my-4">
+            <div className="h-px flex-1 bg-border" />
+            <span className="text-[11px] uppercase tracking-widest text-muted-foreground">or</span>
+            <div className="h-px flex-1 bg-border" />
+          </div>
+
           <form onSubmit={onSubmit} className="space-y-3">
             {mode === "signup" && (
               <>
@@ -94,7 +135,7 @@ export default function Auth() {
           </form>
 
           <p className="text-[11px] text-muted-foreground text-center mt-5">
-            Local prototype storage · Works offline
+            Secured by Lovable Cloud
           </p>
         </div>
 
