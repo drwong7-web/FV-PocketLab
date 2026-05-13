@@ -268,6 +268,20 @@ export default function JumpTest() {
         />
       )}
 
+      {uploadIndex !== null && (
+        <CameraAIJump
+          initialMode="upload"
+          onClose={() => setUploadIndex(null)}
+          onConfirm={({ jumpHeight }) => {
+            const next = [...trials];
+            next[uploadIndex] = { ...next[uploadIndex], jumpHeight: parseFloat((jumpHeight * 100).toFixed(1)) };
+            setTrials(next);
+            setUploadIndex(null);
+            toast.success(`Jump detected: ${(jumpHeight * 100).toFixed(1)} cm`);
+          }}
+        />
+      )}
+
       {error && <p className="text-sm text-destructive">{error}</p>}
 
       <Button onClick={submit} disabled={busy} className="w-full gradient-primary text-primary-foreground shadow-glow h-12">
