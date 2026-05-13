@@ -42,7 +42,7 @@ export default function AppLayout() {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-svh flex flex-col">
       <header className="sticky top-0 z-30 border-b border-border bg-background/80 backdrop-blur-xl">
         <div className="container flex items-center justify-between h-14 max-w-5xl">
           <Link to="/app" className="flex items-center gap-2">
