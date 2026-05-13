@@ -9,6 +9,7 @@ import AppLayout from "@/components/AppLayout";
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
+import Onboarding from "./pages/Onboarding";
 import Teams from "./pages/Teams";
 import TeamDetail from "./pages/TeamDetail";
 import PlayerDetail from "./pages/PlayerDetail";
@@ -40,6 +41,7 @@ const App = () => (
               }
             >
               <Route index element={<Dashboard />} />
+              <Route path="onboarding" element={<Onboarding />} />
               <Route path="teams" element={<Teams />} />
               <Route path="teams/:teamId" element={<TeamDetail />} />
               <Route path="players/:playerId" element={<PlayerDetail />} />
