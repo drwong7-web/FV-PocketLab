@@ -128,8 +128,8 @@ export async function restoreRoot(silent = true): Promise<boolean> {
 export async function pickRoot(): Promise<boolean> {
   if (!FS_SUPPORTED) return false;
   try {
-    // @ts-expect-error - showDirectoryPicker not in standard TS lib
-    const handle: AnyHandle = await window.showDirectoryPicker({ id: "slfv-root", mode: "readwrite" });
+    const picker = (window as unknown as { showDirectoryPicker: (o: { id?: string; mode?: string }) => Promise<AnyHandle> }).showDirectoryPicker;
+    const handle: AnyHandle = await picker({ id: "slfv-root", mode: "readwrite" });
     const ok = await ensurePermission(handle, "readwrite");
     if (!ok) return false;
     rootHandle = handle;
