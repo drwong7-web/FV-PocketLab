@@ -32,6 +32,7 @@ export function saveLocalTest(t: Omit<LocalTest, "id"> & { id?: string }): Local
   const full: LocalTest = { ...t, id } as LocalTest;
   items.unshift(full);
   write(items);
+  if (isConnected()) mirrorJson("tests", `${id}.json`, full);
   return full;
 }
 
