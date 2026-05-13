@@ -244,7 +244,7 @@ export function CameraAIJump({ onConfirm, onClose }: CameraAIJumpProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-black">
+    <div className="fixed inset-0 z-50 flex flex-col bg-black" style={{ height: "100svh" }}>
       <div className="flex items-center justify-between bg-black/80 px-3 py-2 text-white">
         <div className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-primary" /><span className="font-display text-sm uppercase">AI jump detection</span></div>
         <Button size="icon" variant="ghost" onClick={onClose} className="h-8 w-8 text-white hover:bg-white/10"><X className="h-5 w-5" /></Button>

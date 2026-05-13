@@ -1,10 +1,7 @@
-Je vais corriger l’écran caméra de mesure manuelle pour que la moitié inférieure de la vidéo reste visible sur mobile.
+Je vais corriger la page pour qu’elle couvre toute la hauteur visible de l’écran mobile.
 
 Plan :
-1. Ajuster le conteneur vidéo dans `CameraDistance.tsx` pour réserver de l’espace au panneau de commandes en mode review au lieu de le superposer à la vidéo.
-2. Garder le panneau de marquage en bas, mais le sortir du flux qui masque l’image afin que la vidéo s’arrête au-dessus du menu.
-3. Conserver les contrôles existants et les marqueurs, sans changer la logique de mesure ni les autres écrans.
-
-Détail technique :
-- Remplacer la superposition `absolute bottom-0` du panneau review par une zone de commandes dans le layout vertical.
-- Maintenir l’overlay de clic uniquement sur la zone vidéo visible pour que les coordonnées des points restent cohérentes.
+1. Remplacer les hauteurs basées sur `100vh/min-h-screen` par `100svh` aux endroits concernés, afin d’éviter les espaces liés aux barres du navigateur mobile.
+2. Appliquer le correctif au layout principal de l’app et à l’écran de connexion, car la prévisualisation mobile montre aussi le problème sur `/auth`.
+3. Ajuster la modale caméra AI pour utiliser la hauteur dynamique de l’écran (`100dvh/100svh`) afin qu’elle remplisse l’écran sans être coupée par les contrôles du mobile.
+4. Vérifier sur viewport mobile que le fond et les overlays couvrent bien toute la fenêtre.
