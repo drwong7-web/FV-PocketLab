@@ -240,9 +240,8 @@ export function CameraDistance({
             <Button onClick={undoLast} variant="outline" size="sm" disabled={!ankleTakeoff && !ankleApex} className="w-full">
               <Hand className="mr-1 h-3.5 w-3.5" /> Undo last marker
             </Button>
-          </div>
-        )}
-      </div>
+        </div>
+      )}
       {error && <p className="bg-destructive px-3 py-1.5 text-xs text-destructive-foreground">{error}</p>}
 
       <div className="flex gap-2 bg-black/80 p-3">
