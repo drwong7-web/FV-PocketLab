@@ -178,6 +178,7 @@ export function saveTest(t: Omit<TestSession, "id" | "createdAt">): TestSession 
   const test: TestSession = { ...t, id: uid(), createdAt: Date.now() };
   tests.push(test);
   write(KEYS.tests, tests);
+  if (isConnected()) mirrorJson("tests", `${test.id}.json`, test);
   return test;
 }
 export function deleteTest(id: string) {
