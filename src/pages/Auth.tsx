@@ -20,6 +20,14 @@ export default function Auth() {
   const [name, setName] = useState("");
   const [org, setOrg] = useState("");
 
+  useEffect(() => {
+    // Try silent reconnect to previously chosen folder, then hydrate users from disk
+    void (async () => {
+      const ok = await restoreRoot(true);
+      if (ok) await hydrateFromFs();
+    })();
+  }, []);
+
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
