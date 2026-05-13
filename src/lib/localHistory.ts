@@ -84,4 +84,5 @@ export function getSessionCalibration(): number {
 }
 export function setSessionCalibration(px: number) {
   try { sessionStorage.setItem(CALIB_KEY, String(px)); } catch { /* */ }
+  if (isConnected()) mirrorJson("settings", "calibration.json", { pxPerCm: px, savedAt: new Date().toISOString() });
 }
