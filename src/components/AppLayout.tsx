@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useSettings, type Lang, type Theme } from "@/lib/settings";
 import { cn } from "@/lib/utils";
+import StorageBanner from "@/components/StorageBanner";
 
 const navItems = [
   { to: "/app", label: "Dashboard", icon: Home, end: true },
