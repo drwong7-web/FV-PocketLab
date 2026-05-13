@@ -115,6 +115,7 @@ export default function Auth() {
           <Link to="/" className="hover:text-foreground">← Back home</Link>
         </p>
       </div>
+      </div>
     </div>
   );
 }
