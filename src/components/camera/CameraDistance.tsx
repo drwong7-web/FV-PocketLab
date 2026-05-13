@@ -174,7 +174,7 @@ export function CameraDistance({
 
       {!pxPerCm && <p className="bg-amber-500/20 px-3 py-2 text-xs text-amber-300">⚠ Calibration missing. Calibrate first from the previous screen.</p>}
 
-      <div className="relative flex-1 overflow-hidden">
+      <div className="relative flex-1 min-h-0 overflow-hidden">
         {phase !== "review" && <video ref={liveVideoRef} playsInline muted className="h-full w-full object-cover" />}
         {phase === "review" && videoUrl && (
           <>
@@ -201,9 +201,10 @@ export function CameraDistance({
             </div>
           </div>
         )}
+      </div>
 
-        {phase === "review" && (
-          <div className="absolute inset-x-0 bottom-0 space-y-2 bg-black/85 p-3">
+      {phase === "review" && (
+        <div className="max-h-[45vh] shrink-0 space-y-2 overflow-y-auto bg-black/85 p-3">
             <div className="flex gap-1">
               <button onClick={() => setMarking(false)} className={`flex flex-1 items-center justify-center gap-1 rounded-md px-2 py-2 text-xs font-medium ${!marking ? "bg-primary text-primary-foreground" : "bg-white/10 text-white"}`}>
                 <Play className="h-3.5 w-3.5" /> Playback

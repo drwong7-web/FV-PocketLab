@@ -1,22 +1,10 @@
-## Objectif
+Je vais corriger l’écran caméra de mesure manuelle pour que la moitié inférieure de la vidéo reste visible sur mobile.
 
-Supprimer le bandeau d'avertissement en bas de `CameraDistance.tsx` pour laisser plus de place au menu de contrôle (Playback/Mark, vitesse, frame-by-frame) qui se trouve juste au-dessus.
+Plan :
+1. Ajuster le conteneur vidéo dans `CameraDistance.tsx` pour réserver de l’espace au panneau de commandes en mode review au lieu de le superposer à la vidéo.
+2. Garder le panneau de marquage en bas, mais le sortir du flux qui masque l’image afin que la vidéo s’arrête au-dessus du menu.
+3. Conserver les contrôles existants et les marqueurs, sans changer la logique de mesure ni les autres écrans.
 
-## Modification
-
-Dans `src/components/camera/CameraDistance.tsx` (lignes ~245-250), retirer le bloc :
-
-```tsx
-<Card className="m-2 rounded-lg">
-  <div className="space-y-1 p-2 text-xs">
-    <p>⚠ Do not move the camera between calibration and the trial. Same framing and zoom.</p>
-    <p>Use <strong>Playback</strong> to scrub, then <strong>Mark</strong> to place the 2 ankle markers.</p>
-  </div>
-</Card>
-```
-
-Nettoyer aussi l'import `Card` s'il n'est plus utilisé ailleurs dans le fichier.
-
-## Résultat attendu
-
-Le panneau de marquage (overlay sombre avec boutons Playback/Mark, vitesses, ±1 frame, Undo) gagne de l'espace vertical et reste collé aux boutons d'action (Redo / Confirm) en bas.
+Détail technique :
+- Remplacer la superposition `absolute bottom-0` du panneau review par une zone de commandes dans le layout vertical.
+- Maintenir l’overlay de clic uniquement sur la zone vidéo visible pour que les coordonnées des points restent cohérentes.
