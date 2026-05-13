@@ -93,10 +93,12 @@ export function isConnected(): boolean {
 }
 
 async function ensurePermission(handle: AnyHandle, mode: "read" | "readwrite" = "readwrite"): Promise<boolean> {
-  // @ts-expect-error - non-standard but widely supported
   const opts = { mode };
-  // @ts-expect-error - queryPermission not in TS lib
-  const q = await handle.queryPermission?.(opts);
+  const h = handle as unknown as {
+    queryPermission?: (o: { mode: string }) => Promise<PermissionState>;
+    requestPermission?: (o: { mode: string }) => Promise<PermissionState>;
+  };
+  const q = await h.queryPermission?.(opts);
   if (q === "granted") return true;
   // @ts-expect-error - requestPermission not in TS lib
   const r = await handle.requestPermission?.(opts);
