@@ -219,7 +219,7 @@ export default function JumpTest() {
             </div>
           ))}
           <p className="mt-2 text-xs text-muted-foreground">
-            ✨ <strong>AI</strong> auto-detects takeoff & landing from video (no calibration needed). 📷 manual marker uses px/cm calibration.
+            ✨ <strong>AI</strong> records and auto-detects takeoff & landing. 📷 manual marker (needs calibration). ⬆ import a video from your device for AI analysis.
           </p>
         </CardContent>
       </Card>
