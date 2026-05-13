@@ -1,4 +1,5 @@
 import type { JumpResults, SprintResults } from "./fvCalculations";
+import { mirrorJson, isConnected } from "./fsStorage";
 
 const KEY = "fv:local-tests:v1";
 
@@ -22,6 +23,7 @@ function read(): LocalTest[] {
 
 function write(items: LocalTest[]) {
   try { localStorage.setItem(KEY, JSON.stringify(items)); } catch { /* */ }
+  if (isConnected()) mirrorJson("tests", "local-index.json", items);
 }
 
 export function saveLocalTest(t: Omit<LocalTest, "id"> & { id?: string }): LocalTest {
