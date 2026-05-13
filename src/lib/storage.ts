@@ -5,6 +5,7 @@
  */
 
 import type { Organization, Player, Team, TestSession, User } from "./types";
+import { mirrorJson, readJsonFile, isConnected, onFsChange } from "./fsStorage";
 
 const KEYS = {
   users: "slfv:users",
@@ -14,6 +15,16 @@ const KEYS = {
   tests: "slfv:tests",
   session: "slfv:session",
 } as const;
+
+// Map each localStorage key to (folder, filename) on disk
+const FS_MAP: Record<string, { dir: string; file: string }> = {
+  [KEYS.users]: { dir: "auth", file: "users.json" },
+  [KEYS.session]: { dir: "auth", file: "session.json" },
+  [KEYS.orgs]: { dir: "organizations", file: "orgs.json" },
+  [KEYS.teams]: { dir: "teams", file: "teams.json" },
+  [KEYS.players]: { dir: "athletes", file: "players.json" },
+  [KEYS.tests]: { dir: "tests", file: "index.json" },
+};
 
 function read<T>(k: string, fallback: T): T {
   try {
@@ -25,7 +36,32 @@ function read<T>(k: string, fallback: T): T {
 }
 function write<T>(k: string, v: T) {
   localStorage.setItem(k, JSON.stringify(v));
+  const m = FS_MAP[k];
+  if (m && isConnected()) mirrorJson(m.dir, m.file, v);
 }
+
+/** Pull data from the picked folder into localStorage (called when a folder is connected). */
+export async function hydrateFromFs(): Promise<boolean> {
+  if (!isConnected()) return false;
+  let any = false;
+  for (const [key, m] of Object.entries(FS_MAP)) {
+    const data = await readJsonFile(m.dir, m.file);
+    if (data !== null && data !== undefined) {
+      localStorage.setItem(key, JSON.stringify(data));
+      any = true;
+    } else {
+      // First time: push current localStorage content to disk
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        try { mirrorJson(m.dir, m.file, JSON.parse(raw)); } catch { /* */ }
+      }
+    }
+  }
+  return any;
+}
+
+// Auto-hydrate when the user (re)connects a folder
+onFsChange(() => { void hydrateFromFs(); });
 
 export const uid = () =>
   (crypto.randomUUID?.() ?? Math.random().toString(36).slice(2) + Date.now().toString(36));
@@ -142,6 +178,7 @@ export function saveTest(t: Omit<TestSession, "id" | "createdAt">): TestSession 
   const test: TestSession = { ...t, id: uid(), createdAt: Date.now() };
   tests.push(test);
   write(KEYS.tests, tests);
+  if (isConnected()) mirrorJson("tests", `${test.id}.json`, test);
   return test;
 }
 export function deleteTest(id: string) {

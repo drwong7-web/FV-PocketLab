@@ -1,4 +1,4 @@
-import { useState, FormEvent } from "react";
+import { useState, useEffect, FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Activity, Loader2 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
@@ -6,6 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { restoreRoot } from "@/lib/fsStorage";
+import { hydrateFromFs } from "@/lib/storage";
+import StorageBanner from "@/components/StorageBanner";
 
 export default function Auth() {
   const { signIn, signUp } = useAuth();
@@ -16,6 +19,14 @@ export default function Auth() {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [org, setOrg] = useState("");
+
+  useEffect(() => {
+    // Try silent reconnect to previously chosen folder, then hydrate users from disk
+    void (async () => {
+      const ok = await restoreRoot(true);
+      if (ok) await hydrateFromFs();
+    })();
+  }, []);
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -37,7 +48,9 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-svh flex items-center justify-center px-4 py-10">
+    <div className="min-h-svh flex flex-col">
+      <StorageBanner />
+      <div className="flex-1 flex items-center justify-center px-4 py-10">
       <div className="w-full max-w-md">
         <div className="flex items-center gap-3 mb-8 justify-center">
           <div className="w-12 h-12 rounded-2xl bg-gradient-primary shadow-glow flex items-center justify-center">
@@ -101,6 +114,7 @@ export default function Auth() {
         <p className="text-center mt-6 text-xs text-muted-foreground">
           <Link to="/" className="hover:text-foreground">← Back home</Link>
         </p>
+      </div>
       </div>
     </div>
   );
