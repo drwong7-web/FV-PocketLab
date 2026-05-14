@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Camera, Check, RotateCcw, Ruler, X } from "lucide-react";
+import { Camera, Check, RotateCcw, Ruler, Upload, X } from "lucide-react";
 
 interface CameraCalibrationProps {
   onConfirm: (pxPerCm: number) => void;
@@ -15,6 +15,7 @@ export function CameraCalibration({ onConfirm, onClose }: CameraCalibrationProps
   const liveVideoRef = useRef<HTMLVideoElement | null>(null);
   const overlayRef = useRef<HTMLDivElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [phase, setPhase] = useState<"idle" | "snapped">("idle");
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
@@ -69,9 +70,58 @@ export function CameraCalibration({ onConfirm, onClose }: CameraCalibrationProps
     }, "image/jpeg", 0.9);
   };
 
+  const onUploadClick = () => fileInputRef.current?.click();
+
+  const onFileChosen = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setError("");
+    try {
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+      if (photoUrl) URL.revokeObjectURL(photoUrl);
+
+      if (file.type.startsWith("image/")) {
+        const url = URL.createObjectURL(file);
+        const img = new Image();
+        await new Promise<void>((res, rej) => { img.onload = () => res(); img.onerror = () => rej(new Error("Failed to load image")); img.src = url; });
+        setPhotoUrl(url);
+        setNaturalSize({ w: img.naturalWidth, h: img.naturalHeight });
+        setA(null); setB(null);
+        setPhase("snapped");
+        return;
+      }
+
+      // Video: extract a frame
+      const tmpUrl = URL.createObjectURL(file);
+      const v = document.createElement("video");
+      v.src = tmpUrl; v.muted = true; v.playsInline = true; v.preload = "auto";
+      await new Promise<void>((res, rej) => {
+        v.onloadeddata = () => res();
+        v.onerror = () => rej(new Error("Failed to load video"));
+      });
+      v.currentTime = Math.min(0.1, (v.duration || 1) / 2);
+      await new Promise<void>((res) => { v.onseeked = () => res(); });
+      const w = v.videoWidth, h = v.videoHeight;
+      const canvas = document.createElement("canvas");
+      canvas.width = w; canvas.height = h;
+      canvas.getContext("2d")!.drawImage(v, 0, 0, w, h);
+      const blob: Blob = await new Promise((res) => canvas.toBlob((b) => res(b!), "image/jpeg", 0.9));
+      URL.revokeObjectURL(tmpUrl);
+      setPhotoUrl(URL.createObjectURL(blob));
+      setNaturalSize({ w, h });
+      setA(null); setB(null);
+      setPhase("snapped");
+    } catch (err) {
+      setError("Could not read file: " + (err as Error).message);
+    }
+  };
+
   const retake = () => {
     if (photoUrl) URL.revokeObjectURL(photoUrl);
     setPhotoUrl(null); setA(null); setB(null); setPhase("idle");
+    if (!streamRef.current) openCamera();
   };
 
   const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -155,11 +205,18 @@ export function CameraCalibration({ onConfirm, onClose }: CameraCalibrationProps
 
       {error && <p className="bg-destructive px-3 py-1.5 text-xs text-destructive-foreground">{error}</p>}
 
+      <input ref={fileInputRef} type="file" accept="image/*,video/*" hidden onChange={onFileChosen} />
+
       <div className="flex gap-2 bg-black/80 p-3">
         {phase === "idle" && (
-          <Button onClick={snap} className="flex-1 gradient-primary text-primary-foreground shadow-glow">
-            <Camera className="mr-2 h-4 w-4" /> Capture photo
-          </Button>
+          <>
+            <Button onClick={snap} className="flex-1 gradient-primary text-primary-foreground shadow-glow">
+              <Camera className="mr-2 h-4 w-4" /> Capture
+            </Button>
+            <Button onClick={onUploadClick} variant="outline" className="flex-1">
+              <Upload className="mr-2 h-4 w-4" /> Import
+            </Button>
+          </>
         )}
         {phase === "snapped" && (
           <>

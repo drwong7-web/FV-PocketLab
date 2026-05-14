@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Camera, CircleStop, RotateCcw, Sparkles, Video, X, Loader2 } from "lucide-react";
+import { Camera, CircleStop, RotateCcw, Sparkles, Upload, X, Loader2 } from "lucide-react";
 import { getPoseLandmarker, PL, LOWER_BODY_CONNECTIONS, type FrameSample } from "@/lib/poseDetector";
 import { detectJump, type JumpDetectionResult } from "@/lib/jumpDetection";
 
@@ -11,6 +11,7 @@ interface CameraAIJumpProps {
 }
 
 type Phase = "idle" | "recording" | "analyzing" | "review";
+type Source = "camera" | "upload";
 
 export function CameraAIJump({ onConfirm, onClose }: CameraAIJumpProps) {
   const liveRef = useRef<HTMLVideoElement | null>(null);
@@ -22,19 +23,30 @@ export function CameraAIJump({ onConfirm, onClose }: CameraAIJumpProps) {
   const startTimeRef = useRef(0);
   const samplesRef = useRef<FrameSample[]>([]);
   const rafRef = useRef<number | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const analysisStartRef = useRef(0); // absolute time in video where first sample was taken
 
   const [phase, setPhase] = useState<Phase>("idle");
+  const [source, setSource] = useState<Source>("camera");
   const [elapsed, setElapsed] = useState(0);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [captureFps, setCaptureFps] = useState(60);
   const [progress, setProgress] = useState(0);
   const [result, setResult] = useState<JumpDetectionResult | null>(null);
   const [error, setError] = useState("");
-  const [adjustOffset, setAdjustOffset] = useState({ takeoff: 0, landing: 0 }); // in seconds
+  const [adjustOffset, setAdjustOffset] = useState({ takeoff: 0, landing: 0 });
+  const [duration, setDuration] = useState(0);
+  const [trimStart, setTrimStart] = useState(0);
+  const [trimEnd, setTrimEnd] = useState(0);
+
+  const stopStream = () => {
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+  };
 
   const openCamera = async () => {
     try {
-      streamRef.current?.getTracks().forEach((t) => t.stop());
+      stopStream();
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 60, min: 30 } },
         audio: false,
@@ -54,10 +66,9 @@ export function CameraAIJump({ onConfirm, onClose }: CameraAIJumpProps) {
 
   useEffect(() => {
     openCamera();
-    // Pre-warm model
     getPoseLandmarker("heavy").catch(() => getPoseLandmarker("lite").catch(() => {}));
     return () => {
-      streamRef.current?.getTracks().forEach((t) => t.stop());
+      stopStream();
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       if (videoUrl) URL.revokeObjectURL(videoUrl);
     };
@@ -85,6 +96,7 @@ export function CameraAIJump({ onConfirm, onClose }: CameraAIJumpProps) {
     rec.onstop = () => {
       const blob = new Blob(chunksRef.current, { type: mime || "video/webm" });
       setVideoUrl(URL.createObjectURL(blob));
+      setSource("camera");
       setPhase("review");
       setResult(null);
       setAdjustOffset({ takeoff: 0, landing: 0 });
@@ -98,16 +110,51 @@ export function CameraAIJump({ onConfirm, onClose }: CameraAIJumpProps) {
 
   const stopRecording = () => recorderRef.current?.stop();
 
+  const onUploadClick = () => fileInputRef.current?.click();
+
+  const onFileChosen = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-selecting same file later
+    if (!file) return;
+    if (videoUrl) URL.revokeObjectURL(videoUrl);
+    stopStream();
+    const url = URL.createObjectURL(file);
+    setVideoUrl(url);
+    setSource("upload");
+    setResult(null);
+    setAdjustOffset({ takeoff: 0, landing: 0 });
+    setError("");
+    setPhase("review");
+  };
+
   const restart = async () => {
     if (videoUrl) URL.revokeObjectURL(videoUrl);
     setVideoUrl(null);
     setResult(null);
     setElapsed(0);
     setProgress(0);
+    setDuration(0);
+    setTrimStart(0);
+    setTrimEnd(0);
     setPhase("idle");
     samplesRef.current = [];
-    const alive = streamRef.current?.getVideoTracks().some((t) => t.readyState === "live");
-    if (!alive) await openCamera();
+    if (source === "camera") {
+      const alive = streamRef.current?.getVideoTracks().some((t) => t.readyState === "live");
+      if (!alive) await openCamera();
+    } else {
+      // upload mode: don't auto-reopen camera, user picks again
+      setSource("camera");
+      await openCamera();
+    }
+  };
+
+  const onLoadedMetadata = () => {
+    const v = playRef.current;
+    if (!v) return;
+    const d = isFinite(v.duration) ? v.duration : 0;
+    setDuration(d);
+    setTrimStart(0);
+    setTrimEnd(d);
   };
 
   const analyze = async () => {
@@ -126,14 +173,17 @@ export function CameraAIJump({ onConfirm, onClose }: CameraAIJumpProps) {
       catch (e) { setError("Failed to load AI model: " + (e as Error).message); setPhase("review"); return; }
     }
 
-    // Wait for metadata
     if (v.readyState < 1) await new Promise<void>((res) => { v.onloadedmetadata = () => res(); });
-    const duration = v.duration;
-    if (!isFinite(duration) || duration <= 0) {
+    const dur = v.duration;
+    if (!isFinite(dur) || dur <= 0) {
       setError("Cannot read video duration. Try again.");
       setPhase("review");
       return;
     }
+
+    const start = Math.max(0, Math.min(trimStart, dur));
+    const end = Math.max(start + 0.05, Math.min(trimEnd || dur, dur));
+    const span = end - start;
 
     const stepSec = 1 / captureFps;
     v.pause();
@@ -143,12 +193,12 @@ export function CameraAIJump({ onConfirm, onClose }: CameraAIJumpProps) {
       new Promise<void>((resolve) => {
         const onSeeked = () => { v.removeEventListener("seeked", onSeeked); resolve(); };
         v.addEventListener("seeked", onSeeked);
-        v.currentTime = Math.min(time, Math.max(0, duration - 0.001));
+        v.currentTime = Math.min(time, Math.max(0, dur - 0.001));
       });
 
-    let t = 0;
+    let t = start;
     let firstT: number | null = null;
-    while (t <= duration - stepSec / 2) {
+    while (t <= end - stepSec / 2) {
       await seekTo(t);
       try {
         const res = landmarker.detectForVideo(v, performance.now());
@@ -165,9 +215,11 @@ export function CameraAIJump({ onConfirm, onClose }: CameraAIJumpProps) {
       } catch {
         // skip frame
       }
-      setProgress(Math.min(1, t / duration));
+      setProgress(Math.min(1, (t - start) / span));
       t += stepSec;
     }
+
+    analysisStartRef.current = firstT ?? start;
 
     const det = detectJump(samplesRef.current);
     if (!det) {
@@ -178,8 +230,7 @@ export function CameraAIJump({ onConfirm, onClose }: CameraAIJumpProps) {
     setResult(det);
     setPhase("review");
     setAdjustOffset({ takeoff: 0, landing: 0 });
-    // Seek to apex for visual feedback
-    await seekTo((det.apexT) + (samplesRef.current[0]?.t ?? 0));
+    await seekTo(det.apexT + analysisStartRef.current);
     drawOverlay(det.apexIdx);
   };
 
@@ -196,7 +247,6 @@ export function CameraAIJump({ onConfirm, onClose }: CameraAIJumpProps) {
     const sample = samplesRef.current[sampleIdx];
     if (!sample?.landmarks) return;
 
-    // Compute video-fit (object-contain) offsets
     const nW = v.videoWidth, nH = v.videoHeight;
     const elAR = w / h, natAR = nW / nH;
     let dW: number, dH: number, oX = 0, oY = 0;
@@ -223,7 +273,6 @@ export function CameraAIJump({ onConfirm, onClose }: CameraAIJumpProps) {
     }
   };
 
-  // Recompute height when user nudges markers
   const adjusted = result
     ? (() => {
         const ft = Math.max(0, (result.landingT + adjustOffset.landing) - (result.takeoffT + adjustOffset.takeoff));
@@ -243,12 +292,23 @@ export function CameraAIJump({ onConfirm, onClose }: CameraAIJumpProps) {
     v.currentTime = Math.max(0, Math.min(v.duration - 0.001, timeAbs));
   };
 
+  const fmt = (s: number) => {
+    if (!isFinite(s) || s < 0) s = 0;
+    const m = Math.floor(s / 60);
+    const sec = s - m * 60;
+    return `${m}:${sec.toFixed(2).padStart(5, "0")}`;
+  };
+
+  const trimDur = Math.max(0, trimEnd - trimStart);
+
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-black" style={{ height: "100svh" }}>
       <div className="flex items-center justify-between bg-black/80 px-3 py-2 text-white">
         <div className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-primary" /><span className="font-display text-sm uppercase">AI jump detection</span></div>
         <Button size="icon" variant="ghost" onClick={onClose} className="h-8 w-8 text-white hover:bg-white/10"><X className="h-5 w-5" /></Button>
       </div>
+
+      <input ref={fileInputRef} type="file" accept="video/*" hidden onChange={onFileChosen} />
 
       <div className="relative flex-1 overflow-hidden">
         {phase !== "review" && phase !== "analyzing" && <video ref={liveRef} playsInline muted className="h-full w-full object-cover" />}
@@ -260,11 +320,15 @@ export function CameraAIJump({ onConfirm, onClose }: CameraAIJumpProps) {
               playsInline
               controls={phase === "review"}
               className="h-full w-full object-contain"
+              onLoadedMetadata={onLoadedMetadata}
               onTimeUpdate={() => {
-                if (!result) return;
-                // find nearest sample to current time and redraw
                 const v = playRef.current; if (!v) return;
-                const tRel = v.currentTime - (samplesRef.current[0] ? 0 : 0);
+                // Loop playback within trim region (only when not yet analyzed)
+                if (!result && trimEnd > 0 && v.currentTime > trimEnd) {
+                  v.currentTime = trimStart;
+                }
+                if (!result) return;
+                const tRel = v.currentTime - analysisStartRef.current;
                 let bestI = 0, bestD = Infinity;
                 for (let i = 0; i < samplesRef.current.length; i++) {
                   const d = Math.abs(samplesRef.current[i].t - tRel);
@@ -298,8 +362,62 @@ export function CameraAIJump({ onConfirm, onClose }: CameraAIJumpProps) {
       </div>
 
       {phase === "review" && (
-        <Card className="m-2 rounded-lg">
+        <Card className="m-2 max-h-[55vh] shrink-0 overflow-y-auto rounded-lg">
           <div className="space-y-2 p-3 text-xs">
+            {!result && duration > 0 && (
+              <div className="space-y-1.5 rounded-md bg-muted/50 p-2">
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="font-medium uppercase tracking-wide">Crop for AI analysis</span>
+                  <span className="font-mono opacity-70">{fmt(trimDur)} selected</span>
+                </div>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="w-10 font-mono text-[10px]">Start</span>
+                    <input
+                      type="range" min={0} max={duration} step={1 / Math.max(captureFps, 30)}
+                      value={trimStart}
+                      onChange={(e) => {
+                        const v = Math.min(parseFloat(e.target.value), trimEnd - 0.05);
+                        setTrimStart(v);
+                      }}
+                      className="flex-1 accent-primary"
+                    />
+                    <span className="w-14 text-right font-mono text-[10px]">{fmt(trimStart)}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-10 font-mono text-[10px]">End</span>
+                    <input
+                      type="range" min={0} max={duration} step={1 / Math.max(captureFps, 30)}
+                      value={trimEnd}
+                      onChange={(e) => {
+                        const v = Math.max(parseFloat(e.target.value), trimStart + 0.05);
+                        setTrimEnd(v);
+                      }}
+                      className="flex-1 accent-primary"
+                    />
+                    <span className="w-14 text-right font-mono text-[10px]">{fmt(trimEnd)}</span>
+                  </div>
+                </div>
+                <div className="flex gap-1">
+                  <button
+                    onClick={() => { const v = playRef.current; if (v) setTrimStart(Math.min(v.currentTime, trimEnd - 0.05)); }}
+                    className="flex-1 rounded-md bg-white/10 px-2 py-1 text-white"
+                  >Set start = current</button>
+                  <button
+                    onClick={() => { const v = playRef.current; if (v) setTrimEnd(Math.max(v.currentTime, trimStart + 0.05)); }}
+                    className="flex-1 rounded-md bg-white/10 px-2 py-1 text-white"
+                  >Set end = current</button>
+                  <button
+                    onClick={() => { setTrimStart(0); setTrimEnd(duration); }}
+                    className="rounded-md bg-white/10 px-2 py-1 text-white"
+                  >Reset</button>
+                </div>
+                <p className="text-[10px] text-muted-foreground">
+                  Only the selected segment will be analyzed by the AI.
+                </p>
+              </div>
+            )}
+
             {!result && (
               <p className="text-muted-foreground">
                 Side view, full body in frame. Tap <strong>Analyze with AI</strong> to detect takeoff & landing automatically.
@@ -319,9 +437,9 @@ export function CameraAIJump({ onConfirm, onClose }: CameraAIJumpProps) {
                 </div>
 
                 <div className="grid grid-cols-3 gap-1">
-                  <button onClick={() => seekToTime(result.takeoffT + adjustOffset.takeoff)} className="rounded-md bg-white/10 px-2 py-1 text-white">⤒ Takeoff</button>
-                  <button onClick={() => seekToTime(result.apexT)} className="rounded-md bg-white/10 px-2 py-1 text-white">▲ Apex</button>
-                  <button onClick={() => seekToTime(result.landingT + adjustOffset.landing)} className="rounded-md bg-white/10 px-2 py-1 text-white">⤓ Landing</button>
+                  <button onClick={() => seekToTime(result.takeoffT + analysisStartRef.current + adjustOffset.takeoff)} className="rounded-md bg-white/10 px-2 py-1 text-white">⤒ Takeoff</button>
+                  <button onClick={() => seekToTime(result.apexT + analysisStartRef.current)} className="rounded-md bg-white/10 px-2 py-1 text-white">▲ Apex</button>
+                  <button onClick={() => seekToTime(result.landingT + analysisStartRef.current + adjustOffset.landing)} className="rounded-md bg-white/10 px-2 py-1 text-white">⤓ Landing</button>
                 </div>
 
                 <div className="space-y-1">
@@ -354,9 +472,14 @@ export function CameraAIJump({ onConfirm, onClose }: CameraAIJumpProps) {
 
       <div className="flex gap-2 bg-black/80 p-3">
         {phase === "idle" && (
-          <Button onClick={startRecording} className="flex-1 gradient-primary text-primary-foreground shadow-glow">
-            <Camera className="mr-2 h-4 w-4" /> Start recording
-          </Button>
+          <>
+            <Button onClick={startRecording} className="flex-1 gradient-primary text-primary-foreground shadow-glow">
+              <Camera className="mr-2 h-4 w-4" /> Record
+            </Button>
+            <Button onClick={onUploadClick} variant="outline" className="flex-1">
+              <Upload className="mr-2 h-4 w-4" /> Import video
+            </Button>
+          </>
         )}
         {phase === "recording" && (
           <Button onClick={stopRecording} variant="destructive" className="flex-1"><CircleStop className="mr-2 h-4 w-4" /> Stop</Button>
