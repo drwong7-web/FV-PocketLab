@@ -15,6 +15,7 @@ export function CameraCalibration({ onConfirm, onClose }: CameraCalibrationProps
   const liveVideoRef = useRef<HTMLVideoElement | null>(null);
   const overlayRef = useRef<HTMLDivElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [phase, setPhase] = useState<"idle" | "snapped">("idle");
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
