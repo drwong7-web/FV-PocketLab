@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Camera, Check, RotateCcw, Ruler, X } from "lucide-react";
+import { Camera, Check, RotateCcw, Ruler, Upload, X } from "lucide-react";
 
 interface CameraCalibrationProps {
   onConfirm: (pxPerCm: number) => void;
