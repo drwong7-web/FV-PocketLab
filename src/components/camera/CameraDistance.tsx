@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 
-import { Camera, CircleStop, Hand, MousePointer2, Play, RotateCcw, Video, X } from "lucide-react";
+import { Camera, CircleStop, Hand, MousePointer2, Play, RotateCcw, Upload, Video, X } from "lucide-react";
 
 interface CameraDistanceProps {
   pxPerCm: number;
