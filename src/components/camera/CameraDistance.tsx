@@ -262,11 +262,18 @@ export function CameraDistance({
       )}
       {error && <p className="bg-destructive px-3 py-1.5 text-xs text-destructive-foreground">{error}</p>}
 
+      <input ref={fileInputRef} type="file" accept="video/*" hidden onChange={onFileChosen} />
+
       <div className="flex gap-2 bg-black/80 p-3">
         {phase === "idle" && (
-          <Button onClick={startRecording} className="flex-1 gradient-primary text-primary-foreground shadow-glow" disabled={!pxPerCm}>
-            <Camera className="mr-2 h-4 w-4" /> Start recording
-          </Button>
+          <>
+            <Button onClick={startRecording} className="flex-1 gradient-primary text-primary-foreground shadow-glow" disabled={!pxPerCm}>
+              <Camera className="mr-2 h-4 w-4" /> Record
+            </Button>
+            <Button onClick={onUploadClick} variant="outline" className="flex-1" disabled={!pxPerCm}>
+              <Upload className="mr-2 h-4 w-4" /> Import
+            </Button>
+          </>
         )}
         {phase === "recording" && (
           <Button onClick={stopRecording} variant="destructive" className="flex-1"><CircleStop className="mr-2 h-4 w-4" /> Stop</Button>
