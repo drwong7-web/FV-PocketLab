@@ -104,6 +104,23 @@ export function CameraDistance({
 
   const stopRecording = () => recorderRef.current?.stop();
 
+  const onUploadClick = () => fileInputRef.current?.click();
+
+  const onFileChosen = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (videoUrl) URL.revokeObjectURL(videoUrl);
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+    setVideoUrl(URL.createObjectURL(file));
+    setAnkleTakeoff(null);
+    setAnkleApex(null);
+    setMarking(false);
+    setError("");
+    setPhase("review");
+  };
+
   const restart = async () => {
     if (videoUrl) URL.revokeObjectURL(videoUrl);
     setVideoUrl(null);
