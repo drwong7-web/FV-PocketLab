@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Camera, Check, Plus, Ruler, Sparkles, Trash2, Upload, Zap } from "lucide-react";
+import { Camera, Check, Plus, Ruler, Sparkles, Trash2, Zap } from "lucide-react";
 import { calculateJumpProfile, type JumpTrial } from "@/lib/fvCalculations";
 import { CameraDistance } from "@/components/camera/CameraDistance";
 import { CameraCalibration } from "@/components/camera/CameraCalibration";
@@ -39,7 +39,6 @@ export default function JumpTest() {
   const [error, setError] = useState("");
   const [cameraIndex, setCameraIndex] = useState<number | null>(null);
   const [aiIndex, setAiIndex] = useState<number | null>(null);
-  const [uploadIndex, setUploadIndex] = useState<number | null>(null);
   const [pxPerCm, setPxPerCm] = useState<number>(0);
   const [calibrating, setCalibrating] = useState(false);
   const [measuringHpo, setMeasuringHpo] = useState(false);
@@ -201,17 +200,14 @@ export default function JumpTest() {
             <span></span>
           </div>
           {trials.map((tr, i) => (
-            <div key={i} className="mt-2 grid grid-cols-[1fr_1fr_auto_auto_auto_auto] gap-2">
+            <div key={i} className="mt-2 grid grid-cols-[1fr_1fr_auto_auto_auto] gap-2">
               <Input type="number" step="0.5" placeholder="kg" value={tr.load || ""} onChange={(e) => updateTrial(i, "load", e.target.value)} />
               <Input type="number" step="0.1" placeholder="cm" value={tr.jumpHeight || ""} onChange={(e) => updateTrial(i, "jumpHeight", e.target.value)} />
-              <Button size="icon" variant="outline" onClick={() => setAiIndex(i)} aria-label="AI auto-detect" title="AI auto-detect (record video)">
+              <Button size="icon" variant="outline" onClick={() => setAiIndex(i)} aria-label="AI auto-detect" title="AI auto-detect (flight time)">
                 <Sparkles className="h-4 w-4 text-primary" />
               </Button>
               <Button size="icon" variant="outline" onClick={() => setCameraIndex(i)} aria-label="Camera" disabled={!pxPerCm} title="Manual marker (needs calibration)">
                 <Camera className="h-4 w-4 text-primary" />
-              </Button>
-              <Button size="icon" variant="outline" onClick={() => setUploadIndex(i)} aria-label="Import video" title="Import a video from your device (AI analysis)">
-                <Upload className="h-4 w-4 text-primary" />
               </Button>
               <Button size="icon" variant="ghost" onClick={() => setTrials(trials.filter((_, j) => j !== i))} aria-label="Delete">
                 <Trash2 className="h-4 w-4 text-destructive" />
@@ -219,7 +215,7 @@ export default function JumpTest() {
             </div>
           ))}
           <p className="mt-2 text-xs text-muted-foreground">
-            ✨ <strong>AI</strong> records and auto-detects takeoff & landing. 📷 manual marker (needs calibration). ⬆ import a video from your device for AI analysis.
+            ✨ <strong>AI</strong> auto-detects takeoff & landing from video (no calibration needed). 📷 manual marker uses px/cm calibration.
           </p>
         </CardContent>
       </Card>
@@ -263,20 +259,6 @@ export default function JumpTest() {
             next[aiIndex] = { ...next[aiIndex], jumpHeight: parseFloat((jumpHeight * 100).toFixed(1)) };
             setTrials(next);
             setAiIndex(null);
-            toast.success(`Jump detected: ${(jumpHeight * 100).toFixed(1)} cm`);
-          }}
-        />
-      )}
-
-      {uploadIndex !== null && (
-        <CameraAIJump
-          initialMode="upload"
-          onClose={() => setUploadIndex(null)}
-          onConfirm={({ jumpHeight }) => {
-            const next = [...trials];
-            next[uploadIndex] = { ...next[uploadIndex], jumpHeight: parseFloat((jumpHeight * 100).toFixed(1)) };
-            setTrials(next);
-            setUploadIndex(null);
             toast.success(`Jump detected: ${(jumpHeight * 100).toFixed(1)} cm`);
           }}
         />
