@@ -205,11 +205,18 @@ export function CameraCalibration({ onConfirm, onClose }: CameraCalibrationProps
 
       {error && <p className="bg-destructive px-3 py-1.5 text-xs text-destructive-foreground">{error}</p>}
 
+      <input ref={fileInputRef} type="file" accept="image/*,video/*" hidden onChange={onFileChosen} />
+
       <div className="flex gap-2 bg-black/80 p-3">
         {phase === "idle" && (
-          <Button onClick={snap} className="flex-1 gradient-primary text-primary-foreground shadow-glow">
-            <Camera className="mr-2 h-4 w-4" /> Capture photo
-          </Button>
+          <>
+            <Button onClick={snap} className="flex-1 gradient-primary text-primary-foreground shadow-glow">
+              <Camera className="mr-2 h-4 w-4" /> Capture
+            </Button>
+            <Button onClick={onUploadClick} variant="outline" className="flex-1">
+              <Upload className="mr-2 h-4 w-4" /> Import
+            </Button>
+          </>
         )}
         {phase === "snapped" && (
           <>
