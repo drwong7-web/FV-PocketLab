@@ -27,6 +27,7 @@ export function CameraDistance({
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const startTimeRef = useRef<number>(0);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [phase, setPhase] = useState<"idle" | "recording" | "review">("idle");
   const [elapsed, setElapsed] = useState(0);
