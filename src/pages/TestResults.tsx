@@ -557,8 +557,9 @@ function JumpReport({ test, results, chartRef }: { test: TestRecord; results: Ju
     ? Math.sqrt((-4 * results.Pmax) / results.FVoptimal)
     : undefined;
   const optimalF0 = optimalV0 ? (4 * results.Pmax) / optimalV0 : undefined;
-  const target = getJumpTarget(test.athletes?.sport);
   const sportLabel = getSportTargets(test.athletes?.sport).label;
+  const hideTarget = sportLabel === "Athlète polyvalent";
+  const target = hideTarget ? undefined : getJumpTarget(test.athletes?.sport);
 
   return (
     <>
