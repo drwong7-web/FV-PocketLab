@@ -1,13 +1,16 @@
-## Objectif
-Retirer entièrement la carte « Qualité du modèle » de la page de résultats du test (interface + code mort).
+## Problème
 
-## Modifications dans `src/pages/TestResults.tsx`
+Sur la fiche athlète, le bouton "Nouveau test" navigue vers `/app/tests/new?playerId=...`. Mais la page **NewTest** (sélection Jump/Sprint) ne transmet pas ce `playerId` aux liens vers `/app/tests/new/jump` et `/app/tests/new/sprint`. Résultat : l'athlète est perdu et les champs (mass, height, hPO) ne se pré-remplissent pas.
 
-1. **Supprimer le composant `ModelQualityCard`** (lignes 482-507) ainsi que l'import devenu inutile `CheckCircle2` / `AlertTriangle` s'ils ne sont plus utilisés ailleurs (à vérifier au moment de l'édition).
-2. **Retirer l'usage dans `JumpReport`** (ligne 623) :
-   `<ModelQualityCard r2={...} points={...} label="Régression F = F0 − Sfv·V" />`
-3. **Retirer l'usage dans `SprintReport`** (lignes 679-684) :
-   `<ModelQualityCard r2={...} points={...} rmse={...} label="..." />`
+Bonne nouvelle : `JumpTest.tsx` et `SprintTest.tsx` lisent déjà `athleteId`/`playerId` depuis l'URL et auto-remplissent body mass + hauteur. Il suffit donc de **propager le paramètre**.
 
-## Conservé
-- Le `R²` affiché sous le graphique F-V et le composant `R2Explanation` (définition + interprétation) restent en place — ils fournissent déjà l'info essentielle au coach.
+## Modifications
+
+**`src/pages/NewTest.tsx`**
+- Lire `playerId` (et `athleteId` en fallback) via `useSearchParams`.
+- Ajouter le query param aux deux `<Link>` :
+  - `/app/tests/new/jump?athleteId=<id>`
+  - `/app/tests/new/sprint?athleteId=<id>`
+- Si pas d'athlète dans l'URL, garder les liens actuels.
+
+Aucun autre fichier à modifier — l'auto-remplissage côté JumpTest/SprintTest existe déjà.
