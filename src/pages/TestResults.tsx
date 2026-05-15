@@ -614,9 +614,8 @@ function SprintReport({ test, results, chartRef }: { test: TestRecord; results: 
   const points = results.velocityProfile
     .map((v, i) => ({ velocity: v, force: results.FVprofile[i] }))
     .filter((_, i) => i % 10 === 0);
-  const sportLabel = getSportTargets(test.athletes?.sport).label;
-  const hideTarget = sportLabel === "Athlète polyvalent";
-  const target = hideTarget ? undefined : getSprintTarget(test.athletes?.sport);
+  const sportLabel = getSportTargets(test.athletes?.sport)?.label;
+  const target = getSprintTarget(test.athletes?.sport);
   const optimalV0 = target?.V0;
   const optimalF0 = target?.F0;
 
@@ -648,7 +647,7 @@ function SprintReport({ test, results, chartRef }: { test: TestRecord; results: 
               targetV0={target?.V0}
               targetF0Range={target?.F0Range}
               targetV0Range={target?.V0Range}
-              targetLabel={hideTarget ? undefined : sportLabel}
+              targetLabel={sportLabel}
               Pmax={results.Pmax}
             />
           </div>
