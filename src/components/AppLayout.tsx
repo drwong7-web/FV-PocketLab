@@ -22,16 +22,27 @@ export default function AppLayout() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [exportDir, setExportDir] = useState<string | null>(null);
   const pickerSupported = isDirectoryPickerSupported();
+  const inIframe = isInIframe();
 
   useEffect(() => {
     if (settingsOpen) setExportDir(getExportDirectoryLabel());
   }, [settingsOpen]);
 
   const handlePickFolder = async () => {
-    const name = await pickExportDirectory();
-    if (name) {
-      setExportDir(name);
-      toast.success(`${t("savedTo")} ${name}`);
+    const res = await pickExportDirectory();
+    if (res.ok) {
+      setExportDir(res.name);
+      toast.success(`${t("savedTo")} ${res.name}`);
+      return;
+    }
+    if (res.reason === "cancelled") {
+      toast(t("pickerCancelled"));
+    } else if (res.reason === "iframe-blocked") {
+      toast.error(t("iframeBlocked"));
+    } else if (res.reason === "unsupported") {
+      toast.error(t("browserUnsupported"));
+    } else {
+      toast.error(res.message || t("browserUnsupported"));
     }
   };
   const handleResetFolder = async () => {
