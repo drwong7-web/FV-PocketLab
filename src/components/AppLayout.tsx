@@ -20,6 +20,24 @@ export default function AppLayout() {
   const navigate = useNavigate();
   const { lang, theme, accent, setLang, setTheme, setAccent, t } = useSettings();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [exportDir, setExportDir] = useState<string | null>(null);
+  const pickerSupported = isDirectoryPickerSupported();
+
+  useEffect(() => {
+    if (settingsOpen) setExportDir(getExportDirectoryLabel());
+  }, [settingsOpen]);
+
+  const handlePickFolder = async () => {
+    const name = await pickExportDirectory();
+    if (name) {
+      setExportDir(name);
+      toast.success(`${t("savedTo")} ${name}`);
+    }
+  };
+  const handleResetFolder = async () => {
+    await clearExportDirectory();
+    setExportDir(null);
+  };
 
   const swatches = [
     { hue: "142", label: "Green" },
