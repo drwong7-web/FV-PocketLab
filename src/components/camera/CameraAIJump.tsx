@@ -79,6 +79,22 @@ export function CameraAIJump({ onConfirm, onClose }: CameraAIJumpProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Reattach live stream whenever the live <video> remounts (e.g. after Redo)
+  useEffect(() => {
+    if (phase !== "idle") return;
+    const v = liveRef.current;
+    if (!v) return;
+    const stream = streamRef.current;
+    const alive = stream?.getVideoTracks().some((t) => t.readyState === "live");
+    if (stream && alive) {
+      if (v.srcObject !== stream) v.srcObject = stream;
+      v.play().catch(() => {});
+    } else {
+      openCamera();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase]);
+
   useEffect(() => {
     if (phase !== "recording") return;
     const id = window.setInterval(() => setElapsed((performance.now() - startTimeRef.current) / 1000), 50);
@@ -140,16 +156,10 @@ export function CameraAIJump({ onConfirm, onClose }: CameraAIJumpProps) {
     setDuration(0);
     setTrimStart(0);
     setTrimEnd(0);
-    setPhase("idle");
+    setSource("camera");
     samplesRef.current = [];
-    if (source === "camera") {
-      const alive = streamRef.current?.getVideoTracks().some((t) => t.readyState === "live");
-      if (!alive) await openCamera();
-    } else {
-      // upload mode: don't auto-reopen camera, user picks again
-      setSource("camera");
-      await openCamera();
-    }
+    setPhase("idle");
+    // The phase effect will reattach or reopen the camera on the new <video> mount.
   };
 
   const onLoadedMetadata = () => {

@@ -1,25 +1,26 @@
-## Goal
+## Issues
 
-In `CameraAIJump`, remove the separate "Crop for AI analysis" panel (Start/End sliders + buttons) and put the trim markers directly on the video's playback bar.
+### 1. Black video after "Redo" in AI jump page
+After tapping Redo, the camera preview goes black.
 
-## Changes (only `src/components/camera/CameraAIJump.tsx`)
+**Cause:** When `phase === "review"`, the live `<video ref={liveRef}>` is unmounted (`phase !== "review" && phase !== "analyzing"`). On Redo, `restart()` sets phase back to `idle`, so React mounts a **new** `<video>` element. `liveRef.current` now points to that fresh element which has no `srcObject`. The code only calls `openCamera()` when no live tracks exist — when tracks are still alive (camera source), nothing reattaches the stream → black frame.
 
-1. **Drop the native `<video controls>`** in `review` phase — native controls can't host custom marks.
-2. **Build a custom timeline bar** placed just under the video, replacing both the native controls and the existing trim panel:
-   - Full-width track representing `0 → duration`.
-   - A highlighted segment between `trimStart` and `trimEnd` (primary color, lower opacity).
-   - Two draggable handles (start / end) rendered as vertical marker lines with grab targets, positioned on the track.
-   - A playhead indicator that follows `currentTime`.
-   - Click anywhere on the track → seek to that time.
-   - A small play/pause button on the left, and `mm:ss.cs / mm:ss.cs` time readout on the right.
-3. **Hide the entire "Crop for AI analysis" box** (lines ~367–419): the start/end sliders, the "Set start/end = current" buttons, the reset button, and the helper text are removed. Trim state (`trimStart`, `trimEnd`) is kept and now driven exclusively by the new in-bar handles.
-4. **Loop logic** in `onTimeUpdate` stays as is (loops between `trimStart` and `trimEnd` when no result yet).
-5. After analysis (when `result` is set), the trim handles are hidden and the bar acts as a regular scrubber so the user can review takeoff/apex/landing.
+**Fix:** In `CameraAIJump.tsx`, add a `useEffect([phase])` that, whenever `phase === "idle"` and `streamRef.current` exists, sets `liveRef.current.srcObject = streamRef.current` and calls `play()`. This guarantees the stream is reattached on every (re)mount of the live element. Also simplify `restart()` to just reset state — the effect handles attachment, and falls back to `openCamera()` if no stream is alive.
 
-## Technical details
+### 2. Black flicker on every page navigation
+Each route change briefly flashes black.
 
-- Implement the bar with a single `div` track using `position: relative`. Handles and playhead are absolutely positioned at `left: ${(time / duration) * 100}%`.
-- Drag handling: `onPointerDown` on each handle → `setPointerCapture` → `pointermove` updates `trimStart`/`trimEnd` clamped to `[0, other-0.05]`; `pointerup` releases.
-- Clicking the track (not on a handle) seeks the video; dragging a handle does not seek.
-- Use existing semantic tokens (`bg-primary`, `bg-primary/30`, `bg-white/20`, `text-muted-foreground`).
-- No changes to `analyze()`, detection logic, or other camera components.
+**Cause:** `<main>` in `AppLayout.tsx` uses `animate-fade-in`, defined in `tailwind.config.ts` as `from { opacity: 0; transform: translateY(8px) }`. The animation runs on every `<Outlet />` change because `<main>` is the same node but its content swaps — actually it re-runs because React unmounts/mounts the route subtree. During the opacity-0 frame, the body shows through as a dark color, producing the flicker.
+
+**Fix (smaller of two options, no design change):** Move `animate-fade-in` off the persistent `<main>` and apply a subtler fade only to the route content via a wrapper, OR simply drop the translateY and start from `opacity: 0.6` instead of `0` so there is no perceptible blackout. Concretely, update the `fade-in` keyframe in `tailwind.config.ts`:
+```
+from { opacity: 0.6; transform: none }
+to   { opacity: 1;   transform: none }
+```
+and shorten duration to `0.2s`. This keeps a soft transition without the blackout flash.
+
+## Files to change
+- `src/components/camera/CameraAIJump.tsx` — add reattach effect, simplify `restart()`.
+- `src/tailwind.config.ts` — soften `fade-in` keyframe (remove opacity 0 and translateY).
+
+No business logic, no other components touched.
