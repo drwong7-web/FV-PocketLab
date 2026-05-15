@@ -322,11 +322,14 @@ export function CameraAIJump({ onConfirm, onClose }: CameraAIJumpProps) {
               ref={(el) => { playRef.current = el; }}
               src={videoUrl}
               playsInline
-              controls={phase === "review"}
+              controls={false}
               className="h-full w-full object-contain"
               onLoadedMetadata={onLoadedMetadata}
+              onPlay={() => setIsPlaying(true)}
+              onPause={() => setIsPlaying(false)}
               onTimeUpdate={() => {
                 const v = playRef.current; if (!v) return;
+                setCurrentTime(v.currentTime);
                 // Loop playback within trim region (only when not yet analyzed)
                 if (!result && trimEnd > 0 && v.currentTime > trimEnd) {
                   v.currentTime = trimStart;
