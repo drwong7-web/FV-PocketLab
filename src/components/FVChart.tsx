@@ -230,7 +230,7 @@ export function FVChart({
             )}
 
             {Pmax && Pmax > 0 && (
-              <g transform="translate(180, 14)">
+              <g transform={`translate(${hasOptimal ? 180 : 110}, 0)`}>
                 <line x1="0" y1="0" x2="18" y2="0" stroke={isoColor} strokeDasharray="2 4" />
                 <text x="22" y="3" fontSize="10" fill={axisColor}>iso-Pmax</text>
               </g>
