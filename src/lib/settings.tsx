@@ -32,6 +32,12 @@ const TR = {
   customHue: { fr: "Teinte personnalisée", en: "Custom hue", ar: "تدرج مخصص" },
   done: { fr: "Terminé", en: "Done", ar: "تم" },
   logout: { fr: "Déconnexion", en: "Sign out", ar: "تسجيل الخروج" },
+  exportFolder: { fr: "Dossier d'export des rapports", en: "Reports export folder", ar: "مجلد تصدير التقارير" },
+  chooseFolder: { fr: "Choisir un dossier", en: "Choose folder", ar: "اختر مجلداً" },
+  resetFolder: { fr: "Réinitialiser", en: "Reset", ar: "إعادة تعيين" },
+  defaultDownloads: { fr: "Téléchargements par défaut", en: "Default Downloads", ar: "التنزيلات الافتراضية" },
+  folderNotSupported: { fr: "Non supporté sur ce navigateur — utilise Téléchargements", en: "Not supported in this browser — uses Downloads", ar: "غير مدعوم في هذا المتصفح — يستخدم التنزيلات" },
+  savedTo: { fr: "Enregistré dans", en: "Saved to", ar: "تم الحفظ في" },
 } as const;
 
 export type TKey = keyof typeof TR;

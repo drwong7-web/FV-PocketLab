@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
-import { Activity, Check, Home, Languages, LogOut, Moon, Palette, Settings as SettingsIcon, Sun, Users } from "lucide-react";
+import { Activity, Check, Folder, Home, Languages, LogOut, Moon, Palette, Settings as SettingsIcon, Sun, Users } from "lucide-react";
+import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useSettings, type Lang, type Theme } from "@/lib/settings";
+import { clearExportDirectory, getExportDirectoryLabel, isDirectoryPickerSupported, pickExportDirectory } from "@/lib/exportTarget";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -18,6 +20,24 @@ export default function AppLayout() {
   const navigate = useNavigate();
   const { lang, theme, accent, setLang, setTheme, setAccent, t } = useSettings();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [exportDir, setExportDir] = useState<string | null>(null);
+  const pickerSupported = isDirectoryPickerSupported();
+
+  useEffect(() => {
+    if (settingsOpen) setExportDir(getExportDirectoryLabel());
+  }, [settingsOpen]);
+
+  const handlePickFolder = async () => {
+    const name = await pickExportDirectory();
+    if (name) {
+      setExportDir(name);
+      toast.success(`${t("savedTo")} ${name}`);
+    }
+  };
+  const handleResetFolder = async () => {
+    await clearExportDirectory();
+    setExportDir(null);
+  };
 
   const swatches = [
     { hue: "142", label: "Green" },
@@ -178,6 +198,30 @@ export default function AppLayout() {
                   }}
                 />
               </div>
+            </section>
+
+            <section className="space-y-3">
+              <div className="flex items-center gap-2 text-sm font-semibold">
+                <Folder className="h-4 w-4 text-primary" />
+                <h3>{t("exportFolder")}</h3>
+              </div>
+              <div className="rounded-lg border border-border bg-card px-3 py-2.5 text-sm">
+                <span className="text-muted-foreground">{exportDir ?? t("defaultDownloads")}</span>
+              </div>
+              {pickerSupported ? (
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={handlePickFolder} className="flex-1">
+                    {t("chooseFolder")}
+                  </Button>
+                  {exportDir && (
+                    <Button variant="ghost" size="sm" onClick={handleResetFolder}>
+                      {t("resetFolder")}
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">{t("folderNotSupported")}</p>
+              )}
             </section>
           </div>
 
