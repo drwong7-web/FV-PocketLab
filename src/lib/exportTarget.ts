@@ -113,10 +113,12 @@ async function ensurePermission(handle: FileSystemDirectoryHandle): Promise<bool
 }
 
 async function writeViaCapacitor(blob: Blob, filename: string): Promise<boolean> {
+  if (!isCapacitor()) return false;
   try {
-    // Dynamic import — only resolves if @capacitor/filesystem is installed in the native app.
+    // Hide specifier behind a runtime value so Vite skips static resolution in dev.
+    const name = ["@capacitor", "filesystem"].join("/");
     // @ts-ignore
-    const mod = await import(/* @vite-ignore */ "@capacitor/filesystem").catch(() => null);
+    const mod: any = await import(/* @vite-ignore */ name).catch(() => null);
     if (!mod?.Filesystem) return false;
     const { Filesystem, Directory } = mod;
     const buf = await blob.arrayBuffer();
