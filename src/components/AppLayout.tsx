@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
-import { Activity, Check, Home, Languages, LogOut, Moon, Palette, Settings as SettingsIcon, Sun, Users } from "lucide-react";
+import { Activity, Check, Folder, Home, Languages, LogOut, Moon, Palette, Settings as SettingsIcon, Sun, Users } from "lucide-react";
+import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useSettings, type Lang, type Theme } from "@/lib/settings";
+import { clearExportDirectory, getExportDirectoryLabel, isDirectoryPickerSupported, pickExportDirectory } from "@/lib/exportTarget";
 import { cn } from "@/lib/utils";
 
 const navItems = [
