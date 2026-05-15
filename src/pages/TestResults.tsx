@@ -550,7 +550,7 @@ function R2Explanation({ r2 }: { r2: number }) {
   return (
     <div className="mt-1 text-center text-xs space-y-1">
       <p className="text-muted-foreground">
-        Le R² mesure la qualité de l'ajustement linéaire entre force et vitesse (1 = parfait).
+        R² = coefficient de détermination : indique la fiabilité du test ( 1 = parfait ).
       </p>
       <p className={`font-medium ${color}`}>{text}</p>
     </div>
