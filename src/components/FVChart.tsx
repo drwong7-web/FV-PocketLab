@@ -208,7 +208,7 @@ export function FVChart({
           )}
 
           {/* Legend */}
-          <g transform={`translate(${PAD_LEFT}, ${CHART_H - 56})`}>
+          <g transform={`translate(${PAD_LEFT}, ${CHART_H - 14})`}>
             <line x1="0" y1="0" x2="18" y2="0" stroke={currentColor} strokeWidth="2.5" />
             <text x="22" y="3" fontSize="10" fill={axisColor}>Profil mesuré</text>
 
@@ -237,7 +237,7 @@ export function FVChart({
             )}
           </g>
 
-          <text x={CHART_W / 2} y={CHART_H - 14} textAnchor="middle" fontSize="11" fill={axisColor}>
+          <text x={CHART_W / 2} y={CHART_H - 56} textAnchor="middle" fontSize="11" fill={axisColor}>
             Vitesse (m/s)
           </text>
 
