@@ -598,7 +598,7 @@ function JumpReport({ test, results, chartRef }: { test: TestRecord; results: Ju
             />
           </div>
           <p className="mt-2 text-center text-muted-foreground text-sm">
-            R² = {results.r2.toFixed(3)}
+            R² = {results.r2.toFixed(3)}{" "}
           </p>
         </CardContent>
       </Card>
