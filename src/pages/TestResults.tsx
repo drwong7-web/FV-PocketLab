@@ -543,7 +543,7 @@ function ReferencesCard({ kind }: { kind: "jump" | "sprint" }) {
 function TargetSummary({ kind, sport }: { kind: "jump" | "sprint"; sport?: string | null }) {
   const target = kind === "jump" ? getJumpTarget(sport) : getSprintTarget(sport);
   const label = getSportTargets(sport).label;
-  if (!target) return null;
+  if (!target || label === "Athlète polyvalent") return null;
   return (
     <p className="mt-2 text-center text-xs text-muted-foreground">
       Cible {label} (Jiménez-Reyes) : F0 ≈ {target.F0} N/kg · V0 ≈ {target.V0} m/s · Pmax ≈ {target.Pmax} W/kg
@@ -557,8 +557,9 @@ function JumpReport({ test, results, chartRef }: { test: TestRecord; results: Ju
     ? Math.sqrt((-4 * results.Pmax) / results.FVoptimal)
     : undefined;
   const optimalF0 = optimalV0 ? (4 * results.Pmax) / optimalV0 : undefined;
-  const target = getJumpTarget(test.athletes?.sport);
   const sportLabel = getSportTargets(test.athletes?.sport).label;
+  const hideTarget = sportLabel === "Athlète polyvalent";
+  const target = hideTarget ? undefined : getJumpTarget(test.athletes?.sport);
 
   return (
     <>
@@ -593,7 +594,7 @@ function JumpReport({ test, results, chartRef }: { test: TestRecord; results: Ju
               targetV0={target?.V0}
               targetF0Range={target?.F0Range}
               targetV0Range={target?.V0Range}
-              targetLabel={sportLabel}
+              targetLabel={hideTarget ? undefined : sportLabel}
               Pmax={results.Pmax}
             />
           </div>
@@ -614,8 +615,9 @@ function SprintReport({ test, results, chartRef }: { test: TestRecord; results: 
   const points = results.velocityProfile
     .map((v, i) => ({ velocity: v, force: results.FVprofile[i] }))
     .filter((_, i) => i % 10 === 0);
-  const target = getSprintTarget(test.athletes?.sport);
   const sportLabel = getSportTargets(test.athletes?.sport).label;
+  const hideTarget = sportLabel === "Athlète polyvalent";
+  const target = hideTarget ? undefined : getSprintTarget(test.athletes?.sport);
   const optimalV0 = target?.V0;
   const optimalF0 = target?.F0;
 
@@ -647,7 +649,7 @@ function SprintReport({ test, results, chartRef }: { test: TestRecord; results: 
               targetV0={target?.V0}
               targetF0Range={target?.F0Range}
               targetV0Range={target?.V0Range}
-              targetLabel={sportLabel}
+              targetLabel={hideTarget ? undefined : sportLabel}
               Pmax={results.Pmax}
             />
           </div>
