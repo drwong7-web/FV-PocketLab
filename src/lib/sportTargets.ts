@@ -74,15 +74,10 @@ const SPORT_TARGETS: Record<string, SportTargets> = {
     jump:   { F0: 30, V0: 3.4, Pmax: 25, F0Range: 3, V0Range: 0.4 },
     sprint: { F0: 6.5, V0: 8.5, Pmax: 14, F0Range: 0.7, V0Range: 0.5 },
   },
-  default: {
-    label: "Athlète polyvalent",
-    jump:   { F0: 30, V0: 3.5, Pmax: 26, F0Range: 4, V0Range: 0.5 },
-    sprint: { F0: 7.0, V0: 9.0, Pmax: 16, F0Range: 1.0, V0Range: 0.7 },
-  },
 };
 
-function normalize(sport?: string | null): string {
-  if (!sport) return "default";
+function normalize(sport?: string | null): string | null {
+  if (!sport) return null;
   const s = sport
     .toLowerCase()
     .normalize("NFD")
@@ -96,17 +91,18 @@ function normalize(sport?: string | null): string {
   if (s.includes("sprint") || s === "100m" || s === "200m") return "sprint";
   if (s.includes("athle")) return "athletisme";
   if (s.includes("cycl") || s.includes("velo")) return "cyclisme";
-  return "default";
+  return null;
 }
 
-export function getSportTargets(sport?: string | null): SportTargets {
-  return SPORT_TARGETS[normalize(sport)] ?? SPORT_TARGETS.default;
+export function getSportTargets(sport?: string | null): SportTargets | undefined {
+  const key = normalize(sport);
+  return key ? SPORT_TARGETS[key] : undefined;
 }
 
 export function getJumpTarget(sport?: string | null): FVTarget | undefined {
-  return getSportTargets(sport).jump;
+  return getSportTargets(sport)?.jump;
 }
 
 export function getSprintTarget(sport?: string | null): FVTarget | undefined {
-  return getSportTargets(sport).sprint;
+  return getSportTargets(sport)?.sprint;
 }
