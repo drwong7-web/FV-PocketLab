@@ -230,6 +230,19 @@ export default function AppLayout() {
               ) : (
                 <p className="text-xs text-muted-foreground">{t("folderNotSupported")}</p>
               )}
+              {pickerSupported && inIframe && (
+                <p className="text-xs text-muted-foreground">
+                  {t("iframeBlocked")}{" "}
+                  <a
+                    href={window.location.href}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-primary underline underline-offset-2"
+                  >
+                    {t("openInNewTab")}
+                  </a>
+                </p>
+              )}
             </section>
           </div>
 
