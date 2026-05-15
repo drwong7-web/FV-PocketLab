@@ -30,17 +30,16 @@ export default function AppLayout() {
 
   const handlePickFolder = async () => {
     const res = await pickExportDirectory();
-    if (res.ok) {
+    if (res.ok === true) {
       setExportDir(res.name);
       toast.success(`${t("savedTo")} ${res.name}`);
-    } else if (res.reason === "cancelled") {
-      toast(t("pickerCancelled"));
-    } else if (res.reason === "iframe-blocked") {
-      toast.error(t("iframeBlocked"));
-    } else if (res.reason === "unsupported") {
-      toast.error(t("browserUnsupported"));
-    } else {
-      toast.error(res.message || t("browserUnsupported"));
+      return;
+    }
+    switch (res.reason) {
+      case "cancelled": toast(t("pickerCancelled")); break;
+      case "iframe-blocked": toast.error(t("iframeBlocked")); break;
+      case "unsupported": toast.error(t("browserUnsupported")); break;
+      default: toast.error(res.message || t("browserUnsupported"));
     }
   };
   const handleResetFolder = async () => {
