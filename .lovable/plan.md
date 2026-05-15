@@ -1,46 +1,25 @@
-## Objectif
+## Goal
 
-1. **Upload vidéo** depuis le stockage de l'appareil dans tous les outils caméra (`CameraAIJump`, `CameraDistance`, `CameraCalibration` si pertinent).
-2. **Crop temporel** (trim début/fin) avant l'analyse IA, **uniquement dans `CameraAIJump`**.
+In `CameraAIJump`, remove the separate "Crop for AI analysis" panel (Start/End sliders + buttons) and put the trim markers directly on the video's playback bar.
 
-## 1. Upload vidéo (tous les composants caméra)
+## Changes (only `src/components/camera/CameraAIJump.tsx`)
 
-Dans chaque composant en phase initiale (avant capture), ajouter un bouton secondaire "Importer une vidéo" à côté du bouton d'enregistrement :
+1. **Drop the native `<video controls>`** in `review` phase — native controls can't host custom marks.
+2. **Build a custom timeline bar** placed just under the video, replacing both the native controls and the existing trim panel:
+   - Full-width track representing `0 → duration`.
+   - A highlighted segment between `trimStart` and `trimEnd` (primary color, lower opacity).
+   - Two draggable handles (start / end) rendered as vertical marker lines with grab targets, positioned on the track.
+   - A playhead indicator that follows `currentTime`.
+   - Click anywhere on the track → seek to that time.
+   - A small play/pause button on the left, and `mm:ss.cs / mm:ss.cs` time readout on the right.
+3. **Hide the entire "Crop for AI analysis" box** (lines ~367–419): the start/end sliders, the "Set start/end = current" buttons, the reset button, and the helper text are removed. Trim state (`trimStart`, `trimEnd`) is kept and now driven exclusively by the new in-bar handles.
+4. **Loop logic** in `onTimeUpdate` stays as is (loops between `trimStart` and `trimEnd` when no result yet).
+5. After analysis (when `result` is set), the trim handles are hidden and the bar acts as a regular scrubber so the user can review takeoff/apex/landing.
 
-- `<input type="file" accept="video/*" hidden ref={fileInputRef}>` déclenché par le bouton.
-- À la sélection :
-  - `URL.createObjectURL(file)` → alimente `videoUrl`.
-  - Stoppe le flux caméra : `streamRef.current?.getTracks().forEach(t => t.stop())`.
-  - Passe directement en phase `review` (skip `idle`/`recording`).
-- `restart()` ramène à `idle` sans réouvrir la caméra automatiquement si l'origine était un upload — l'utilisateur choisit à nouveau (caméra ou upload).
-- Dans `CameraDistance` et `CameraCalibration`, le flux est identique : on charge le fichier dans le `<video>` de revue, l'utilisateur peut scrubber et placer ses marqueurs comme avec une vidéo enregistrée.
+## Technical details
 
-Note : `accept="video/*"` sans `capture` ouvre le sélecteur natif (galerie/fichiers) sur mobile.
-
-## 2. Crop temporel pour l'analyse IA (`CameraAIJump` uniquement)
-
-En phase `review`, avant `Analyze with AI` :
-
-- Mini "trimmer" sous la vidéo dans la `Card` :
-  - Deux poignées sur une timeline `[0, duration]` → `trimStart`, `trimEnd`.
-  - Boutons `[ Set start ]` / `[ Set end ]` qui reprennent `playRef.current.currentTime` pour précision.
-  - Affichage `mm:ss.cs` + durée sélectionnée.
-  - Pendant la lecture de prévisualisation, si `currentTime > trimEnd` → revient à `trimStart` (boucle visuelle sur la zone choisie).
-- Initialisation : `trimStart = 0`, `trimEnd = duration` au `loadedmetadata`.
-- `analyze()` modifié :
-  - Boucle de seek de `trimStart` → `trimEnd` au lieu de `0` → `duration`.
-  - `progress = (t - trimStart) / (trimEnd - trimStart)`.
-  - Les timestamps issus de `detectJump` restent relatifs au premier sample, donc inchangés en aval.
-  - `seekToTime(...)` continue de fonctionner sur le timeline absolu de la vidéo.
-
-## Fichiers modifiés
-
-- `src/components/camera/CameraAIJump.tsx` — bouton import + trimmer + analyse bornée.
-- `src/components/camera/CameraDistance.tsx` — bouton import + chargement fichier en revue.
-- `src/components/camera/CameraCalibration.tsx` — bouton import + chargement fichier en revue.
-
-## Détails techniques
-
-- Trimmer maison léger (2 ranges superposés ou track + 2 poignées custom), sans nouvelle dépendance, stylé avec les tokens existants.
-- Les `URL.createObjectURL` créées sont libérées dans le cleanup déjà présent.
-- Pas de changement aux moteurs de calcul (`jumpDetection`, `fvCalculations`).
+- Implement the bar with a single `div` track using `position: relative`. Handles and playhead are absolutely positioned at `left: ${(time / duration) * 100}%`.
+- Drag handling: `onPointerDown` on each handle → `setPointerCapture` → `pointermove` updates `trimStart`/`trimEnd` clamped to `[0, other-0.05]`; `pointerup` releases.
+- Clicking the track (not on a handle) seeks the video; dragging a handle does not seek.
+- Use existing semantic tokens (`bg-primary`, `bg-primary/30`, `bg-white/20`, `text-muted-foreground`).
+- No changes to `analyze()`, detection logic, or other camera components.
