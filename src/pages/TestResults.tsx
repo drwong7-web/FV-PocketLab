@@ -597,8 +597,8 @@ function JumpReport({ test, results, chartRef }: { test: TestRecord; results: Ju
               Pmax={results.Pmax}
             />
           </div>
-          <p className="mt-2 text-center text-xs text-muted-foreground">
-            R² = {results.r2.toFixed(3)} — droite mesurée (vert), optimale (rouge), cible sport (bleu), iso-Pmax (gris)
+          <p className="mt-2 text-center text-muted-foreground text-sm">
+            R² = {results.r2.toFixed(3)}
           </p>
         </CardContent>
       </Card>
@@ -651,7 +651,7 @@ function SprintReport({ test, results, chartRef }: { test: TestRecord; results: 
               Pmax={results.Pmax}
             />
           </div>
-          <p className="mt-2 text-center text-xs text-muted-foreground">
+          <p className="mt-2 text-center text-muted-foreground text-sm">
             R² = {results.r2.toFixed(3)} · τ = {results.tau.toFixed(3)} s — modèle Morin & Samozino (2016)
           </p>
           <TargetSummary kind="sprint" sport={test.athletes?.sport} />
