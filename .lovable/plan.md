@@ -1,22 +1,39 @@
 ## Problème
 
-Le bouton « Choisir un dossier » ne fait rien visiblement dans l'aperçu Lovable.
+Dans le rapport exporté (PDF et DOCX), le graphique Force-Vitesse apparaît comme une image entièrement noire.
 
-**Cause :** L'aperçu s'affiche dans un iframe, et la Permissions-Policy du navigateur bloque `window.showDirectoryPicker()` dans les iframes cross-origin. L'appel lève une `SecurityError` (« The request is not allowed by the user agent or the platform in the current context »). Notre code attrape silencieusement cette erreur dans `pickExportDirectory()` et retourne `null`, donc rien n'apparaît à l'écran — d'où l'impression que le bouton ne fonctionne pas.
+## Cause
 
-Hors iframe (onglet plein écran sur Chrome/Edge desktop, ou app native Capacitor), l'API fonctionne normalement.
+Dans `src/pages/TestResults.tsx` (`captureChartDataUrl`), on clone le `<svg>` du `FVChart`, on le sérialise en blob `image/svg+xml`, puis on le charge dans une `Image` HTML pour le dessiner sur un `<canvas>`.
 
-## Correctifs
+Le SVG de `src/components/FVChart.tsx` utilise massivement des couleurs liées au design system :
+- `fill="hsl(var(--card))"`
+- `stroke={gridColor}` / `fill={axisColor}` où ces valeurs sont elles-mêmes du type `hsl(var(--muted-foreground))`
+- couleurs des points, ligne F-V, zone cible, etc.
 
-### 1. `src/lib/exportTarget.ts`
-- Détecter l'exécution en iframe (`window.self !== window.top`) et exposer `isInIframe()`.
-- Dans `pickExportDirectory()`, ne plus avaler les erreurs : retourner un objet `{ ok, name?, reason? }` avec des codes (`unsupported`, `iframe-blocked`, `cancelled`, `error`) au lieu de `string | null`.
-- Conserver le comportement Capacitor existant.
+Une fois sérialisé et chargé dans une `Image` isolée du DOM, **les variables CSS `--card`, `--muted-foreground`, etc. ne sont plus résolues**. Toutes les couleurs deviennent invalides → noir/transparent. En thème sombre, le rectangle de fond `hsl(var(--card))` devient noir et masque tout le contenu (lui aussi noir/invalide).
 
-### 2. `src/components/AppLayout.tsx`
-- Adapter `handlePickFolder` au nouveau retour : afficher un `toast.error` explicite si `iframe-blocked` (« Ouvrez l'app dans un nouvel onglet pour choisir un dossier ») ou `unsupported` (« Navigateur non compatible — utilisez Chrome/Edge desktop »).
-- Ajouter sous le bouton un petit texte d'aide quand on est en iframe, avec un lien « Ouvrir dans un nouvel onglet » qui pointe vers `window.location.href` cible (`target="_blank"`).
-- Ajouter les clés i18n correspondantes (`openInNewTab`, `iframeBlocked`, `browserUnsupported`) dans `src/lib/settings.tsx` (fr/en/ar).
+## Correction
 
-## Hors scope
-Aucun changement de logique d'export PDF/Word ni de stockage. Uniquement le retour d'erreur du sélecteur et le feedback UI.
+Modifier uniquement `captureChartDataUrl` dans `src/pages/TestResults.tsx` pour **inliner les couleurs calculées** dans le SVG cloné avant la sérialisation :
+
+1. Avant de cloner, parcourir chaque élément du `<svg>` original avec `querySelectorAll("*")`.
+2. Pour chaque élément, lire `getComputedStyle(el)` et lire aussi les attributs `fill` / `stroke` directement présents (qui peuvent contenir `hsl(var(--…))`).
+3. Calculer les valeurs résolues :
+   - Si l'attribut `fill` ou `stroke` contient `var(`, le remplacer par une valeur résolue. Méthode simple : créer un élément temporaire `<span>` dans le DOM, lui appliquer `style.color = attribute`, lire `getComputedStyle(span).color` (le navigateur résout les `var(...)`), puis utiliser cette valeur RGB.
+   - Sinon, conserver la valeur d'origine.
+4. Appliquer ensuite ces valeurs résolues comme attributs inline sur les éléments du SVG cloné (mêmes index ou via un second `querySelectorAll`).
+5. Forcer un fond blanc explicite : remplacer le premier `<rect>` de fond (`fill="hsl(var(--card))"`) par `fill="#ffffff"` pour garantir un rendu lisible dans le rapport quel que soit le thème actif.
+6. Conserver le fallback `html2canvas` existant comme filet de sécurité.
+
+Aucun changement nécessaire dans `FVChart.tsx`, `pdfReport.ts`, `docxExport.ts`, ni dans la logique d'export.
+
+## Fichiers modifiés
+
+- `src/pages/TestResults.tsx` — fonction `captureChartDataUrl` uniquement.
+
+## Vérification
+
+- Exporter un test en PDF (thème clair et thème sombre) → le graphique doit apparaître en couleurs lisibles sur fond blanc.
+- Exporter le même test en DOCX → image du graphique correctement rendue.
+- Vérifier qu'aucune régression visuelle n'apparaît sur la page `TestResults` elle-même (on ne touche que la fonction de capture).

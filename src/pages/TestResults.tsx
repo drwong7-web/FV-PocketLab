@@ -248,6 +248,54 @@ export default function TestResults() {
         const clonedSvg = svg.cloneNode(true) as SVGSVGElement;
         clonedSvg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
         clonedSvg.setAttribute("xmlns:xlink", "http://www.w3.org/1999/xlink");
+
+        // Resolve CSS variables (hsl(var(--...))) by computing them via a temp element,
+        // then inline the resolved colors on the cloned SVG so the rasterizer can render them.
+        const resolver = document.createElement("span");
+        resolver.style.position = "absolute";
+        resolver.style.visibility = "hidden";
+        document.body.appendChild(resolver);
+        const resolveColor = (value: string | null): string | null => {
+          if (!value) return null;
+          if (!value.includes("var(") && !value.startsWith("hsl(") && !value.startsWith("rgb(")) {
+            // plain value (e.g. "#fff", "none", "currentColor") — keep as is unless currentColor
+            if (value !== "currentColor") return value;
+          }
+          try {
+            resolver.style.color = "";
+            resolver.style.color = value;
+            const computed = getComputedStyle(resolver).color;
+            return computed || value;
+          } catch {
+            return value;
+          }
+        };
+
+        const srcEls = Array.from(svg.querySelectorAll<SVGElement>("*"));
+        const dstEls = Array.from(clonedSvg.querySelectorAll<SVGElement>("*"));
+        const len = Math.min(srcEls.length, dstEls.length);
+        for (let i = 0; i < len; i++) {
+          const src = srcEls[i];
+          const dst = dstEls[i];
+          const cs = getComputedStyle(src);
+          const fillAttr = src.getAttribute("fill");
+          const strokeAttr = src.getAttribute("stroke");
+          const fill = resolveColor(fillAttr ?? cs.fill);
+          const stroke = resolveColor(strokeAttr ?? cs.stroke);
+          if (fill && fill !== "none") dst.setAttribute("fill", fill);
+          if (stroke && stroke !== "none") dst.setAttribute("stroke", stroke);
+          // Preserve text color too
+          if (src.tagName.toLowerCase() === "text") {
+            const textColor = resolveColor(cs.fill) ?? "#000";
+            dst.setAttribute("fill", textColor);
+          }
+        }
+        document.body.removeChild(resolver);
+
+        // Force a white background on the first rect (chart background) for legibility in reports.
+        const firstRect = clonedSvg.querySelector("rect");
+        if (firstRect) firstRect.setAttribute("fill", "#ffffff");
+
         const serialized = new XMLSerializer().serializeToString(clonedSvg);
         const blob = new Blob([serialized], { type: "image/svg+xml;charset=utf-8" });
         const url = URL.createObjectURL(blob);
