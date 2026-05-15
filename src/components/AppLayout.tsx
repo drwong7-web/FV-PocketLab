@@ -33,9 +33,7 @@ export default function AppLayout() {
     if (res.ok) {
       setExportDir(res.name);
       toast.success(`${t("savedTo")} ${res.name}`);
-      return;
-    }
-    if (res.reason === "cancelled") {
+    } else if (res.reason === "cancelled") {
       toast(t("pickerCancelled"));
     } else if (res.reason === "iframe-blocked") {
       toast.error(t("iframeBlocked"));
