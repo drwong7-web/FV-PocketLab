@@ -542,8 +542,8 @@ function ReferencesCard({ kind }: { kind: "jump" | "sprint" }) {
 
 function TargetSummary({ kind, sport }: { kind: "jump" | "sprint"; sport?: string | null }) {
   const target = kind === "jump" ? getJumpTarget(sport) : getSprintTarget(sport);
-  const label = getSportTargets(sport).label;
-  if (!target || label === "Athlète polyvalent") return null;
+  const label = getSportTargets(sport)?.label;
+  if (!target || !label) return null;
   return (
     <p className="mt-2 text-center text-xs text-muted-foreground">
       Cible {label} (Jiménez-Reyes) : F0 ≈ {target.F0} N/kg · V0 ≈ {target.V0} m/s · Pmax ≈ {target.Pmax} W/kg
