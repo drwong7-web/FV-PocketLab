@@ -474,7 +474,7 @@ function ProfileBar({ imbalance, profile }: { imbalance: number; profile: string
         <div className={`absolute top-1/2 h-5 w-5 -translate-y-1/2 -translate-x-1/2 rounded-full border-2 border-background ${color} shadow-glow`}
           style={{ left: `${position}%` }} />
       </div>
-      <p className="mt-2 text-center text-xs text-muted-foreground">FVimb = {imbalance.toFixed(1)}%</p>
+      <p className="mt-2 text-center text-muted-foreground text-sm">FVimb = {imbalance.toFixed(1)}%</p>
     </div>
   );
 }
@@ -545,7 +545,7 @@ function TargetSummary({ kind, sport }: { kind: "jump" | "sprint"; sport?: strin
   const label = getSportTargets(sport)?.label;
   if (!target || !label) return null;
   return (
-    <p className="mt-2 text-center text-xs text-muted-foreground">
+    <p className="mt-2 text-center text-muted-foreground text-sm">
       Cible {label} (Jiménez-Reyes) : F0 ≈ {target.F0} N/kg · V0 ≈ {target.V0} m/s · Pmax ≈ {target.Pmax} W/kg
     </p>
   );
