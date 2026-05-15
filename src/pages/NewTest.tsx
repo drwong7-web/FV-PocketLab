@@ -1,7 +1,11 @@
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { ArrowLeft, TrendingUp, Zap } from "lucide-react";
 
 export default function NewTest() {
+  const [params] = useSearchParams();
+  const athleteId = params.get("playerId") ?? params.get("athleteId") ?? "";
+  const qs = athleteId ? `?athleteId=${athleteId}` : "";
+
   return (
     <div className="space-y-6">
       <Link to="/app" className="inline-flex items-center text-xs text-muted-foreground hover:text-foreground">
@@ -14,7 +18,7 @@ export default function NewTest() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <Link to="/app/tests/new/jump" className="glass-card overflow-hidden group hover:border-primary/40 transition-colors">
+        <Link to={`/app/tests/new/jump${qs}`} className="glass-card overflow-hidden group hover:border-primary/40 transition-colors">
           <div className="gradient-primary h-2 w-full" />
           <div className="p-5 space-y-3">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl gradient-primary text-primary-foreground shadow-glow">
@@ -30,7 +34,7 @@ export default function NewTest() {
           </div>
         </Link>
 
-        <Link to="/app/tests/new/sprint" className="glass-card overflow-hidden group hover:border-primary/40 transition-colors">
+        <Link to={`/app/tests/new/sprint${qs}`} className="glass-card overflow-hidden group hover:border-primary/40 transition-colors">
           <div className="gradient-primary h-2 w-full" />
           <div className="p-5 space-y-3">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl gradient-primary text-primary-foreground shadow-glow">
