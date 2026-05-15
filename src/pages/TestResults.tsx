@@ -615,6 +615,7 @@ function JumpReport({ test, results, chartRef }: { test: TestRecord; results: Ju
           <p className="mt-2 text-center text-muted-foreground text-sm">
             R² = {results.r2.toFixed(3)}{" "}
           </p>
+          <R2Explanation r2={results.r2} />
         </CardContent>
       </Card>
       <ModelQualityCard r2={results.r2} points={results.points.length} label="Régression F = F0 − Sfv·V" />
@@ -669,6 +670,7 @@ function SprintReport({ test, results, chartRef }: { test: TestRecord; results: 
           <p className="mt-2 text-center text-muted-foreground text-sm">
             R² = {results.r2.toFixed(3)} · τ = {results.tau.toFixed(3)} s — modèle Morin & Samozino (2016)
           </p>
+          <R2Explanation r2={results.r2} />
           <TargetSummary kind="sprint" sport={test.athletes?.sport} />
         </CardContent>
       </Card>
