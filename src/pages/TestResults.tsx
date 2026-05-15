@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { FVChart } from "@/components/FVChart";
 import {
   Download, ChevronLeft, Activity, Zap, Gauge, FileText, FileType, Save,
-  BookOpen, CheckCircle2, AlertTriangle, ChevronDown,
+  BookOpen, ChevronDown,
 } from "lucide-react";
 import {
   type JumpResults, type SprintResults,
@@ -479,33 +479,6 @@ function ProfileBar({ imbalance, profile }: { imbalance: number; profile: string
   );
 }
 
-function ModelQualityCard({ r2, points, rmse, label }: { r2: number; points: number; rmse?: number; label?: string }) {
-  const ok = r2 >= 0.95;
-  return (
-    <Card className={ok ? "border-success/30" : "border-warning/40"}>
-      <CardHeader>
-        <CardTitle className="font-display text-base flex items-center gap-2">
-          {ok ? <CheckCircle2 className="h-4 w-4 text-success" /> : <AlertTriangle className="h-4 w-4 text-warning" />}
-          Qualité du modèle
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-1.5 text-sm">
-        <div className="flex justify-between"><span className="text-muted-foreground">R² régression F-V</span><span className="font-mono">{r2.toFixed(3)}</span></div>
-        <div className="flex justify-between"><span className="text-muted-foreground">Points utilisés</span><span className="font-mono">{points}</span></div>
-        {rmse !== undefined && (
-          <div className="flex justify-between"><span className="text-muted-foreground">RMSE position</span><span className="font-mono">{rmse.toFixed(3)} m</span></div>
-        )}
-        <p className="pt-1 text-xs text-muted-foreground">
-          {ok
-            ? "Ajustement linéaire de très bonne qualité (Samozino & Morin recommandent R² ≥ 0,95)."
-            : "R² inférieur à 0,95 : interpréter F0/V0/Pmax avec prudence et vérifier la qualité des essais."}
-          {label ? ` · ${label}` : ""}
-        </p>
-      </CardContent>
-    </Card>
-  );
-}
-
 function ReferencesCard({ kind }: { kind: "jump" | "sprint" }) {
   return (
     <Collapsible>
@@ -620,7 +593,7 @@ function JumpReport({ test, results, chartRef }: { test: TestRecord; results: Ju
           <R2Explanation r2={results.r2} />
         </CardContent>
       </Card>
-      <ModelQualityCard r2={results.r2} points={results.points.length} label="Régression F = F0 − Sfv·V" />
+      
       <RecommendationCard reco={reco} />
       <ReferencesCard kind="jump" />
     </>
@@ -676,12 +649,6 @@ function SprintReport({ test, results, chartRef }: { test: TestRecord; results: 
           <TargetSummary kind="sprint" sport={test.athletes?.sport} />
         </CardContent>
       </Card>
-      <ModelQualityCard
-        r2={results.r2}
-        points={results.splits.length}
-        rmse={results.rmse}
-        label="Modèle exponentiel v(t) + régression F-V"
-      />
       <Card>
         <CardHeader><CardTitle className="font-display text-base">Splits</CardTitle></CardHeader>
         <CardContent>
