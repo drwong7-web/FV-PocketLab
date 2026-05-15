@@ -315,8 +315,9 @@ export default function TestResults() {
           chartPng,
         });
       }
-      downloadBlob(blob, filename);
+      const dest = await saveBlobToTarget(blob, filename);
       await saveLocalExport(filename, blob);
+      toast.success(`${filename} → ${dest}`);
     } finally {
       setExporting(false);
     }
