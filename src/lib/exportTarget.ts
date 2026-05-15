@@ -57,6 +57,18 @@ export function isDirectoryPickerSupported(): boolean {
   return isFileSystemAccessSupported() || isCapacitor();
 }
 
+export function isInIframe(): boolean {
+  try {
+    return typeof window !== "undefined" && window.self !== window.top;
+  } catch {
+    return true;
+  }
+}
+
+export type PickResult =
+  | { ok: true; name: string }
+  | { ok: false; reason: "unsupported" | "iframe-blocked" | "cancelled" | "error"; message?: string };
+
 export function getExportDirectoryLabel(): string | null {
   try {
     return localStorage.getItem(LABEL_KEY);
