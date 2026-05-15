@@ -1,23 +1,30 @@
-## Suppression complète de la cible "Athlète polyvalent"
+## Objectif
+Ajouter sous la valeur "R² = …" affichée sous chaque graphique F-V une courte phrase qui explique ce qu'est le R² et comment l'interpréter, pour aider l'utilisateur à lire le résultat.
 
-### Changements
+## Emplacements concernés
+Fichier : `src/pages/TestResults.tsx`
+- **JumpReport** (ligne ~600) : sous le graphique saut vertical, après `R² = {results.r2.toFixed(3)}`.
+- **SprintReport** (ligne ~654) : sous le graphique sprint, après `R² = {results.r2.toFixed(3)} · τ = …`.
 
-**1. `src/lib/sportTargets.ts`**
-- Retirer l'entrée `default` de `SPORT_TARGETS` (label "Athlète polyvalent" + valeurs F0/V0/Pmax pour jump/sprint).
-- Modifier `normalize()` pour retourner `null` quand le sport est vide ou non reconnu (au lieu de `"default"`).
-- Modifier `getSportTargets()` pour retourner `undefined` (au lieu d'un fallback). Type de retour : `SportTargets | undefined`.
-- `getJumpTarget()` / `getSprintTarget()` retournent déjà `undefined` naturellement quand il n'y a pas de cible.
+## Contenu proposé
+Sous le R², ajouter un petit paragraphe en deux parties :
 
-**2. `src/pages/TestResults.tsx`**
-- Retirer les gardes devenues inutiles :
-  - `TargetSummary` : remplacer le check `label === "Athlète polyvalent"` par un simple check sur l'absence de cible (`if (!target) return null`).
-  - `JumpReport` / `SprintReport` : supprimer la variable `hideTarget` et utiliser directement `getSportTargets(...)?.label` ; passer `target` et `targetLabel` directement (ils seront `undefined` automatiquement si le sport n'est pas reconnu).
+1. **Définition** (toujours affichée) :
+   « Le R² mesure la qualité de l'ajustement linéaire entre force et vitesse (1 = parfait). »
 
-### Résultat
-- Aucune trace de "Athlète polyvalent" dans le code ou l'interface.
-- Pour tout athlète sans sport reconnu : aucune cible affichée, ni dans l'app, ni dans les exports PDF/DOCX.
-- Les sports listés (football, rugby, basketball, etc.) continuent d'afficher leurs cibles normalement.
+2. **Interprétation dynamique** selon la valeur :
+   - R² ≥ 0,95 → « Excellent ajustement : F0, V0 et Pmax sont fiables. » (vert/success)
+   - 0,85 ≤ R² < 0,95 → « Ajustement correct : interpréter avec une certaine prudence. » (warning)
+   - R² < 0,85 → « Ajustement faible : vérifier la qualité des essais avant d'exploiter F0/V0/Pmax. » (warning/destructive)
 
-### Fichiers
-- `src/lib/sportTargets.ts`
-- `src/pages/TestResults.tsx`
+Ces seuils sont alignés avec la recommandation Samozino & Morin (R² ≥ 0,95) déjà utilisée dans `ModelQualityCard`.
+
+## Détails techniques
+- Créer un petit composant local `R2Explanation({ r2 }: { r2: number })` réutilisé dans les deux rapports, pour éviter la duplication.
+- Style : `text-xs text-muted-foreground text-center mt-1`, avec la phrase d'interprétation colorée (`text-success` / `text-warning` / `text-destructive`) selon le seuil.
+- Aucune logique métier modifiée, uniquement de la présentation.
+
+## Question ouverte
+Souhaitez-vous :
+- (a) ces seuils 0,95 / 0,85 (cohérents avec la littérature Samozino), ou
+- (b) une seule phrase générique sans variation selon la valeur ?
