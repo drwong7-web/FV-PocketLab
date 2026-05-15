@@ -38,6 +38,10 @@ export function CameraAIJump({ onConfirm, onClose }: CameraAIJumpProps) {
   const [duration, setDuration] = useState(0);
   const [trimStart, setTrimStart] = useState(0);
   const [trimEnd, setTrimEnd] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const trackRef = useRef<HTMLDivElement | null>(null);
+  const draggingRef = useRef<null | "start" | "end">(null);
 
   const stopStream = () => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
