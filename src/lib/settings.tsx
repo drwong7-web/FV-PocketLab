@@ -38,6 +38,10 @@ const TR = {
   defaultDownloads: { fr: "Téléchargements par défaut", en: "Default Downloads", ar: "التنزيلات الافتراضية" },
   folderNotSupported: { fr: "Non supporté sur ce navigateur — utilise Téléchargements", en: "Not supported in this browser — uses Downloads", ar: "غير مدعوم في هذا المتصفح — يستخدم التنزيلات" },
   savedTo: { fr: "Enregistré dans", en: "Saved to", ar: "تم الحفظ في" },
+  openInNewTab: { fr: "Ouvrir dans un nouvel onglet", en: "Open in new tab", ar: "افتح في علامة تبويب جديدة" },
+  iframeBlocked: { fr: "Sélection bloquée dans l'aperçu. Ouvrez l'app dans un nouvel onglet.", en: "Selection blocked in preview. Open the app in a new tab.", ar: "الاختيار محظور في المعاينة. افتح التطبيق في علامة تبويب جديدة." },
+  browserUnsupported: { fr: "Navigateur non compatible. Utilisez Chrome ou Edge sur ordinateur.", en: "Browser not supported. Use Chrome or Edge on desktop.", ar: "المتصفح غير مدعوم. استخدم Chrome أو Edge على الكمبيوتر." },
+  pickerCancelled: { fr: "Sélection annulée", en: "Selection cancelled", ar: "تم إلغاء الاختيار" },
 } as const;
 
 export type TKey = keyof typeof TR;
