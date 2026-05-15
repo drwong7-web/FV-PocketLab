@@ -156,16 +156,10 @@ export function CameraAIJump({ onConfirm, onClose }: CameraAIJumpProps) {
     setDuration(0);
     setTrimStart(0);
     setTrimEnd(0);
-    setPhase("idle");
+    setSource("camera");
     samplesRef.current = [];
-    if (source === "camera") {
-      const alive = streamRef.current?.getVideoTracks().some((t) => t.readyState === "live");
-      if (!alive) await openCamera();
-    } else {
-      // upload mode: don't auto-reopen camera, user picks again
-      setSource("camera");
-      await openCamera();
-    }
+    setPhase("idle");
+    // The phase effect will reattach or reopen the camera on the new <video> mount.
   };
 
   const onLoadedMetadata = () => {
