@@ -368,63 +368,104 @@ export function CameraAIJump({ onConfirm, onClose }: CameraAIJumpProps) {
         )}
       </div>
 
+      {phase === "review" && videoUrl && duration > 0 && (
+        <div className="shrink-0 bg-black/80 px-3 pt-2 pb-1 text-white">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                const v = playRef.current; if (!v) return;
+                if (v.paused) v.play().catch(() => {}); else v.pause();
+              }}
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10 hover:bg-white/20"
+              aria-label={isPlaying ? "Pause" : "Play"}
+            >
+              {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+            </button>
+
+            <div
+              ref={trackRef}
+              className="relative h-8 flex-1 cursor-pointer"
+              onPointerDown={(e) => {
+                if (draggingRef.current) return;
+                const rect = e.currentTarget.getBoundingClientRect();
+                const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+                seekToTime(ratio * duration);
+              }}
+            >
+              {/* track */}
+              <div className="absolute inset-x-0 top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-white/20" />
+              {/* selected segment */}
+              {!result && (
+                <div
+                  className="absolute top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-primary/40"
+                  style={{
+                    left: `${(trimStart / duration) * 100}%`,
+                    width: `${((trimEnd - trimStart) / duration) * 100}%`,
+                  }}
+                />
+              )}
+              {/* playhead progress */}
+              <div
+                className="absolute top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-primary"
+                style={{ left: 0, width: `${(currentTime / duration) * 100}%` }}
+              />
+              {/* playhead dot */}
+              <div
+                className="absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary shadow"
+                style={{ left: `${(currentTime / duration) * 100}%` }}
+              />
+              {/* trim handles (only before analysis) */}
+              {!result && (["start", "end"] as const).map((kind) => {
+                const t = kind === "start" ? trimStart : trimEnd;
+                return (
+                  <div
+                    key={kind}
+                    onPointerDown={(e) => {
+                      e.stopPropagation();
+                      draggingRef.current = kind;
+                      (e.target as Element).setPointerCapture(e.pointerId);
+                    }}
+                    onPointerMove={(e) => {
+                      if (draggingRef.current !== kind) return;
+                      const track = trackRef.current; if (!track) return;
+                      const rect = track.getBoundingClientRect();
+                      const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+                      const time = ratio * duration;
+                      if (kind === "start") setTrimStart(Math.min(time, trimEnd - 0.05));
+                      else setTrimEnd(Math.max(time, trimStart + 0.05));
+                    }}
+                    onPointerUp={(e) => {
+                      if (draggingRef.current === kind) {
+                        draggingRef.current = null;
+                        (e.target as Element).releasePointerCapture(e.pointerId);
+                      }
+                    }}
+                    className="absolute top-0 flex h-full w-5 -translate-x-1/2 cursor-ew-resize touch-none items-center justify-center"
+                    style={{ left: `${(t / duration) * 100}%` }}
+                    aria-label={`${kind} marker`}
+                  >
+                    <div className="h-full w-1 rounded-sm bg-primary shadow-[0_0_0_2px_hsl(var(--background))]" />
+                  </div>
+                );
+              })}
+            </div>
+
+            <span className="shrink-0 font-mono text-[10px] tabular-nums opacity-80">
+              {fmt(currentTime)} / {fmt(duration)}
+            </span>
+          </div>
+          {!result && (
+            <div className="mt-1 flex items-center justify-between text-[10px] text-white/60">
+              <span>Drag the markers to crop the AI analysis range</span>
+              <span className="font-mono">{fmt(trimDur)} selected</span>
+            </div>
+          )}
+        </div>
+      )}
+
       {phase === "review" && (
         <Card className="m-2 max-h-[55vh] shrink-0 overflow-y-auto rounded-lg">
           <div className="space-y-2 p-3 text-xs">
-            {!result && duration > 0 && (
-              <div className="space-y-1.5 rounded-md bg-muted/50 p-2">
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className="font-medium uppercase tracking-wide">Crop for AI analysis</span>
-                  <span className="font-mono opacity-70">{fmt(trimDur)} selected</span>
-                </div>
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="w-10 font-mono text-[10px]">Start</span>
-                    <input
-                      type="range" min={0} max={duration} step={1 / Math.max(captureFps, 30)}
-                      value={trimStart}
-                      onChange={(e) => {
-                        const v = Math.min(parseFloat(e.target.value), trimEnd - 0.05);
-                        setTrimStart(v);
-                      }}
-                      className="flex-1 accent-primary"
-                    />
-                    <span className="w-14 text-right font-mono text-[10px]">{fmt(trimStart)}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-10 font-mono text-[10px]">End</span>
-                    <input
-                      type="range" min={0} max={duration} step={1 / Math.max(captureFps, 30)}
-                      value={trimEnd}
-                      onChange={(e) => {
-                        const v = Math.max(parseFloat(e.target.value), trimStart + 0.05);
-                        setTrimEnd(v);
-                      }}
-                      className="flex-1 accent-primary"
-                    />
-                    <span className="w-14 text-right font-mono text-[10px]">{fmt(trimEnd)}</span>
-                  </div>
-                </div>
-                <div className="flex gap-1">
-                  <button
-                    onClick={() => { const v = playRef.current; if (v) setTrimStart(Math.min(v.currentTime, trimEnd - 0.05)); }}
-                    className="flex-1 rounded-md bg-white/10 px-2 py-1 text-white"
-                  >Set start = current</button>
-                  <button
-                    onClick={() => { const v = playRef.current; if (v) setTrimEnd(Math.max(v.currentTime, trimStart + 0.05)); }}
-                    className="flex-1 rounded-md bg-white/10 px-2 py-1 text-white"
-                  >Set end = current</button>
-                  <button
-                    onClick={() => { setTrimStart(0); setTrimEnd(duration); }}
-                    className="rounded-md bg-white/10 px-2 py-1 text-white"
-                  >Reset</button>
-                </div>
-                <p className="text-[10px] text-muted-foreground">
-                  Only the selected segment will be analyzed by the AI.
-                </p>
-              </div>
-            )}
-
             {!result && (
               <p className="text-muted-foreground">
                 Side view, full body in frame. Tap <strong>Analyze with AI</strong> to detect takeoff & landing automatically.
