@@ -6,7 +6,7 @@ import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useSettings, type Lang, type Theme } from "@/lib/settings";
-import { clearExportDirectory, getExportDirectoryLabel, isDirectoryPickerSupported, pickExportDirectory } from "@/lib/exportTarget";
+import { clearExportDirectory, getExportDirectoryLabel, isDirectoryPickerSupported, isInIframe, pickExportDirectory } from "@/lib/exportTarget";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -22,16 +22,24 @@ export default function AppLayout() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [exportDir, setExportDir] = useState<string | null>(null);
   const pickerSupported = isDirectoryPickerSupported();
+  const inIframe = isInIframe();
 
   useEffect(() => {
     if (settingsOpen) setExportDir(getExportDirectoryLabel());
   }, [settingsOpen]);
 
   const handlePickFolder = async () => {
-    const name = await pickExportDirectory();
-    if (name) {
-      setExportDir(name);
-      toast.success(`${t("savedTo")} ${name}`);
+    const res = await pickExportDirectory();
+    if (res.ok === true) {
+      setExportDir(res.name);
+      toast.success(`${t("savedTo")} ${res.name}`);
+      return;
+    }
+    switch (res.reason) {
+      case "cancelled": toast(t("pickerCancelled")); break;
+      case "iframe-blocked": toast.error(t("iframeBlocked")); break;
+      case "unsupported": toast.error(t("browserUnsupported")); break;
+      default: toast.error(res.message || t("browserUnsupported"));
     }
   };
   const handleResetFolder = async () => {
@@ -221,6 +229,19 @@ export default function AppLayout() {
                 </div>
               ) : (
                 <p className="text-xs text-muted-foreground">{t("folderNotSupported")}</p>
+              )}
+              {pickerSupported && inIframe && (
+                <p className="text-xs text-muted-foreground">
+                  {t("iframeBlocked")}{" "}
+                  <a
+                    href={window.location.href}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-primary underline underline-offset-2"
+                  >
+                    {t("openInNewTab")}
+                  </a>
+                </p>
               )}
             </section>
           </div>

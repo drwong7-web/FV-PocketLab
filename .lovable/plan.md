@@ -1,18 +1,22 @@
-## Cause
-Vite fails to resolve `@capacitor/filesystem` from `src/lib/exportTarget.ts`, which crashes the whole bundle and produces a blank screen. The `/* @vite-ignore */` hint isn't enough because the literal string is still statically analyzed in dev.
+## Problème
 
-## Fix
-Hide the specifier behind a runtime variable so Vite skips static resolution entirely, and only attempt the import on a real native (Capacitor) device:
+Le bouton « Choisir un dossier » ne fait rien visiblement dans l'aperçu Lovable.
 
-```ts
-async function writeViaCapacitor(blob, filename) {
-  if (!isCapacitor()) return false;
-  try {
-    const name = ["@capacitor", "filesystem"].join("/");
-    const mod: any = await import(/* @vite-ignore */ name).catch(() => null);
-    ...
-  } catch { return false; }
-}
-```
+**Cause :** L'aperçu s'affiche dans un iframe, et la Permissions-Policy du navigateur bloque `window.showDirectoryPicker()` dans les iframes cross-origin. L'appel lève une `SecurityError` (« The request is not allowed by the user agent or the platform in the current context »). Notre code attrape silencieusement cette erreur dans `pickExportDirectory()` et retourne `null`, donc rien n'apparaît à l'écran — d'où l'impression que le bouton ne fonctionne pas.
 
-No other file changes are needed. After this edit the web build resolves cleanly and the app renders again; the native code path remains intact for Capacitor packaging.
+Hors iframe (onglet plein écran sur Chrome/Edge desktop, ou app native Capacitor), l'API fonctionne normalement.
+
+## Correctifs
+
+### 1. `src/lib/exportTarget.ts`
+- Détecter l'exécution en iframe (`window.self !== window.top`) et exposer `isInIframe()`.
+- Dans `pickExportDirectory()`, ne plus avaler les erreurs : retourner un objet `{ ok, name?, reason? }` avec des codes (`unsupported`, `iframe-blocked`, `cancelled`, `error`) au lieu de `string | null`.
+- Conserver le comportement Capacitor existant.
+
+### 2. `src/components/AppLayout.tsx`
+- Adapter `handlePickFolder` au nouveau retour : afficher un `toast.error` explicite si `iframe-blocked` (« Ouvrez l'app dans un nouvel onglet pour choisir un dossier ») ou `unsupported` (« Navigateur non compatible — utilisez Chrome/Edge desktop »).
+- Ajouter sous le bouton un petit texte d'aide quand on est en iframe, avec un lien « Ouvrir dans un nouvel onglet » qui pointe vers `window.location.href` cible (`target="_blank"`).
+- Ajouter les clés i18n correspondantes (`openInNewTab`, `iframeBlocked`, `browserUnsupported`) dans `src/lib/settings.tsx` (fr/en/ar).
+
+## Hors scope
+Aucun changement de logique d'export PDF/Word ni de stockage. Uniquement le retour d'erreur du sélecteur et le feedback UI.
