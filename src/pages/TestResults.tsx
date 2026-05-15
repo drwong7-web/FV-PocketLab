@@ -593,7 +593,7 @@ function JumpReport({ test, results, chartRef }: { test: TestRecord; results: Ju
               targetV0={target?.V0}
               targetF0Range={target?.F0Range}
               targetV0Range={target?.V0Range}
-              targetLabel={hideTarget ? undefined : sportLabel}
+              targetLabel={sportLabel}
               Pmax={results.Pmax}
             />
           </div>
