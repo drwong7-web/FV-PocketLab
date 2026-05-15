@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Camera, CircleStop, RotateCcw, Sparkles, Upload, X, Loader2 } from "lucide-react";
+import { Camera, CircleStop, RotateCcw, Sparkles, Upload, X, Loader2, Play, Pause } from "lucide-react";
 import { getPoseLandmarker, PL, LOWER_BODY_CONNECTIONS, type FrameSample } from "@/lib/poseDetector";
 import { detectJump, type JumpDetectionResult } from "@/lib/jumpDetection";
 
