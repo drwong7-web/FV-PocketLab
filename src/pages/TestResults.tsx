@@ -15,6 +15,7 @@ import { getJumpTarget, getSprintTarget, getSportTargets } from "@/lib/sportTarg
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { generateDOCX, downloadBlob, fileNameFor, saveLocalExport } from "@/lib/docxExport";
+import { saveBlobToTarget } from "@/lib/exportTarget";
 import {
   getLocalTest, getLocalTests, markLocalTestSaved, saveLocalTest, setTestDraft,
 } from "@/lib/localHistory";
