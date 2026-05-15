@@ -84,14 +84,16 @@ function setExportDirectoryLabel(label: string | null) {
   } catch { /* */ }
 }
 
-export async function pickExportDirectory(): Promise<string | null> {
+export async function pickExportDirectory(): Promise<PickResult> {
   // Capacitor native: no real picker; use Documents/SprintLab as a virtual choice.
   if (isCapacitor()) {
     const label = "Documents/SprintLab";
     setExportDirectoryLabel(label);
-    return label;
+    return { ok: true, name: label };
   }
-  if (!isFileSystemAccessSupported()) return null;
+  if (!isFileSystemAccessSupported()) {
+    return { ok: false, reason: "unsupported" };
+  }
   try {
     const handle: FileSystemDirectoryHandle = await (window as any).showDirectoryPicker({
       id: "sprintlab-exports",
@@ -99,9 +101,18 @@ export async function pickExportDirectory(): Promise<string | null> {
     });
     await setStoredHandle(handle);
     setExportDirectoryLabel(handle.name);
-    return handle.name;
-  } catch {
-    return null;
+    return { ok: true, name: handle.name };
+  } catch (e: any) {
+    const msg = String(e?.message || e?.name || "");
+    if (e?.name === "AbortError") return { ok: false, reason: "cancelled" };
+    if (
+      e?.name === "SecurityError" ||
+      /not allowed|sandbox|permissions policy|cross-origin/i.test(msg) ||
+      isInIframe()
+    ) {
+      return { ok: false, reason: "iframe-blocked", message: msg };
+    }
+    return { ok: false, reason: "error", message: msg };
   }
 }
 
