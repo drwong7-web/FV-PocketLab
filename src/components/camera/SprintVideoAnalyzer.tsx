@@ -109,8 +109,10 @@ export function SprintVideoAnalyzer({ distances, testDistance, onClose, onConfir
       const all = await navigator.mediaDevices.enumerateDevices();
       const cams = all.filter((d) => d.kind === "videoinput");
       setDevices(cams);
-      const active = stream.getVideoTracks()[0]?.getSettings().deviceId;
+      const settings = stream.getVideoTracks()[0]?.getSettings();
+      const active = settings?.deviceId;
       if (active) setDeviceId(active);
+      if (settings?.frameRate) setMeasuredFps(Math.round(settings.frameRate));
     } catch (e) {
       const err = e as DOMException;
       if (err.name === "NotAllowedError") setRecError("Autorisez l'accès caméra dans le navigateur.");
@@ -258,6 +260,32 @@ export function SprintVideoAnalyzer({ distances, testDistance, onClose, onConfir
     }
   };
 
+  const measureFpsFromVideo = () => {
+    const v = videoRef.current as VideoFrameCallbackVideo | null;
+    if (!v || typeof v.requestVideoFrameCallback !== "function") return;
+    let frames = 0;
+    let firstTs = 0;
+    const wasPaused = v.paused;
+    const wasMuted = v.muted;
+    v.muted = true;
+    const startAt = v.currentTime;
+    const tick = (now: number) => {
+      if (!firstTs) firstTs = now;
+      frames++;
+      const elapsed = (now - firstTs) / 1000;
+      if (elapsed < 1 && frames < 120) {
+        v.requestVideoFrameCallback!(tick);
+      } else {
+        const fps = elapsed > 0 ? Math.round(frames / elapsed) : 0;
+        if (fps > 0) setMeasuredFps(fps);
+        if (wasPaused) v.pause();
+        v.muted = wasMuted;
+        try { v.currentTime = startAt; } catch { /* noop */ }
+      }
+    };
+    v.play().then(() => v.requestVideoFrameCallback!(tick)).catch(() => { /* noop */ });
+  };
+
   const confirm = () => {
     const out: AnalyzerSplitResult[] = distances
       .map((d) => {
@@ -265,7 +293,7 @@ export function SprintVideoAnalyzer({ distances, testDistance, onClose, onConfir
         return t ? { distance: d, time: parseFloat(t.time.toFixed(3)), source: t.source, confidence: t.confidence } : null;
       })
       .filter((x): x is AnalyzerSplitResult => x !== null);
-    onConfirm(out);
+    onConfirm({ splits: out, videoFps: measuredFps });
   };
 
   const tagsCount = Object.keys(tags).length;
@@ -350,7 +378,7 @@ export function SprintVideoAnalyzer({ distances, testDistance, onClose, onConfir
                   src={videoUrl}
                   className="block w-full"
                   playsInline
-                  onLoadedMetadata={(e) => setDuration((e.target as HTMLVideoElement).duration)}
+                  onLoadedMetadata={(e) => { setDuration((e.target as HTMLVideoElement).duration); measureFpsFromVideo(); }}
                   onTimeUpdate={(e) => setCurrentTime((e.target as HTMLVideoElement).currentTime)}
                   onPlay={() => setPlaying(true)}
                   onPause={() => setPlaying(false)}
