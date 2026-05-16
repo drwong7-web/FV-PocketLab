@@ -322,7 +322,7 @@ export function SprintVideoAnalyzer({ distances, testDistance, onClose, onConfir
     setAiBusy(true);
     setAiProgress(0);
     try {
-      const collected = await trackPelvisX(v, { sampleRateHz: 30, onProgress: setAiProgress });
+      const collected = await trackPelvisX(v, { sampleRateHz: 30, onProgress: setAiProgress, startTime: cropStart, endTime: cropEnd });
       setSamples(collected);
       const computed = computeSplitTimesFromSamples(
         collected,
