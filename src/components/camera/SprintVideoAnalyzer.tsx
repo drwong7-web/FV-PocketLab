@@ -71,6 +71,13 @@ export function SprintVideoAnalyzer({ distances, testDistance, onClose, onConfir
   const [aiError, setAiError] = useState("");
   const [samples, setSamples] = useState<PoseSample[] | null>(null);
   const [measuredFps, setMeasuredFps] = useState<number | undefined>(undefined);
+  const [draggingMarker, setDraggingMarker] = useState<"x0" | "xRef" | null>(null);
+  const [cropStart, setCropStart] = useState(0);
+  const [cropEnd, setCropEnd] = useState(0);
+  const [draggingCrop, setDraggingCrop] = useState<"start" | "end" | null>(null);
+  const cropTrackRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => { setCropStart(0); setCropEnd(duration || 0); }, [duration]);
   const fpsMeasuredRef = useRef(false);
   const rafRef = useRef<number | null>(null);
 
