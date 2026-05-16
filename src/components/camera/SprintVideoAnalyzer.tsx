@@ -587,6 +587,28 @@ export function SprintVideoAnalyzer({ distances, testDistance, onClose, onConfir
                       </div>
                     </div>
                   )}
+                  {Object.entries(extraMarkers)
+                    .map(([d, x]) => ({ d: parseFloat(d), x }))
+                    .filter((m) => m.d !== 0 && m.d !== calib.refMeters)
+                    .map((m) => (
+                      <div key={m.d} className="pointer-events-none absolute top-0 bottom-0" style={{ left: `${m.x * 100}%` }}>
+                        <div className="absolute top-0 bottom-0 -translate-x-1/2 w-px bg-amber-400/80" />
+                        <span className="pointer-events-none absolute left-1 top-6 rounded bg-amber-400 px-1 text-[10px] font-bold text-black">{m.d}m</span>
+                        <div
+                          role="slider"
+                          tabIndex={0}
+                          aria-label={`Repère ${m.d} m (glisser pour ajuster)`}
+                          className="pointer-events-auto absolute top-0 bottom-0 -translate-x-1/2 w-4 cursor-ew-resize touch-none"
+                          onPointerDown={onMarkerPointerDown(`extra:${m.d}`)}
+                          onPointerMove={onMarkerPointerMove(`extra:${m.d}`)}
+                          onPointerUp={onMarkerPointerUp}
+                          onPointerCancel={onMarkerPointerUp}
+                          onKeyDown={onMarkerKeyDown(`extra:${m.d}`)}
+                        >
+                          <span className="absolute left-1/2 top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-amber-400 ring-2 ring-background" />
+                        </div>
+                      </div>
+                    ))}
                   {calibStep !== "none" && (
                     <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/40 text-center text-xs font-medium text-white">
                       Cliquez sur la position du repère {calibStep === "set0" ? "0 m" : `${calib.refMeters} m`} dans la vidéo
