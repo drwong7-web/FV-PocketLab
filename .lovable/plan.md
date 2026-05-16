@@ -1,40 +1,78 @@
 ## Objectif
 
-Remplacer intégralement le test sprint linéaire (`src/pages/SprintTest.tsx` + section sprint de `src/lib/fvCalculations.ts`) par la version de [Projet ref](/projects/b659e226-503d-404c-b8c8-e65e740a17f6). Ce projet ref est plus riche : protocole (distance 30/40/60 m, type de départ, surface, chaussures), météo géolocalisée, analyse vidéo IA, segmentation en phases, score qualité, interprétation, etc.
+1. Garder `RFmean` et l'afficher dans le rapport sprint (avec calcul précis).
+2. Rendre `modelFitScore` consommé par l'UI.
+3. Mesurer un vrai `videoFps` côté appareil utilisateur et le propager jusqu'au score qualité.
 
-## Fichiers créés / remplacés
+---
 
-### Nouveaux
-- `src/lib/weather.ts` — copie de `src/lib/weather.ts` du projet ref (Open-Meteo + géoloc navigateur).
-- `src/components/camera/SprintVideoAnalyzer.tsx` — copie du composant ref, adapté aux imports actuels (`@/components/ui/...`).
+## 1. RFmean — calcul précis + affichage
 
-### Remplacés
-- `src/lib/fvCalculations.ts` — bloc « SPRINT METHOD » entièrement remplacé par celui du ref :
-  - Nouveaux types : `SprintPhase`, `SprintSeriesPoint`, `SprintQualityScore`, `SprintInterpretationType`, `ShoeType`, `SHOE_LABELS`, `FOOTWEAR_SURFACE_FACTORS`.
-  - Nouveaux helpers exportés : `getFootwearAdjustment`, `airDensity`, `frontalArea`, `simulateSplitTime`, `defaultSplitsForDistance`, `SPRINT_DEMO`, `segmentSprintPhases`, `computeSprintQualityScore`, `interpretSprintProfile`.
-  - `SprintInputs` enrichi (testDistance, startType, surface, shoeType, notes, videoFps).
-  - `SprintResults` enrichi (MAC, Sfv, RFpeak, RFmean, modelFitScore, rmse, phases, series, qualityScore, interpretationType, aeroDefaults, testDistance, startType, surface, videoFps, shoeType, footwearAdjustment).
-  - Bloc JUMP intact.
-- `src/pages/SprintTest.tsx` — réécriture complète depuis `src/routes/test.sprint.tsx` du ref, avec adaptations :
-  - Routage : `useNavigate`/`useSearchParams` (react-router-dom) au lieu de tanstack-router.
-  - Données athlètes/équipes : `listPlayers`/`listTeams`/`getPlayer` de `@/lib/storage` (pas de Supabase direct).
-  - Mapping des champs : `firstName`/`lastName`/`mass`/`height`/`teamId` au lieu de snake_case.
-  - Pas d'insertion `tests` Supabase → uniquement `saveLocalTest` + `navigate(\`/app/tests/${local.id}\`)` comme l'actuel.
-  - Textes : français en dur (pas de hook `useSettings`/`t()` dans ce projet).
-  - Imports `CameraTimer` depuis `@/components/camera/CameraTimer` (chemin existant).
+**`src/lib/fvCalculations.ts`**
+- Conserver le champ `RFmean?: number` dans `SprintResults` et la sortie de `calculateSprintProfile`.
+- Améliorer le calcul actuel (moyenne uniforme sur tous les pas de temps) en une **moyenne pondérée par dt sur la phase d'accélération uniquement** (jusqu'à atteindre ~95 % de Vmax), ce qui est la définition usuelle du RFmean en sprint (Morin/Samozino) :
+  ```
+  RFmean = Σ(RF_i · dt_i) / Σ(dt_i)  pour v_i ≤ 0.95·Vmax
+  ```
+  Comme `dt` est constant, ça revient à une moyenne sur la fenêtre [t0, t@0.95·Vmax]. Fallback : si moins de 3 points dans la fenêtre, on garde la moyenne globale.
 
-## Adaptations techniques
+**`src/pages/TestResults.tsx`**
+- Ajouter une `MetricCard` (ou ligne) « RFmean (%) » à côté de `RFpeak` et `DRF` dans la section sprint, avec 1 décimale.
 
-- `SprintVideoAnalyzer` utilise `@/lib/pose-detection` côté ref → on l'importera depuis `@/lib/poseDetector` existant si l'API correspond, sinon on copie aussi `pose-detection.ts` sous `src/lib/poseDetection.ts`. À valider à l'écriture.
-- `weather.ts` est autonome (fetch Open-Meteo), aucune dépendance externe.
-- `TestResults.tsx` lit déjà `SprintResults` ; les champs anciens (`tau`, `Vmax`, `F0`, `V0`, `Pmax`, `slopeFV`, `RFmax`, `DRF`, `splits`, `FVprofile`, `velocityProfile`) restent présents → **pas de cassure**. Les nouveaux champs (phases, qualityScore, etc.) ne seront simplement pas affichés dans la page résultats — c'est conforme à la demande (« remplacer ce qui est à l'intérieur du test sprint », pas la page résultats).
+---
 
-## Hors scope
+## 2. Activer modelFitScore
 
-- Page résultats sprint (`TestResults.tsx`) : non modifiée. À demander séparément si l'utilisateur veut aussi importer l'affichage enrichi (phases, score qualité, etc.).
-- Base de données : on conserve le stockage local existant.
+**`src/pages/TestResults.tsx`** — carte « Score qualité » du sprint
+- Lire `results.modelFitScore` (au lieu de ré-utiliser `results.r2` à cet endroit) et l'afficher comme sous-score explicite « Ajustement du modèle » en %, aux côtés de « Cohérence des splits » et « FPS vidéo ». Le champ devient ainsi réellement consommé.
 
-## Vérification
+---
 
-- `tsc --noEmit` via build auto.
-- Charger `/app/tests/new/sprint`, sélectionner athlète, lancer le calcul, vérifier la redirection vers la page résultats.
+## 3. Brancher le FPS vidéo réel
+
+Le FPS doit refléter ce que l'appareil de l'utilisateur produit (webcam, téléphone, ou vidéo importée).
+
+### 3a. Mesure dans `src/components/camera/SprintVideoAnalyzer.tsx`
+
+Deux sources selon le mode :
+- **Mode enregistrement** : après `getUserMedia`, lire `stream.getVideoTracks()[0].getSettings().frameRate`.
+- **Mode import / après enregistrement** : sur l'élément `<video>` chargé, utiliser `video.requestVideoFrameCallback` pendant ~1 s de lecture muette pour compter les frames et déduire les FPS. Fallback : 30 fps si l'API n'est pas dispo.
+
+Stocker dans un state `measuredFps` (arrondi à l'entier).
+
+### 3b. Remonter au parent
+
+Changer la signature de `onConfirm` :
+```ts
+onConfirm: (payload: { splits: AnalyzerSplitResult[]; videoFps?: number }) => void;
+```
+
+### 3c. `src/pages/SprintTest.tsx`
+- Nouveau state `videoFps`.
+- Adapter la callback `onConfirm` du `SprintVideoAnalyzer` pour la nouvelle forme et faire `setVideoFps(...)`.
+- Dans `submit()`, ajouter `videoFps` à l'objet `inputs` passé à `calculateSprintProfile`.
+
+### 3d. Aval — rien à changer
+`calculateSprintProfile` transmet déjà `inputs.videoFps` à `computeSprintQualityScore` et au champ `results.videoFps`. `TestResults.tsx` affiche déjà `quality.fpsScore` et `results.videoFps` → la valeur deviendra non-nulle automatiquement.
+
+---
+
+## Détails techniques
+
+- `requestVideoFrameCallback` n'est pas typé sur `HTMLVideoElement` ; déclarer un type local minimal dans l'analyzer pour éviter `any`.
+- Arrondir le FPS mesuré à l'entier le plus proche (24, 30, 60…).
+- Pas d'UI supplémentaire pour le FPS dans l'analyzer (info bas niveau) — la valeur apparaît dans le rapport.
+
+---
+
+## Fichiers modifiés
+
+- `src/lib/fvCalculations.ts` — calcul RFmean affiné sur la phase d'accélération.
+- `src/components/camera/SprintVideoAnalyzer.tsx` — mesure FPS + nouvelle signature `onConfirm`.
+- `src/pages/SprintTest.tsx` — state `videoFps`, callback adaptée, passage dans `inputs`.
+- `src/pages/TestResults.tsx` — affichage de `RFmean` et de `modelFitScore` dans la carte qualité.
+
+## Hors-scope
+
+- Aucune autre modification de la logique F-V.
+- Aucun changement de schéma de stockage (tests anciens : `videoFps`/`RFmean` affichent « — » si absents).
