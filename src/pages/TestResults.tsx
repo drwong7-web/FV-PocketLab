@@ -10,7 +10,21 @@ import {
 import {
   type JumpResults, type SprintResults,
   getJumpRecommendations, getSprintRecommendations,
+  getSprintInterpretation,
+  airDensity, frontalArea, simulateSplitTime,
 } from "@/lib/fvCalculations";
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line as RLine,
+  XAxis as RXAxis,
+  YAxis as RYAxis,
+  CartesianGrid as RCartesianGrid,
+  Tooltip as RTooltip,
+  ReferenceDot,
+  Scatter,
+  ScatterChart,
+} from "recharts";
 import { getJumpTarget, getSprintTarget, getSportTargets } from "@/lib/sportTargets";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
@@ -602,6 +616,14 @@ function JumpReport({ test, results, chartRef }: { test: TestRecord; results: Ju
 
 function SprintReport({ test, results, chartRef }: { test: TestRecord; results: SprintResults; chartRef: React.RefObject<HTMLDivElement | null> }) {
   const reco = getSprintRecommendations(results);
+  const interp = getSprintInterpretation(results);
+  const raw = test.raw_data as {
+    testDistance?: number; startType?: string; surface?: string;
+    shoes?: string; shoeType?: "spikes" | "cleats" | "sprint";
+    notes?: string; videoFps?: number;
+    airTemperature?: number; airPressure?: number; windSpeed?: number;
+    bodyMass?: number; height?: number;
+  };
   const points = results.velocityProfile
     .map((v, i) => ({ velocity: v, force: results.FVprofile[i] }))
     .filter((_, i) => i % 10 === 0);
@@ -610,21 +632,202 @@ function SprintReport({ test, results, chartRef }: { test: TestRecord; results: 
   const optimalV0 = target?.V0;
   const optimalF0 = target?.F0;
 
+  const series = results.series ?? [];
+  const phaseColors: Record<string, string> = {
+    start: "hsl(20 90% 55%)",
+    acceleration: "hsl(40 90% 55%)",
+    transition: "hsl(140 60% 50%)",
+    max_velocity: "hsl(200 80% 55%)",
+    deceleration: "hsl(0 70% 55%)",
+  };
+  const startLabels: Record<string, string> = {
+    standing: "Debout", three_point: "3 appuis", blocks: "Starting-blocks",
+  };
+  const surfaceLabels: Record<string, string> = {
+    track: "Piste", grass: "Gazon", synthetic: "Synthétique", indoor: "Indoor",
+  };
+  const shoeLabels: Record<string, string> = {
+    spikes: "Pointes (sprint spikes)",
+    cleats: "Crampons (foot / rugby)",
+    sprint: "Chaussures de sprint / training",
+  };
+  const shoeKey = raw.shoeType ?? results.shoeType;
+  const fwAdj = results.footwearAdjustment;
+
+  const Pmax = results.Pmax;
+  const RFpeak = results.RFpeak ?? results.RFmax;
+  const MAC = results.MAC ?? results.Vmax / results.tau;
+  const quality = results.qualityScore;
+
   return (
     <>
-      <HeaderCard test={test} label="F-V profile — Linear sprint" />
+      <HeaderCard test={test} label="Profil F-V — Sprint linéaire" />
+
+      <Card>
+        <CardHeader><CardTitle className="font-display text-base">Protocole & conditions</CardTitle></CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-3">
+            <Info label="Distance" value={`${raw.testDistance ?? results.testDistance ?? "—"} m`} />
+            <Info label="Départ" value={startLabels[raw.startType ?? results.startType ?? ""] ?? "—"} />
+            <Info label="Surface" value={surfaceLabels[raw.surface ?? results.surface ?? ""] ?? "—"} />
+            <Info
+              label="Vent"
+              value={(() => {
+                const w = raw.windSpeed ?? 0;
+                if (Math.abs(w) < 0.05) return "Neutre";
+                return `${Math.abs(w).toFixed(1)} m/s ${w > 0 ? "propulsion" : "résistance"}`;
+              })()}
+            />
+            <Info label="Température" value={`${raw.airTemperature ?? "—"} °C`} />
+            <Info label="Pression" value={`${raw.airPressure ?? "—"} hPa`} />
+            {shoeKey && <Info label="Chaussures" value={shoeLabels[shoeKey] ?? shoeKey} />}
+            {!shoeKey && raw.shoes && <Info label="Chaussures" value={raw.shoes} />}
+            {raw.videoFps && <Info label="FPS vidéo" value={String(raw.videoFps)} />}
+          </div>
+          {fwAdj && Math.abs(fwAdj.factor - 1) > 0.005 && (
+            <p className="mt-2 text-[11px] italic text-muted-foreground">
+              Correction adhérence appliquée : {((fwAdj.factor - 1) * 100 >= 0 ? "+" : "")}
+              {((fwAdj.factor - 1) * 100).toFixed(1)} % sur les temps mesurés.
+            </p>
+          )}
+          <AeroSummary
+            tempC={raw.airTemperature}
+            pressureHpa={raw.airPressure}
+            windMs={raw.windSpeed}
+            heightM={raw.height}
+            bodyMassKg={raw.bodyMass}
+            Vmax={results.Vmax}
+            tau={results.tau}
+            testDistance={raw.testDistance ?? results.testDistance ?? 30}
+          />
+          {results.aeroDefaults && (
+            <p className="mt-2 text-[11px] italic text-muted-foreground">
+              Correction aérodynamique estimée avec valeurs par défaut.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      {quality && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="font-display text-base flex items-center justify-between">
+              <span>Score de qualité</span>
+              <span className={`rounded-full px-3 py-0.5 text-sm font-bold ${
+                quality.globalScore >= 80 ? "bg-success/20 text-success" :
+                quality.globalScore >= 60 ? "bg-warning/20 text-warning" :
+                "bg-destructive/20 text-destructive"
+              }`}>{quality.globalScore}/100</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <div className="grid grid-cols-3 gap-2 text-center text-xs">
+              <div className="rounded-md bg-muted/40 p-2">
+                <p className="text-[10px] uppercase text-muted-foreground">Fit modèle</p>
+                <p className="font-display text-base font-bold">{quality.modelFitScore}</p>
+              </div>
+              <div className="rounded-md bg-muted/40 p-2">
+                <p className="text-[10px] uppercase text-muted-foreground">Cohérence splits</p>
+                <p className="font-display text-base font-bold">{quality.splitCoherenceScore}</p>
+              </div>
+              <div className="rounded-md bg-muted/40 p-2">
+                <p className="text-[10px] uppercase text-muted-foreground">FPS vidéo</p>
+                <p className="font-display text-base font-bold">{quality.fpsScore || "—"}</p>
+              </div>
+            </div>
+            <p className="text-sm">{quality.message}</p>
+            {quality.warnings.length > 0 && (
+              <ul className="list-disc space-y-0.5 pl-5 text-xs text-warning">
+                {quality.warnings.map((w, i) => <li key={i}>{w}</li>)}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         <Metric label="F0 horiz." value={results.F0.toFixed(2)} unit="N/kg" color="text-force" />
         <Metric label="V0 / Vmax" value={results.Vmax.toFixed(2)} unit="m/s" color="text-velocity" />
-        <Metric label="Pmax" value={results.Pmax.toFixed(1)} unit="W/kg" color="text-primary" />
-        <Metric label="RFmax" value={results.RFmax.toFixed(1)} unit="%" />
+        <Metric label="Pmax" value={Pmax.toFixed(1)} unit="W/kg" color="text-primary" />
+        <Metric label="RFpeak" value={RFpeak.toFixed(1)} unit="%" />
       </div>
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-3 gap-2">
         <Metric label="DRF" value={results.DRF.toFixed(2)} unit="%/m·s⁻¹" />
+        <Metric label="MAC" value={MAC.toFixed(2)} unit="m/s²" />
         <Metric label="τ" value={results.tau.toFixed(3)} unit="s" />
       </div>
+
+      {series.length > 0 && (
+        <>
+          <Card>
+            <CardHeader><CardTitle className="font-display text-base">Distance — temps</CardTitle></CardHeader>
+            <CardContent>
+              <div style={{ width: "100%", height: 200 }}>
+                <ResponsiveContainer>
+                  <LineChart data={series} margin={{ top: 5, right: 10, bottom: 0, left: 0 }}>
+                    <RCartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                    <RXAxis dataKey="t" type="number" domain={["dataMin", "dataMax"]} tickFormatter={(v) => Number(v).toFixed(1)} fontSize={10} />
+                    <RYAxis fontSize={10} />
+                    <RTooltip formatter={(v) => Number(v).toFixed(2)} labelFormatter={(l) => `t = ${(l as number).toFixed(2)} s`} />
+                    <RLine type="monotone" dataKey="x" stroke="hsl(var(--primary))" dot={false} name="x (m)" />
+                    <Scatter data={results.splits.map((s) => ({ t: s.time, x: s.distance }))} fill="hsl(var(--destructive))" />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+              <p className="mt-1 text-center text-xs text-muted-foreground">
+                R² = {results.r2.toFixed(3)} · RMSE = {(results.rmse ?? 0).toFixed(3)} m
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader><CardTitle className="font-display text-base">Vitesse — temps (phases)</CardTitle></CardHeader>
+            <CardContent>
+              <div style={{ width: "100%", height: 200 }}>
+                <ResponsiveContainer>
+                  <LineChart data={series} margin={{ top: 5, right: 10, bottom: 0, left: 0 }}>
+                    <RCartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                    <RXAxis dataKey="t" type="number" domain={["dataMin", "dataMax"]} tickFormatter={(v) => Number(v).toFixed(1)} fontSize={10} />
+                    <RYAxis fontSize={10} />
+                    <RTooltip formatter={(v) => `${Number(v).toFixed(2)} m/s`} labelFormatter={(l) => `t = ${(l as number).toFixed(2)} s`} />
+                    <RLine type="monotone" dataKey="v" stroke="hsl(var(--primary))" dot={false} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+              {results.phases && (
+                <div className="mt-2 flex flex-wrap gap-1.5 text-[10px]">
+                  {results.phases.map((p, i) => (
+                    <span key={i} className="rounded px-2 py-0.5 font-medium text-white"
+                      style={{ background: phaseColors[p.name] }}>
+                      {p.label} · {(p.tEnd - p.tStart).toFixed(2)}s · {(p.dEnd - p.dStart).toFixed(1)}m
+                    </span>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader><CardTitle className="font-display text-base">Accélération — temps</CardTitle></CardHeader>
+            <CardContent>
+              <div style={{ width: "100%", height: 180 }}>
+                <ResponsiveContainer>
+                  <LineChart data={series} margin={{ top: 5, right: 10, bottom: 0, left: 0 }}>
+                    <RCartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                    <RXAxis dataKey="t" type="number" domain={["dataMin", "dataMax"]} tickFormatter={(v) => Number(v).toFixed(1)} fontSize={10} />
+                    <RYAxis fontSize={10} />
+                    <RTooltip formatter={(v) => `${Number(v).toFixed(2)} m/s²`} labelFormatter={(l) => `t = ${(l as number).toFixed(2)} s`} />
+                    <RLine type="monotone" dataKey="a" stroke="hsl(var(--destructive))" dot={false} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        </>
+      )}
+
       <Card>
-        <CardHeader><CardTitle className="font-display text-base flex items-center gap-2"><Activity className="h-4 w-4 text-primary"/>Représentation graphique F-V (horizontal)</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="font-display text-base flex items-center gap-2"><Activity className="h-4 w-4 text-primary"/>Relation Force horizontale-Vitesse</CardTitle></CardHeader>
         <CardContent>
           <div ref={chartRef}>
             <FVChart
@@ -643,34 +846,151 @@ function SprintReport({ test, results, chartRef }: { test: TestRecord; results: 
             />
           </div>
           <p className="mt-2 text-center text-muted-foreground text-sm">
-            R² = {results.r2.toFixed(3)} · τ = {results.tau.toFixed(3)} s — modèle Morin & Samozino (2016)
+            R² = {results.r2.toFixed(3)} · τ = {results.tau.toFixed(3)} s · Sfv = {(results.Sfv ?? results.slopeFV).toFixed(2)}
           </p>
           <R2Explanation r2={results.r2} />
           <TargetSummary kind="sprint" sport={test.athletes?.sport} />
         </CardContent>
       </Card>
+
+      {series.length > 0 && (
+        <>
+          <Card>
+            <CardHeader><CardTitle className="font-display text-base">Puissance — vitesse</CardTitle></CardHeader>
+            <CardContent>
+              <div style={{ width: "100%", height: 200 }}>
+                <ResponsiveContainer>
+                  <LineChart data={series} margin={{ top: 5, right: 10, bottom: 0, left: 0 }}>
+                    <RCartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                    <RXAxis dataKey="v" type="number" domain={[0, "dataMax"]} tickFormatter={(v) => Number(v).toFixed(1)} fontSize={10} />
+                    <RYAxis fontSize={10} />
+                    <RTooltip formatter={(v) => `${Number(v).toFixed(2)} W/kg`} labelFormatter={(l) => `v = ${(l as number).toFixed(2)} m/s`} />
+                    <RLine type="monotone" dataKey="P" stroke="hsl(var(--primary))" dot={false} />
+                    <ReferenceDot x={results.V0 / 2} y={Pmax} r={4} fill="hsl(var(--destructive))" stroke="none" label={{ value: "Pmax", position: "top", fontSize: 10 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader><CardTitle className="font-display text-base">RF — vitesse</CardTitle></CardHeader>
+            <CardContent>
+              <div style={{ width: "100%", height: 200 }}>
+                <ResponsiveContainer>
+                  <ScatterChart margin={{ top: 5, right: 10, bottom: 0, left: 0 }}>
+                    <RCartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                    <RXAxis dataKey="v" type="number" domain={[0, "dataMax"]} tickFormatter={(v) => Number(v).toFixed(1)} fontSize={10} name="v" unit=" m/s" />
+                    <RYAxis dataKey="RF" type="number" fontSize={10} unit=" %" />
+                    <RTooltip formatter={(v) => Number(v).toFixed(1)} />
+                    <Scatter data={series.filter((_, i) => i % 5 === 0)} fill="hsl(var(--primary))" />
+                  </ScatterChart>
+                </ResponsiveContainer>
+              </div>
+              <p className="mt-1 text-center text-xs text-muted-foreground">
+                RFpeak = {RFpeak.toFixed(1)} % · DRF = {results.DRF.toFixed(2)} %/(m/s)
+              </p>
+            </CardContent>
+          </Card>
+        </>
+      )}
+
       <Card>
         <CardHeader><CardTitle className="font-display text-base">Splits</CardTitle></CardHeader>
         <CardContent>
           <table className="w-full text-sm">
             <thead className="text-xs text-muted-foreground">
-              <tr><th className="text-left">Distance</th><th className="text-left">Mesuré</th><th className="text-left">Modèle</th></tr>
+              <tr><th className="text-left">Distance</th><th className="text-left">Mesuré</th><th className="text-left">Modèle</th><th className="text-left">Δ</th></tr>
             </thead>
             <tbody>
-              {results.splits.map((s, i) => (
-                <tr key={i} className="border-t">
-                  <td className="py-1.5">{s.distance} m</td>
-                  <td>{s.time.toFixed(2)} s</td>
-                  <td className="text-muted-foreground">{(s.distance / s.predicted * s.time).toFixed(2)} s</td>
-                </tr>
-              ))}
+              {results.splits.map((s, i) => {
+                const tModel = s.predicted > 0 ? (s.distance / s.predicted) * s.time : 0;
+                return (
+                  <tr key={i} className="border-t">
+                    <td className="py-1.5">{s.distance} m</td>
+                    <td>{s.time.toFixed(3)} s</td>
+                    <td className="text-muted-foreground">{tModel.toFixed(3)} s</td>
+                    <td className={Math.abs(s.distance - s.predicted) > 0.5 ? "text-warning" : "text-muted-foreground"}>
+                      {(s.distance - s.predicted >= 0 ? "+" : "") + (s.distance - s.predicted).toFixed(2)} m
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </CardContent>
       </Card>
+
+      <Card className="border-primary/30">
+        <CardHeader>
+          <CardTitle className="font-display text-base flex items-center gap-2">
+            <Gauge className="h-4 w-4 text-primary" /> Interprétation — {interp.title}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm">{interp.description}</p>
+          <div className="space-y-1.5">
+            {interp.recommendations.map((r, i) => (
+              <div key={i} className="rounded-md bg-accent/40 p-2 text-xs">{r}</div>
+            ))}
+          </div>
+          <p className="text-[11px] italic text-muted-foreground">
+            Ces résultats ne constituent pas un diagnostic médical. Ils doivent être interprétés par un professionnel
+            qualifié en tenant compte du contexte sportif, médical et de l'historique de l'athlète.
+          </p>
+        </CardContent>
+      </Card>
+
+      {raw.notes && (
+        <Card>
+          <CardHeader><CardTitle className="font-display text-base">Notes du praticien</CardTitle></CardHeader>
+          <CardContent>
+            <p className="whitespace-pre-wrap text-sm">{raw.notes}</p>
+          </CardContent>
+        </Card>
+      )}
+
       <RecommendationCard reco={reco} />
       <ReferencesCard kind="sprint" />
     </>
+  );
+}
+
+function Info({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-md bg-muted/30 px-2 py-1.5">
+      <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="font-medium">{value}</p>
+    </div>
+  );
+}
+
+function AeroSummary({
+  tempC, pressureHpa, windMs, heightM, bodyMassKg, Vmax, tau, testDistance,
+}: {
+  tempC?: number; pressureHpa?: number; windMs?: number;
+  heightM?: number; bodyMassKg?: number;
+  Vmax: number; tau: number; testDistance: number;
+}) {
+  if (tempC == null || pressureHpa == null || windMs == null || !heightM || !bodyMassKg) return null;
+  const rho = airDensity(tempC, pressureHpa);
+  const A = frontalArea(heightM, bodyMassKg);
+  const k = 0.5 * rho * A * 0.9;
+  const tNo = simulateSplitTime(testDistance, Vmax, tau, k, bodyMassKg, 0);
+  const tWith = simulateSplitTime(testDistance, Vmax, tau, k, bodyMassKg, windMs);
+  const delta = tWith - tNo;
+  const illegal = Math.abs(windMs) > 2;
+  return (
+    <p className="mt-2 text-[11px] italic text-muted-foreground">
+      Correction aérodynamique : ρ = <span className="font-mono not-italic">{rho.toFixed(3)} kg/m³</span>
+      {Math.abs(windMs) > 0.05 && (
+        <>
+          {" · "}effet vent ({windMs > 0 ? "+" : ""}{windMs.toFixed(1)} m/s) sur {testDistance} m :{" "}
+          <span className="font-mono not-italic">{delta >= 0 ? "+" : ""}{delta.toFixed(3)} s</span>
+        </>
+      )}
+      {illegal && <span className="ml-1 text-amber-500 not-italic"> · vent &gt; 2 m/s (non homologable IAAF)</span>}
+    </p>
   );
 }
 
