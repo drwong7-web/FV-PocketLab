@@ -33,6 +33,8 @@ export interface PoseTrackingOptions {
   sampleRateHz?: number;
   onProgress?: (ratio: number) => void;
   signal?: AbortSignal;
+  startTime?: number;
+  endTime?: number;
 }
 
 export async function trackPelvisX(
