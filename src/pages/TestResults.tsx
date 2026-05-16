@@ -723,8 +723,10 @@ function SprintReport({ test, results, chartRef }: { test: TestRecord; results: 
           <CardContent className="space-y-2">
             <div className="grid grid-cols-3 gap-2 text-center text-xs">
               <div className="rounded-md bg-muted/40 p-2">
-                <p className="text-[10px] uppercase text-muted-foreground">Fit modèle</p>
-                <p className="font-display text-base font-bold">{quality.modelFitScore}</p>
+                <p className="text-[10px] uppercase text-muted-foreground">Fit modèle (R²)</p>
+                <p className="font-display text-base font-bold">
+                  {results.modelFitScore != null ? Math.round(results.modelFitScore * 100) : quality.modelFitScore}
+                </p>
               </div>
               <div className="rounded-md bg-muted/40 p-2">
                 <p className="text-[10px] uppercase text-muted-foreground">Cohérence splits</p>
@@ -732,7 +734,9 @@ function SprintReport({ test, results, chartRef }: { test: TestRecord; results: 
               </div>
               <div className="rounded-md bg-muted/40 p-2">
                 <p className="text-[10px] uppercase text-muted-foreground">FPS vidéo</p>
-                <p className="font-display text-base font-bold">{quality.fpsScore || "—"}</p>
+                <p className="font-display text-base font-bold">
+                  {results.videoFps ? `${results.videoFps} (${quality.fpsScore})` : "—"}
+                </p>
               </div>
             </div>
             <p className="text-sm">{quality.message}</p>
@@ -751,8 +755,9 @@ function SprintReport({ test, results, chartRef }: { test: TestRecord; results: 
         <Metric label="Pmax" value={Pmax.toFixed(1)} unit="W/kg" color="text-primary" />
         <Metric label="RFpeak" value={RFpeak.toFixed(1)} unit="%" />
       </div>
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         <Metric label="DRF" value={results.DRF.toFixed(2)} unit="%/m·s⁻¹" />
+        <Metric label="RFmean" value={(results.RFmean ?? 0).toFixed(1)} unit="%" />
         <Metric label="MAC" value={MAC.toFixed(2)} unit="m/s²" />
         <Metric label="τ" value={results.tau.toFixed(3)} unit="s" />
       </div>

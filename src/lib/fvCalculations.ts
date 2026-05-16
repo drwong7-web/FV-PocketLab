@@ -365,7 +365,11 @@ export function calculateSprintProfile(inputs: SprintInputs): SprintResults {
     rfPoints.map((p) => p.rf),
   );
   const RFpeak = Math.max(...rfPoints.map((p) => p.rf));
-  const RFmean = rfPoints.reduce((a, p) => a + p.rf, 0) / rfPoints.length;
+  // RFmean : moyenne pondérée par dt sur la phase d'accélération (v <= 0.95·Vmax),
+  // définition usuelle Morin/Samozino. dt est constant -> moyenne arithmétique sur la fenêtre.
+  const accelWindow = rfPoints.filter((p) => p.v <= 0.95 * Vmax);
+  const RFmean = (accelWindow.length >= 3 ? accelWindow : rfPoints)
+    .reduce((a, p) => a + p.rf, 0) / Math.max(1, (accelWindow.length >= 3 ? accelWindow.length : rfPoints.length));
 
   const splitsWithPred = sorted.map((s) => ({
     ...s,
