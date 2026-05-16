@@ -278,14 +278,12 @@ export function SprintVideoAnalyzer({ distances, testDistance, onClose, onConfir
   };
 
   const measureFpsFromVideo = () => {
+    if (fpsMeasuredRef.current) return;
     const v = videoRef.current as VideoFrameCallbackVideo | null;
     if (!v || typeof v.requestVideoFrameCallback !== "function") return;
+    fpsMeasuredRef.current = true;
     let frames = 0;
     let firstTs = 0;
-    const wasPaused = v.paused;
-    const wasMuted = v.muted;
-    v.muted = true;
-    const startAt = v.currentTime;
     const tick = (now: number) => {
       if (!firstTs) firstTs = now;
       frames++;
@@ -295,12 +293,9 @@ export function SprintVideoAnalyzer({ distances, testDistance, onClose, onConfir
       } else {
         const fps = elapsed > 0 ? Math.round(frames / elapsed) : 0;
         if (fps > 0) setMeasuredFps(fps);
-        if (wasPaused) v.pause();
-        v.muted = wasMuted;
-        try { v.currentTime = startAt; } catch { /* noop */ }
       }
     };
-    v.play().then(() => v.requestVideoFrameCallback!(tick)).catch(() => { /* noop */ });
+    v.requestVideoFrameCallback!(tick);
   };
 
   const confirm = () => {
