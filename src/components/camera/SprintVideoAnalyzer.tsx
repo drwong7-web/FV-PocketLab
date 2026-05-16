@@ -236,6 +236,7 @@ export function SprintVideoAnalyzer({ distances, testDistance, onClose, onConfir
   };
 
   const onOverlayClick = (e: React.MouseEvent) => {
+    if (draggingMarker) return;
     if (calibStep === "none") return;
     const el = overlayRef.current; if (!el) return;
     const rect = el.getBoundingClientRect();
@@ -247,6 +248,63 @@ export function SprintVideoAnalyzer({ distances, testDistance, onClose, onConfir
       setCalib((c) => ({ ...c, xRef: xNorm }));
       setCalibStep("none");
     }
+  };
+
+  const getOverlayXNorm = (clientX: number): number | null => {
+    const el = overlayRef.current; if (!el) return null;
+    const rect = el.getBoundingClientRect();
+    return Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+  };
+
+  const onMarkerPointerDown = (which: "x0" | "xRef") => (e: React.PointerEvent) => {
+    e.stopPropagation();
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    setDraggingMarker(which);
+  };
+  const onMarkerPointerMove = (which: "x0" | "xRef") => (e: React.PointerEvent) => {
+    if (draggingMarker !== which) return;
+    const x = getOverlayXNorm(e.clientX); if (x === null) return;
+    setCalib((c) => ({ ...c, [which]: x }));
+  };
+  const onMarkerPointerUp = (e: React.PointerEvent) => {
+    try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId); } catch { /* noop */ }
+    setDraggingMarker(null);
+  };
+  const onMarkerKeyDown = (which: "x0" | "xRef") => (e: React.KeyboardEvent) => {
+    const el = overlayRef.current; if (!el) return;
+    const px = 1 / el.getBoundingClientRect().width;
+    const cur = calib[which]; if (cur === undefined) return;
+    if (e.key === "ArrowLeft") { e.preventDefault(); setCalib((c) => ({ ...c, [which]: Math.max(0, cur - px) })); }
+    else if (e.key === "ArrowRight") { e.preventDefault(); setCalib((c) => ({ ...c, [which]: Math.min(1, cur + px) })); }
+  };
+
+  // Crop timeline drag
+  const getCropTime = (clientX: number): number => {
+    const el = cropTrackRef.current; if (!el || !duration) return 0;
+    const rect = el.getBoundingClientRect();
+    const r = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+    return r * duration;
+  };
+  const onCropHandleDown = (which: "start" | "end") => (e: React.PointerEvent) => {
+    e.stopPropagation();
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    setDraggingCrop(which);
+  };
+  const onCropHandleMove = (which: "start" | "end") => (e: React.PointerEvent) => {
+    if (draggingCrop !== which) return;
+    const t = getCropTime(e.clientX);
+    if (which === "start") setCropStart(Math.min(t, cropEnd - 0.1));
+    else setCropEnd(Math.max(t, cropStart + 0.1));
+  };
+  const onCropHandleUp = (e: React.PointerEvent) => {
+    try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId); } catch { /* noop */ }
+    setDraggingCrop(null);
+  };
+  const onTrackClick = (e: React.MouseEvent) => {
+    if (draggingCrop) return;
+    const t = getCropTime(e.clientX);
+    if (t < cropStart || t > cropEnd) return;
+    const v = videoRef.current; if (v) v.currentTime = t;
   };
 
   const runAI = async () => {
