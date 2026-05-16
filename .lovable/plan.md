@@ -1,78 +1,43 @@
-## Objectif
+## Problèmes constatés
 
-1. Garder `RFmean` et l'afficher dans le rapport sprint (avec calcul précis).
-2. Rendre `modelFitScore` consommé par l'UI.
-3. Mesurer un vrai `videoFps` côté appareil utilisateur et le propager jusqu'au score qualité.
-
----
-
-## 1. RFmean — calcul précis + affichage
-
-**`src/lib/fvCalculations.ts`**
-- Conserver le champ `RFmean?: number` dans `SprintResults` et la sortie de `calculateSprintProfile`.
-- Améliorer le calcul actuel (moyenne uniforme sur tous les pas de temps) en une **moyenne pondérée par dt sur la phase d'accélération uniquement** (jusqu'à atteindre ~95 % de Vmax), ce qui est la définition usuelle du RFmean en sprint (Morin/Samozino) :
-  ```
-  RFmean = Σ(RF_i · dt_i) / Σ(dt_i)  pour v_i ≤ 0.95·Vmax
-  ```
-  Comme `dt` est constant, ça revient à une moyenne sur la fenêtre [t0, t@0.95·Vmax]. Fallback : si moins de 3 points dans la fenêtre, on garde la moyenne globale.
-
-**`src/pages/TestResults.tsx`**
-- Ajouter une `MetricCard` (ou ligne) « RFmean (%) » à côté de `RFpeak` et `DRF` dans la section sprint, avec 1 décimale.
+1. **Barre de progression saccadée / bloquée** : la position du curseur est mise à jour uniquement via `onTimeUpdate` (≈ 4 Hz), donc visuellement haché. Pire : `measureFpsFromVideo()` est déclenché sur `onLoadedMetadata`, ce qui lance une **lecture silencieuse parallèle** de la vidéo (jusqu'à 1 s) puis remet `currentTime` à la position de départ. Cela bloque/saute la lecture utilisateur juste après l'ouverture de la vidéo et perturbe la timeline.
+2. **Vidéo partiellement cachée** : `<video className="block w-full" />` sans contrainte verticale. Une vidéo portrait (téléphone) déborde la `Card` (`max-h-[95vh]` avec header, contrôles, panneaux, footer) → le bas de la vidéo est masqué.
 
 ---
 
-## 2. Activer modelFitScore
+## Correctifs (`src/components/camera/SprintVideoAnalyzer.tsx`)
 
-**`src/pages/TestResults.tsx`** — carte « Score qualité » du sprint
-- Lire `results.modelFitScore` (au lieu de ré-utiliser `results.r2` à cet endroit) et l'afficher comme sous-score explicite « Ajustement du modèle » en %, aux côtés de « Cohérence des splits » et « FPS vidéo ». Le champ devient ainsi réellement consommé.
+### 1. Mesure FPS non bloquante
+- Ne plus appeler `measureFpsFromVideo()` dans `onLoadedMetadata`.
+- Déclencher la mesure **à la première lecture utilisateur** (`onPlay`), avec un drapeau `fpsMeasuredRef` pour ne le faire qu'une fois. La mesure se fait alors **pendant la lecture réelle** via `requestVideoFrameCallback` (compte les frames sur ~1 s), sans `play()`/`pause()`/seek artificiels.
+- Fallback inchangé : si l'API n'existe pas, on ne mesure pas (le score FPS reste à 0).
 
----
+### 2. Barre de progression fluide
+- Remplacer la mise à jour `currentTime` par `onTimeUpdate` par une boucle `requestAnimationFrame` active uniquement pendant la lecture (`playing === true`). Cleanup via `useEffect` retournant `cancelAnimationFrame`.
+- Conserver `onTimeUpdate` comme filet de sécurité quand la vidéo est en pause (seek manuel).
 
-## 3. Brancher le FPS vidéo réel
+### 3. Affichage vidéo adéquat
+- Conteneur vidéo : `flex items-center justify-center bg-black` avec hauteur bornée `max-h-[55vh]` (et `max-h-[45vh]` en mobile via responsive ou simplement `max-h-[50vh]`).
+- Élément `<video>` : `className="max-h-[50vh] w-auto max-w-full object-contain"` pour gérer correctement portrait **et** paysage sans recadrage ni débordement.
+- Les overlays de calibration (lignes 0 m / réf) restent positionnés sur le conteneur en `relative`, mais ils doivent suivre la **largeur réelle** de la vidéo, pas celle du conteneur. Solution simple : limiter le conteneur lui-même à la largeur de la vidéo via `inline-block` + `mx-auto`, ou positionner les overlays via un wrapper interne dont la largeur s'aligne sur la vidéo (`relative` autour du `<video>` lui-même).
 
-Le FPS doit refléter ce que l'appareil de l'utilisateur produit (webcam, téléphone, ou vidéo importée).
-
-### 3a. Mesure dans `src/components/camera/SprintVideoAnalyzer.tsx`
-
-Deux sources selon le mode :
-- **Mode enregistrement** : après `getUserMedia`, lire `stream.getVideoTracks()[0].getSettings().frameRate`.
-- **Mode import / après enregistrement** : sur l'élément `<video>` chargé, utiliser `video.requestVideoFrameCallback` pendant ~1 s de lecture muette pour compter les frames et déduire les FPS. Fallback : 30 fps si l'API n'est pas dispo.
-
-Stocker dans un state `measuredFps` (arrondi à l'entier).
-
-### 3b. Remonter au parent
-
-Changer la signature de `onConfirm` :
-```ts
-onConfirm: (payload: { splits: AnalyzerSplitResult[]; videoFps?: number }) => void;
+### Implémentation des overlays
+Structurer comme :
 ```
-
-### 3c. `src/pages/SprintTest.tsx`
-- Nouveau state `videoFps`.
-- Adapter la callback `onConfirm` du `SprintVideoAnalyzer` pour la nouvelle forme et faire `setVideoFps(...)`.
-- Dans `submit()`, ajouter `videoFps` à l'objet `inputs` passé à `calculateSprintProfile`.
-
-### 3d. Aval — rien à changer
-`calculateSprintProfile` transmet déjà `inputs.videoFps` à `computeSprintQualityScore` et au champ `results.videoFps`. `TestResults.tsx` affiche déjà `quality.fpsScore` et `results.videoFps` → la valeur deviendra non-nulle automatiquement.
-
----
-
-## Détails techniques
-
-- `requestVideoFrameCallback` n'est pas typé sur `HTMLVideoElement` ; déclarer un type local minimal dans l'analyzer pour éviter `any`.
-- Arrondir le FPS mesuré à l'entier le plus proche (24, 30, 60…).
-- Pas d'UI supplémentaire pour le FPS dans l'analyzer (info bas niveau) — la valeur apparaît dans le rapport.
+<div className="flex justify-center bg-black rounded-md overflow-hidden">
+  <div ref={overlayRef} className="relative" onClick={onOverlayClick}>
+    <video … className="block max-h-[50vh] w-auto max-w-full" />
+    {overlays calib + step}
+  </div>
+</div>
+```
+Ainsi `overlayRef.getBoundingClientRect()` correspond bien à la zone vidéo affichée, la calibration reste exacte.
 
 ---
-
-## Fichiers modifiés
-
-- `src/lib/fvCalculations.ts` — calcul RFmean affiné sur la phase d'accélération.
-- `src/components/camera/SprintVideoAnalyzer.tsx` — mesure FPS + nouvelle signature `onConfirm`.
-- `src/pages/SprintTest.tsx` — state `videoFps`, callback adaptée, passage dans `inputs`.
-- `src/pages/TestResults.tsx` — affichage de `RFmean` et de `modelFitScore` dans la carte qualité.
 
 ## Hors-scope
+- Pas de changement de la logique de calibration, IA pose, splits, ou plumbing FPS vers `calculateSprintProfile`.
+- Pas de changement aux autres modes (caméra live, choix).
 
-- Aucune autre modification de la logique F-V.
-- Aucun changement de schéma de stockage (tests anciens : `videoFps`/`RFmean` affichent « — » si absents).
+## Fichier modifié
+- `src/components/camera/SprintVideoAnalyzer.tsx` uniquement.
