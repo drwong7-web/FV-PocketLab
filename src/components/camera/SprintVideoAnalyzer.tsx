@@ -462,13 +462,41 @@ export function SprintVideoAnalyzer({ distances, testDistance, onClose, onConfir
                     onPause={() => setPlaying(false)}
                   />
                   {calib.x0 !== undefined && (
-                    <div className="pointer-events-none absolute top-0 bottom-0 w-px bg-primary" style={{ left: `${calib.x0 * 100}%` }}>
-                      <span className="absolute left-1 top-1 rounded bg-primary px-1 text-[10px] font-bold text-primary-foreground">0m</span>
+                    <div className="pointer-events-none absolute top-0 bottom-0" style={{ left: `${calib.x0 * 100}%` }}>
+                      <div className="absolute top-0 bottom-0 -translate-x-1/2 w-px bg-primary" />
+                      <span className="pointer-events-none absolute left-1 top-1 rounded bg-primary px-1 text-[10px] font-bold text-primary-foreground">0m</span>
+                      <div
+                        role="slider"
+                        tabIndex={0}
+                        aria-label="Repère 0 m (glisser pour ajuster)"
+                        className="pointer-events-auto absolute top-0 bottom-0 -translate-x-1/2 w-4 cursor-ew-resize touch-none"
+                        onPointerDown={onMarkerPointerDown("x0")}
+                        onPointerMove={onMarkerPointerMove("x0")}
+                        onPointerUp={onMarkerPointerUp}
+                        onPointerCancel={onMarkerPointerUp}
+                        onKeyDown={onMarkerKeyDown("x0")}
+                      >
+                        <span className="absolute left-1/2 top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary ring-2 ring-background" />
+                      </div>
                     </div>
                   )}
                   {calib.xRef !== undefined && (
-                    <div className="pointer-events-none absolute top-0 bottom-0 w-px bg-destructive" style={{ left: `${calib.xRef * 100}%` }}>
-                      <span className="absolute left-1 top-1 rounded bg-destructive px-1 text-[10px] font-bold text-white">{calib.refMeters}m</span>
+                    <div className="pointer-events-none absolute top-0 bottom-0" style={{ left: `${calib.xRef * 100}%` }}>
+                      <div className="absolute top-0 bottom-0 -translate-x-1/2 w-px bg-destructive" />
+                      <span className="pointer-events-none absolute left-1 top-1 rounded bg-destructive px-1 text-[10px] font-bold text-white">{calib.refMeters}m</span>
+                      <div
+                        role="slider"
+                        tabIndex={0}
+                        aria-label={`Repère ${calib.refMeters} m (glisser pour ajuster)`}
+                        className="pointer-events-auto absolute top-0 bottom-0 -translate-x-1/2 w-4 cursor-ew-resize touch-none"
+                        onPointerDown={onMarkerPointerDown("xRef")}
+                        onPointerMove={onMarkerPointerMove("xRef")}
+                        onPointerUp={onMarkerPointerUp}
+                        onPointerCancel={onMarkerPointerUp}
+                        onKeyDown={onMarkerKeyDown("xRef")}
+                      >
+                        <span className="absolute left-1/2 top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-destructive ring-2 ring-background" />
+                      </div>
                     </div>
                   )}
                   {calibStep !== "none" && (
@@ -479,15 +507,72 @@ export function SprintVideoAnalyzer({ distances, testDistance, onClose, onConfir
                 </div>
               </div>
 
-              <input
-                type="range"
-                min={0}
-                max={duration || 0}
-                step={FRAME_STEP}
-                value={currentTime}
-                onChange={(e) => { const v = videoRef.current; if (v) v.currentTime = parseFloat(e.target.value); }}
-                className="w-full accent-primary"
-              />
+              {/* Timeline avec crop pour l'analyse IA */}
+              <div className="space-y-1">
+                <div
+                  ref={cropTrackRef}
+                  className="relative h-7 w-full select-none rounded bg-muted/60"
+                  onClick={onTrackClick}
+                >
+                  {duration > 0 && (
+                    <>
+                      <div
+                        className="absolute top-0 bottom-0 bg-primary/20"
+                        style={{ left: `${(cropStart / duration) * 100}%`, right: `${100 - (cropEnd / duration) * 100}%` }}
+                      />
+                      <div
+                        className="pointer-events-none absolute top-0 bottom-0 w-0.5 bg-foreground"
+                        style={{ left: `${(currentTime / duration) * 100}%` }}
+                      />
+                      <div
+                        role="slider"
+                        aria-label="Début de la zone d'analyse IA"
+                        tabIndex={0}
+                        className="absolute top-0 bottom-0 -translate-x-1/2 w-4 cursor-ew-resize touch-none"
+                        style={{ left: `${(cropStart / duration) * 100}%` }}
+                        onPointerDown={onCropHandleDown("start")}
+                        onPointerMove={onCropHandleMove("start")}
+                        onPointerUp={onCropHandleUp}
+                        onPointerCancel={onCropHandleUp}
+                      >
+                        <span className="absolute left-1/2 top-0 bottom-0 -translate-x-1/2 w-1 rounded bg-primary" />
+                      </div>
+                      <div
+                        role="slider"
+                        aria-label="Fin de la zone d'analyse IA"
+                        tabIndex={0}
+                        className="absolute top-0 bottom-0 -translate-x-1/2 w-4 cursor-ew-resize touch-none"
+                        style={{ left: `${(cropEnd / duration) * 100}%` }}
+                        onPointerDown={onCropHandleDown("end")}
+                        onPointerMove={onCropHandleMove("end")}
+                        onPointerUp={onCropHandleUp}
+                        onPointerCancel={onCropHandleUp}
+                      >
+                        <span className="absolute left-1/2 top-0 bottom-0 -translate-x-1/2 w-1 rounded bg-primary" />
+                      </div>
+                    </>
+                  )}
+                </div>
+                <input
+                  type="range"
+                  min={0}
+                  max={duration || 0}
+                  step={FRAME_STEP}
+                  value={currentTime}
+                  onChange={(e) => { const v = videoRef.current; if (v) v.currentTime = parseFloat(e.target.value); }}
+                  className="w-full accent-primary"
+                />
+                <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                  <span className="font-mono">Crop IA : {cropStart.toFixed(2)}s → {cropEnd.toFixed(2)}s</span>
+                  <button
+                    type="button"
+                    className="rounded border px-2 py-0.5 hover:bg-muted"
+                    onClick={() => { setCropStart(0); setCropEnd(duration || 0); }}
+                  >
+                    Réinitialiser le crop
+                  </button>
+                </div>
+              </div>
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-1">
                   <Button size="icon" variant="outline" onClick={() => stepFrame(-FRAME_STEP)} aria-label="Frame -1"><ChevronLeft className="h-4 w-4" /></Button>
