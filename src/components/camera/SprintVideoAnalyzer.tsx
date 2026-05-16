@@ -70,6 +70,7 @@ export function SprintVideoAnalyzer({ distances, testDistance, onClose, onConfir
   const [aiProgress, setAiProgress] = useState(0);
   const [aiError, setAiError] = useState("");
   const [samples, setSamples] = useState<PoseSample[] | null>(null);
+  const [measuredFps, setMeasuredFps] = useState<number | undefined>(undefined);
 
   useEffect(() => () => { if (videoUrl) URL.revokeObjectURL(videoUrl); }, [videoUrl]);
 
