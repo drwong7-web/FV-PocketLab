@@ -3,8 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ChevronLeft, ChevronRight, Circle, Crosshair, Flag, Pause, Play, Sparkles, Square, Upload, Video, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Circle, Crosshair, Flag, Pause, Play, Sparkles, Square, Upload, Video, Wand2, X } from "lucide-react";
 import { trackPelvisX, computeSplitTimesFromSamples, type PoseSample } from "@/lib/poseDetection";
+import { supabase } from "@/integrations/supabase/client";
 
 export interface AnalyzerSplitResult {
   distance: number;
@@ -71,11 +72,15 @@ export function SprintVideoAnalyzer({ distances, testDistance, onClose, onConfir
   const [aiError, setAiError] = useState("");
   const [samples, setSamples] = useState<PoseSample[] | null>(null);
   const [measuredFps, setMeasuredFps] = useState<number | undefined>(undefined);
-  const [draggingMarker, setDraggingMarker] = useState<"x0" | "xRef" | null>(null);
+  const [draggingMarker, setDraggingMarker] = useState<string | null>(null); // "x0" | "xRef" | "extra:<distance>"
   const [cropStart, setCropStart] = useState(0);
   const [cropEnd, setCropEnd] = useState(0);
   const [draggingCrop, setDraggingCrop] = useState<"start" | "end" | null>(null);
   const cropTrackRef = useRef<HTMLDivElement | null>(null);
+  const [extraMarkers, setExtraMarkers] = useState<Record<number, number>>({}); // meters -> xNorm
+  const [aiMarkersBusy, setAiMarkersBusy] = useState(false);
+  const [aiMarkersError, setAiMarkersError] = useState("");
+  const [aiMarkersNotes, setAiMarkersNotes] = useState("");
 
   useEffect(() => { setCropStart(0); setCropEnd(duration || 0); }, [duration]);
   const fpsMeasuredRef = useRef(false);
@@ -256,26 +261,40 @@ export function SprintVideoAnalyzer({ distances, testDistance, onClose, onConfir
     return Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
   };
 
-  const onMarkerPointerDown = (which: "x0" | "xRef") => (e: React.PointerEvent) => {
+  const onMarkerPointerDown = (which: string) => (e: React.PointerEvent) => {
     e.stopPropagation();
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     setDraggingMarker(which);
   };
-  const onMarkerPointerMove = (which: "x0" | "xRef") => (e: React.PointerEvent) => {
+  const applyMarkerX = (which: string, x: number) => {
+    if (which === "x0" || which === "xRef") {
+      setCalib((c) => ({ ...c, [which]: x }));
+    } else if (which.startsWith("extra:")) {
+      const d = parseFloat(which.slice(6));
+      setExtraMarkers((m) => ({ ...m, [d]: x }));
+    }
+  };
+  const onMarkerPointerMove = (which: string) => (e: React.PointerEvent) => {
     if (draggingMarker !== which) return;
     const x = getOverlayXNorm(e.clientX); if (x === null) return;
-    setCalib((c) => ({ ...c, [which]: x }));
+    applyMarkerX(which, x);
   };
   const onMarkerPointerUp = (e: React.PointerEvent) => {
     try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId); } catch { /* noop */ }
     setDraggingMarker(null);
   };
-  const onMarkerKeyDown = (which: "x0" | "xRef") => (e: React.KeyboardEvent) => {
+  const getMarkerX = (which: string): number | undefined => {
+    if (which === "x0") return calib.x0;
+    if (which === "xRef") return calib.xRef;
+    if (which.startsWith("extra:")) return extraMarkers[parseFloat(which.slice(6))];
+    return undefined;
+  };
+  const onMarkerKeyDown = (which: string) => (e: React.KeyboardEvent) => {
     const el = overlayRef.current; if (!el) return;
     const px = 1 / el.getBoundingClientRect().width;
-    const cur = calib[which]; if (cur === undefined) return;
-    if (e.key === "ArrowLeft") { e.preventDefault(); setCalib((c) => ({ ...c, [which]: Math.max(0, cur - px) })); }
-    else if (e.key === "ArrowRight") { e.preventDefault(); setCalib((c) => ({ ...c, [which]: Math.min(1, cur + px) })); }
+    const cur = getMarkerX(which); if (cur === undefined) return;
+    if (e.key === "ArrowLeft") { e.preventDefault(); applyMarkerX(which, Math.max(0, cur - px)); }
+    else if (e.key === "ArrowRight") { e.preventDefault(); applyMarkerX(which, Math.min(1, cur + px)); }
   };
 
   // Crop timeline drag
@@ -307,6 +326,70 @@ export function SprintVideoAnalyzer({ distances, testDistance, onClose, onConfir
     const v = videoRef.current; if (v) v.currentTime = t;
   };
 
+  const detectMarkersAI = async () => {
+    const v = videoRef.current; if (!v) return;
+    setAiMarkersError("");
+    setAiMarkersBusy(true);
+    setAiMarkersNotes("");
+    try {
+      // Seek to first frame of crop window
+      await new Promise<void>((resolve) => {
+        const onSeek = () => { v.removeEventListener("seeked", onSeek); resolve(); };
+        v.addEventListener("seeked", onSeek);
+        const target = Math.min(cropStart, Math.max(0, (v.duration || 0) - 0.05));
+        if (Math.abs(v.currentTime - target) < 0.01) { v.removeEventListener("seeked", onSeek); resolve(); }
+        else v.currentTime = target;
+      });
+      // Draw current frame to a canvas
+      const w = v.videoWidth || 1280;
+      const h = v.videoHeight || 720;
+      const canvas = document.createElement("canvas");
+      // Downscale for cost/latency, keep aspect
+      const maxW = 1280;
+      const scale = w > maxW ? maxW / w : 1;
+      canvas.width = Math.round(w * scale);
+      canvas.height = Math.round(h * scale);
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new Error("Canvas indisponible");
+      ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+      const imageBase64 = dataUrl.substring(dataUrl.indexOf(",") + 1);
+
+      const distancesWithZero = Array.from(new Set([0, ...distances, calib.refMeters].filter((d) => Number.isFinite(d)))).sort((a, b) => a - b);
+
+      const { data, error } = await supabase.functions.invoke("detect-sprint-markers", {
+        body: { imageBase64, distances: distancesWithZero, mimeType: "image/jpeg" },
+      });
+      if (error) {
+        const status = (error as { context?: { status?: number } }).context?.status;
+        if (status === 429) throw new Error("Trop de requêtes IA, réessayez dans quelques secondes.");
+        if (status === 402) throw new Error("Crédits IA épuisés, ajoutez du crédit dans Lovable Cloud.");
+        throw new Error(error.message || "Erreur de détection IA");
+      }
+      const markers = ((data as { markers?: Array<{ distance: number; xNorm: number; confidence: number }> })?.markers) ?? [];
+      const notes = (data as { notes?: string })?.notes ?? "";
+      if (markers.length === 0) {
+        setAiMarkersError("Aucun repère détecté — ajustez manuellement.");
+      } else {
+        const map: Record<number, number> = {};
+        for (const m of markers) map[m.distance] = m.xNorm;
+        setExtraMarkers(map);
+        // Auto-fill primary calib points if detected
+        const next: { x0?: number; xRef?: number } = {};
+        if (map[0] !== undefined) next.x0 = map[0];
+        if (map[calib.refMeters] !== undefined) next.xRef = map[calib.refMeters];
+        if (Object.keys(next).length > 0) {
+          setCalib((c) => ({ ...c, ...next }));
+        }
+      }
+      if (notes) setAiMarkersNotes(notes);
+    } catch (e) {
+      setAiMarkersError((e as Error).message || "Erreur de détection IA");
+    } finally {
+      setAiMarkersBusy(false);
+    }
+  };
+
   const runAI = async () => {
     const v = videoRef.current;
     if (!v) return;
@@ -324,12 +407,17 @@ export function SprintVideoAnalyzer({ distances, testDistance, onClose, onConfir
     try {
       const collected = await trackPelvisX(v, { sampleRateHz: 30, onProgress: setAiProgress, startTime: cropStart, endTime: cropEnd });
       setSamples(collected);
-      const computed = computeSplitTimesFromSamples(
-        collected,
-        distances,
-        { x0Norm: calib.x0, xRefNorm: calib.xRef, refMeters: calib.refMeters },
-        startOffset,
-      );
+      // Build calib: prefer piecewise if ≥2 extra markers, ensuring x0/xRef are included
+      const allMarkers: Record<number, number> = { ...extraMarkers };
+      if (calib.x0 !== undefined) allMarkers[0] = calib.x0;
+      if (calib.xRef !== undefined) allMarkers[calib.refMeters] = calib.xRef;
+      const markerEntries = Object.entries(allMarkers)
+        .map(([m, x]) => ({ meters: parseFloat(m), xNorm: x }))
+        .filter((p) => Number.isFinite(p.meters));
+      const calibInput: import("@/lib/poseDetection").CalibInput = markerEntries.length >= 2
+        ? { markers: markerEntries }
+        : { x0Norm: calib.x0!, xRefNorm: calib.xRef!, refMeters: calib.refMeters };
+      const computed = computeSplitTimesFromSamples(collected, distances, calibInput, startOffset);
       const next: typeof tags = {};
       for (const c of computed) {
         next[c.distance] = { time: c.time, source: "ai", confidence: c.confidence };
@@ -499,6 +587,28 @@ export function SprintVideoAnalyzer({ distances, testDistance, onClose, onConfir
                       </div>
                     </div>
                   )}
+                  {Object.entries(extraMarkers)
+                    .map(([d, x]) => ({ d: parseFloat(d), x }))
+                    .filter((m) => m.d !== 0 && m.d !== calib.refMeters)
+                    .map((m) => (
+                      <div key={m.d} className="pointer-events-none absolute top-0 bottom-0" style={{ left: `${m.x * 100}%` }}>
+                        <div className="absolute top-0 bottom-0 -translate-x-1/2 w-px bg-amber-400/80" />
+                        <span className="pointer-events-none absolute left-1 top-6 rounded bg-amber-400 px-1 text-[10px] font-bold text-black">{m.d}m</span>
+                        <div
+                          role="slider"
+                          tabIndex={0}
+                          aria-label={`Repère ${m.d} m (glisser pour ajuster)`}
+                          className="pointer-events-auto absolute top-0 bottom-0 -translate-x-1/2 w-4 cursor-ew-resize touch-none"
+                          onPointerDown={onMarkerPointerDown(`extra:${m.d}`)}
+                          onPointerMove={onMarkerPointerMove(`extra:${m.d}`)}
+                          onPointerUp={onMarkerPointerUp}
+                          onPointerCancel={onMarkerPointerUp}
+                          onKeyDown={onMarkerKeyDown(`extra:${m.d}`)}
+                        >
+                          <span className="absolute left-1/2 top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-amber-400 ring-2 ring-background" />
+                        </div>
+                      </div>
+                    ))}
                   {calibStep !== "none" && (
                     <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/40 text-center text-xs font-medium text-white">
                       Cliquez sur la position du repère {calibStep === "set0" ? "0 m" : `${calib.refMeters} m`} dans la vidéo
@@ -630,6 +740,28 @@ export function SprintVideoAnalyzer({ distances, testDistance, onClose, onConfir
                       <Crosshair className="mr-1 h-3 w-3" /> Repère {calib.refMeters}m
                     </Button>
                   </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full"
+                    disabled={aiMarkersBusy}
+                    onClick={detectMarkersAI}
+                  >
+                    <Wand2 className="mr-1.5 h-3.5 w-3.5" />
+                    {aiMarkersBusy ? "Détection des repères…" : "Détecter les repères (IA)"}
+                  </Button>
+                  {Object.keys(extraMarkers).length > 0 && (
+                    <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                      <span>{Object.keys(extraMarkers).length} repères détectés (interpolation activée)</span>
+                      <button
+                        type="button"
+                        className="rounded border px-1.5 py-0.5 hover:bg-muted"
+                        onClick={() => setExtraMarkers({})}
+                      >Effacer</button>
+                    </div>
+                  )}
+                  {aiMarkersNotes && <p className="text-[10px] text-muted-foreground italic">{aiMarkersNotes}</p>}
+                  {aiMarkersError && <p className="text-[10px] text-destructive">{aiMarkersError}</p>}
                   <Button
                     size="sm"
                     className="w-full gradient-primary text-primary-foreground"
