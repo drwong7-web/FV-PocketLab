@@ -13,12 +13,22 @@ export interface AnalyzerSplitResult {
   confidence: number;
 }
 
+export interface AnalyzerConfirmPayload {
+  splits: AnalyzerSplitResult[];
+  videoFps?: number;
+}
+
 interface Props {
   distances: number[];
   testDistance: number;
   onClose: () => void;
-  onConfirm: (splits: AnalyzerSplitResult[]) => void;
+  onConfirm: (payload: AnalyzerConfirmPayload) => void;
 }
+
+type VideoFrameCallbackVideo = HTMLVideoElement & {
+  requestVideoFrameCallback?: (cb: (now: number, metadata: { mediaTime: number }) => void) => number;
+  cancelVideoFrameCallback?: (handle: number) => void;
+};
 
 type CalibStep = "none" | "set0" | "setRef";
 
