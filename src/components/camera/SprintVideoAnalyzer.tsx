@@ -384,32 +384,34 @@ export function SprintVideoAnalyzer({ distances, testDistance, onClose, onConfir
             </div>
           ) : (
             <>
-              <div ref={overlayRef} className="relative w-full overflow-hidden rounded-md bg-black" onClick={onOverlayClick}>
-                <video
-                  ref={videoRef}
-                  src={videoUrl}
-                  className="block w-full"
-                  playsInline
-                  onLoadedMetadata={(e) => { setDuration((e.target as HTMLVideoElement).duration); measureFpsFromVideo(); }}
-                  onTimeUpdate={(e) => setCurrentTime((e.target as HTMLVideoElement).currentTime)}
-                  onPlay={() => setPlaying(true)}
-                  onPause={() => setPlaying(false)}
-                />
-                {calib.x0 !== undefined && (
-                  <div className="pointer-events-none absolute top-0 bottom-0 w-px bg-primary" style={{ left: `${calib.x0 * 100}%` }}>
-                    <span className="absolute left-1 top-1 rounded bg-primary px-1 text-[10px] font-bold text-primary-foreground">0m</span>
-                  </div>
-                )}
-                {calib.xRef !== undefined && (
-                  <div className="pointer-events-none absolute top-0 bottom-0 w-px bg-destructive" style={{ left: `${calib.xRef * 100}%` }}>
-                    <span className="absolute left-1 top-1 rounded bg-destructive px-1 text-[10px] font-bold text-white">{calib.refMeters}m</span>
-                  </div>
-                )}
-                {calibStep !== "none" && (
-                  <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/40 text-center text-xs font-medium text-white">
-                    Cliquez sur la position du repère {calibStep === "set0" ? "0 m" : `${calib.refMeters} m`} dans la vidéo
-                  </div>
-                )}
+              <div className="flex justify-center rounded-md bg-black overflow-hidden">
+                <div ref={overlayRef} className="relative inline-block" onClick={onOverlayClick}>
+                  <video
+                    ref={videoRef}
+                    src={videoUrl}
+                    className="block max-h-[50vh] w-auto max-w-full"
+                    playsInline
+                    onLoadedMetadata={(e) => { setDuration((e.target as HTMLVideoElement).duration); }}
+                    onTimeUpdate={(e) => { if (!playing) setCurrentTime((e.target as HTMLVideoElement).currentTime); }}
+                    onPlay={() => { setPlaying(true); measureFpsFromVideo(); }}
+                    onPause={() => setPlaying(false)}
+                  />
+                  {calib.x0 !== undefined && (
+                    <div className="pointer-events-none absolute top-0 bottom-0 w-px bg-primary" style={{ left: `${calib.x0 * 100}%` }}>
+                      <span className="absolute left-1 top-1 rounded bg-primary px-1 text-[10px] font-bold text-primary-foreground">0m</span>
+                    </div>
+                  )}
+                  {calib.xRef !== undefined && (
+                    <div className="pointer-events-none absolute top-0 bottom-0 w-px bg-destructive" style={{ left: `${calib.xRef * 100}%` }}>
+                      <span className="absolute left-1 top-1 rounded bg-destructive px-1 text-[10px] font-bold text-white">{calib.refMeters}m</span>
+                    </div>
+                  )}
+                  {calibStep !== "none" && (
+                    <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/40 text-center text-xs font-medium text-white">
+                      Cliquez sur la position du repère {calibStep === "set0" ? "0 m" : `${calib.refMeters} m`} dans la vidéo
+                    </div>
+                  )}
+                </div>
               </div>
 
               <input
