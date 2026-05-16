@@ -414,9 +414,9 @@ export function SprintVideoAnalyzer({ distances, testDistance, onClose, onConfir
       const markerEntries = Object.entries(allMarkers)
         .map(([m, x]) => ({ meters: parseFloat(m), xNorm: x }))
         .filter((p) => Number.isFinite(p.meters));
-      const calibInput = markerEntries.length >= 2
+      const calibInput: import("@/lib/poseDetection").CalibInput = markerEntries.length >= 2
         ? { markers: markerEntries }
-        : { x0Norm: calib.x0, xRefNorm: calib.xRef, refMeters: calib.refMeters };
+        : { x0Norm: calib.x0!, xRefNorm: calib.xRef!, refMeters: calib.refMeters };
       const computed = computeSplitTimesFromSamples(collected, distances, calibInput, startOffset);
       const next: typeof tags = {};
       for (const c of computed) {
