@@ -68,6 +68,7 @@ export default function SprintTest() {
   const [error, setError] = useState("");
   const [cameraOpen, setCameraOpen] = useState(false);
   const [analyzerOpen, setAnalyzerOpen] = useState(false);
+  const [videoFps, setVideoFps] = useState<number | undefined>(undefined);
   const [geoBusy, setGeoBusy] = useState(false);
   const [geoInfo, setGeoInfo] = useState<string | null>(null);
   const [geoError, setGeoError] = useState<string | null>(null);
@@ -174,6 +175,7 @@ export default function SprintTest() {
         surface,
         shoeType,
         notes: notes || undefined,
+        videoFps,
       };
       const results = calculateSprintProfile(inputs);
       const athlete = players.find((p) => p.id === athleteId);
@@ -483,13 +485,14 @@ export default function SprintTest() {
           distances={splits.filter((s) => s.distance > 0).map((s) => s.distance)}
           testDistance={testDistance}
           onClose={() => setAnalyzerOpen(false)}
-          onConfirm={(results) => {
+          onConfirm={({ splits: results, videoFps: fps }) => {
             const next = [...splits];
             for (const r of results) {
               const i = next.findIndex((s) => s.distance === r.distance);
               if (i >= 0) next[i] = { ...next[i], time: r.time, source: r.source, confidence: r.confidence };
             }
             setSplits(next);
+            if (fps) setVideoFps(fps);
             setAnalyzerOpen(false);
           }}
         />
