@@ -1,43 +1,77 @@
-## Problèmes constatés
+## Objectifs
 
-1. **Barre de progression saccadée / bloquée** : la position du curseur est mise à jour uniquement via `onTimeUpdate` (≈ 4 Hz), donc visuellement haché. Pire : `measureFpsFromVideo()` est déclenché sur `onLoadedMetadata`, ce qui lance une **lecture silencieuse parallèle** de la vidéo (jusqu'à 1 s) puis remet `currentTime` à la position de départ. Cela bloque/saute la lecture utilisateur juste après l'ouverture de la vidéo et perturbe la timeline.
-2. **Vidéo partiellement cachée** : `<video className="block w-full" />` sans contrainte verticale. Une vidéo portrait (téléphone) déborde la `Card` (`max-h-[95vh]` avec header, contrôles, panneaux, footer) → le bas de la vidéo est masqué.
+1. Repères de calibration (0 m et `refMeters` m) **déplaçables au pixel près** sur la vidéo.
+2. Sur la timeline vidéo, **deux poignées de crop** (début/fin) qui délimitent la portion analysée par l'IA.
 
 ---
 
-## Correctifs (`src/components/camera/SprintVideoAnalyzer.tsx`)
+## 1. Repères 0 m / X m déplaçables
 
-### 1. Mesure FPS non bloquante
-- Ne plus appeler `measureFpsFromVideo()` dans `onLoadedMetadata`.
-- Déclencher la mesure **à la première lecture utilisateur** (`onPlay`), avec un drapeau `fpsMeasuredRef` pour ne le faire qu'une fois. La mesure se fait alors **pendant la lecture réelle** via `requestVideoFrameCallback` (compte les frames sur ~1 s), sans `play()`/`pause()`/seek artificiels.
-- Fallback inchangé : si l'API n'existe pas, on ne mesure pas (le score FPS reste à 0).
+### Fichier : `src/components/camera/SprintVideoAnalyzer.tsx`
 
-### 2. Barre de progression fluide
-- Remplacer la mise à jour `currentTime` par `onTimeUpdate` par une boucle `requestAnimationFrame` active uniquement pendant la lecture (`playing === true`). Cleanup via `useEffect` retournant `cancelAnimationFrame`.
-- Conserver `onTimeUpdate` comme filet de sécurité quand la vidéo est en pause (seek manuel).
+- Chaque ligne de calibration (`calib.x0`, `calib.xRef`) devient une poignée draggable :
+  - Ajouter une zone de saisie large (≈ 16 px) centrée sur la ligne, `cursor-ew-resize`, `pointer-events-auto`.
+  - Sur `pointerdown` → capture du pointeur, on entre en mode drag (`draggingMarker: "x0" | "xRef" | null`).
+  - Sur `pointermove` → calcul `xNorm = (clientX − overlayRect.left) / overlayRect.width`, clamp `[0, 1]`, met à jour `calib.x0` ou `calib.xRef`.
+  - Sur `pointerup` / `pointercancel` → fin du drag.
+- `onOverlayClick` (mode calibration initial) reste inchangé pour la première pose.
+- Quand le drag est actif, désactiver `onOverlayClick` (early return si on vient de drag).
+- Affichage : agrandir un peu les étiquettes "0m" / "{refMeters}m" et ajouter un petit handle visuel (cercle 8 px) au milieu vertical pour signaler que c'est manipulable.
+- Astuce précision : flèches clavier ←/→ quand un marqueur est focus → déplacement de 1 px (= `1 / overlayRect.width`).
 
-### 3. Affichage vidéo adéquat
-- Conteneur vidéo : `flex items-center justify-center bg-black` avec hauteur bornée `max-h-[55vh]` (et `max-h-[45vh]` en mobile via responsive ou simplement `max-h-[50vh]`).
-- Élément `<video>` : `className="max-h-[50vh] w-auto max-w-full object-contain"` pour gérer correctement portrait **et** paysage sans recadrage ni débordement.
-- Les overlays de calibration (lignes 0 m / réf) restent positionnés sur le conteneur en `relative`, mais ils doivent suivre la **largeur réelle** de la vidéo, pas celle du conteneur. Solution simple : limiter le conteneur lui-même à la largeur de la vidéo via `inline-block` + `mx-auto`, ou positionner les overlays via un wrapper interne dont la largeur s'aligne sur la vidéo (`relative` autour du `<video>` lui-même).
+Aucun changement sur la logique de calcul aval (`runAI`, `computeSplitTimesFromSamples`) puisqu'elle lit déjà `calib.x0` / `calib.xRef`.
 
-### Implémentation des overlays
-Structurer comme :
+---
+
+## 2. Crop de la fenêtre d'analyse IA sur la timeline
+
+### `src/components/camera/SprintVideoAnalyzer.tsx`
+
+- Nouveaux états : `cropStart: number`, `cropEnd: number` (en secondes), initialisés à `[0, duration]` quand `duration` change.
+- Remplacer l'`<input type="range">` actuel par un composant timeline custom :
+  - Piste horizontale `relative h-6`.
+  - **Zone grisée** avant `cropStart` et après `cropEnd` (`bg-muted/60`).
+  - **Zone active** `[cropStart, cropEnd]` (`bg-primary/15`).
+  - **Curseur de lecture** = ligne fine pilotée par `currentTime` (déjà mis à jour par rAF).
+  - **Deux poignées draggables** (cropStart, cropEnd) en `cursor-ew-resize`, avec contraintes :
+    - `cropStart ≥ 0`, `cropStart ≤ cropEnd − 0.1`.
+    - `cropEnd ≤ duration`, `cropEnd ≥ cropStart + 0.1`.
+  - Clic sur la zone active (hors poignée) → seek (`videoRef.currentTime = …`).
+- Bornes affichées sous la timeline : `cropStart.toFixed(2)s → cropEnd.toFixed(2)s` + bouton "Réinitialiser le crop".
+- Le contrôle `startOffset` ("marquer départ") reste indépendant : le crop sert à l'IA, `startOffset` au calcul de t=0.
+
+### `src/lib/poseDetection.ts`
+
+- Étendre `PoseTrackingOptions` :
+  ```ts
+  startTime?: number; // default 0
+  endTime?: number;   // default video.duration
+  ```
+- Dans `trackPelvisX` :
+  - `const start = Math.max(0, opts.startTime ?? 0);`
+  - `const end = Math.min(duration, opts.endTime ?? duration);`
+  - Boucle : `let t = start; while (t < end) { … }`.
+  - Progression : `(t − start) / (end − start)`.
+
+### Branchement `runAI`
+
+```ts
+const collected = await trackPelvisX(v, {
+  sampleRateHz: 30,
+  onProgress: setAiProgress,
+  startTime: cropStart,
+  endTime: cropEnd,
+});
 ```
-<div className="flex justify-center bg-black rounded-md overflow-hidden">
-  <div ref={overlayRef} className="relative" onClick={onOverlayClick}>
-    <video … className="block max-h-[50vh] w-auto max-w-full" />
-    {overlays calib + step}
-  </div>
-</div>
-```
-Ainsi `overlayRef.getBoundingClientRect()` correspond bien à la zone vidéo affichée, la calibration reste exacte.
+
+`computeSplitTimesFromSamples` reste inchangé (il filtre déjà à partir de `startTimeOffset`).
 
 ---
 
 ## Hors-scope
-- Pas de changement de la logique de calibration, IA pose, splits, ou plumbing FPS vers `calculateSprintProfile`.
-- Pas de changement aux autres modes (caméra live, choix).
+- Pas de zoom vidéo / recadrage spatial (seulement temporel sur la timeline).
+- Pas de changement à la mesure FPS, au flux d'enregistrement caméra, ni aux modes parents.
 
-## Fichier modifié
-- `src/components/camera/SprintVideoAnalyzer.tsx` uniquement.
+## Fichiers modifiés
+- `src/components/camera/SprintVideoAnalyzer.tsx`
+- `src/lib/poseDetection.ts`

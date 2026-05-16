@@ -71,6 +71,13 @@ export function SprintVideoAnalyzer({ distances, testDistance, onClose, onConfir
   const [aiError, setAiError] = useState("");
   const [samples, setSamples] = useState<PoseSample[] | null>(null);
   const [measuredFps, setMeasuredFps] = useState<number | undefined>(undefined);
+  const [draggingMarker, setDraggingMarker] = useState<"x0" | "xRef" | null>(null);
+  const [cropStart, setCropStart] = useState(0);
+  const [cropEnd, setCropEnd] = useState(0);
+  const [draggingCrop, setDraggingCrop] = useState<"start" | "end" | null>(null);
+  const cropTrackRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => { setCropStart(0); setCropEnd(duration || 0); }, [duration]);
   const fpsMeasuredRef = useRef(false);
   const rafRef = useRef<number | null>(null);
 
@@ -229,6 +236,7 @@ export function SprintVideoAnalyzer({ distances, testDistance, onClose, onConfir
   };
 
   const onOverlayClick = (e: React.MouseEvent) => {
+    if (draggingMarker) return;
     if (calibStep === "none") return;
     const el = overlayRef.current; if (!el) return;
     const rect = el.getBoundingClientRect();
@@ -240,6 +248,63 @@ export function SprintVideoAnalyzer({ distances, testDistance, onClose, onConfir
       setCalib((c) => ({ ...c, xRef: xNorm }));
       setCalibStep("none");
     }
+  };
+
+  const getOverlayXNorm = (clientX: number): number | null => {
+    const el = overlayRef.current; if (!el) return null;
+    const rect = el.getBoundingClientRect();
+    return Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+  };
+
+  const onMarkerPointerDown = (which: "x0" | "xRef") => (e: React.PointerEvent) => {
+    e.stopPropagation();
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    setDraggingMarker(which);
+  };
+  const onMarkerPointerMove = (which: "x0" | "xRef") => (e: React.PointerEvent) => {
+    if (draggingMarker !== which) return;
+    const x = getOverlayXNorm(e.clientX); if (x === null) return;
+    setCalib((c) => ({ ...c, [which]: x }));
+  };
+  const onMarkerPointerUp = (e: React.PointerEvent) => {
+    try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId); } catch { /* noop */ }
+    setDraggingMarker(null);
+  };
+  const onMarkerKeyDown = (which: "x0" | "xRef") => (e: React.KeyboardEvent) => {
+    const el = overlayRef.current; if (!el) return;
+    const px = 1 / el.getBoundingClientRect().width;
+    const cur = calib[which]; if (cur === undefined) return;
+    if (e.key === "ArrowLeft") { e.preventDefault(); setCalib((c) => ({ ...c, [which]: Math.max(0, cur - px) })); }
+    else if (e.key === "ArrowRight") { e.preventDefault(); setCalib((c) => ({ ...c, [which]: Math.min(1, cur + px) })); }
+  };
+
+  // Crop timeline drag
+  const getCropTime = (clientX: number): number => {
+    const el = cropTrackRef.current; if (!el || !duration) return 0;
+    const rect = el.getBoundingClientRect();
+    const r = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+    return r * duration;
+  };
+  const onCropHandleDown = (which: "start" | "end") => (e: React.PointerEvent) => {
+    e.stopPropagation();
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    setDraggingCrop(which);
+  };
+  const onCropHandleMove = (which: "start" | "end") => (e: React.PointerEvent) => {
+    if (draggingCrop !== which) return;
+    const t = getCropTime(e.clientX);
+    if (which === "start") setCropStart(Math.min(t, cropEnd - 0.1));
+    else setCropEnd(Math.max(t, cropStart + 0.1));
+  };
+  const onCropHandleUp = (e: React.PointerEvent) => {
+    try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId); } catch { /* noop */ }
+    setDraggingCrop(null);
+  };
+  const onTrackClick = (e: React.MouseEvent) => {
+    if (draggingCrop) return;
+    const t = getCropTime(e.clientX);
+    if (t < cropStart || t > cropEnd) return;
+    const v = videoRef.current; if (v) v.currentTime = t;
   };
 
   const runAI = async () => {
@@ -257,7 +322,7 @@ export function SprintVideoAnalyzer({ distances, testDistance, onClose, onConfir
     setAiBusy(true);
     setAiProgress(0);
     try {
-      const collected = await trackPelvisX(v, { sampleRateHz: 30, onProgress: setAiProgress });
+      const collected = await trackPelvisX(v, { sampleRateHz: 30, onProgress: setAiProgress, startTime: cropStart, endTime: cropEnd });
       setSamples(collected);
       const computed = computeSplitTimesFromSamples(
         collected,
@@ -397,13 +462,41 @@ export function SprintVideoAnalyzer({ distances, testDistance, onClose, onConfir
                     onPause={() => setPlaying(false)}
                   />
                   {calib.x0 !== undefined && (
-                    <div className="pointer-events-none absolute top-0 bottom-0 w-px bg-primary" style={{ left: `${calib.x0 * 100}%` }}>
-                      <span className="absolute left-1 top-1 rounded bg-primary px-1 text-[10px] font-bold text-primary-foreground">0m</span>
+                    <div className="pointer-events-none absolute top-0 bottom-0" style={{ left: `${calib.x0 * 100}%` }}>
+                      <div className="absolute top-0 bottom-0 -translate-x-1/2 w-px bg-primary" />
+                      <span className="pointer-events-none absolute left-1 top-1 rounded bg-primary px-1 text-[10px] font-bold text-primary-foreground">0m</span>
+                      <div
+                        role="slider"
+                        tabIndex={0}
+                        aria-label="Repère 0 m (glisser pour ajuster)"
+                        className="pointer-events-auto absolute top-0 bottom-0 -translate-x-1/2 w-4 cursor-ew-resize touch-none"
+                        onPointerDown={onMarkerPointerDown("x0")}
+                        onPointerMove={onMarkerPointerMove("x0")}
+                        onPointerUp={onMarkerPointerUp}
+                        onPointerCancel={onMarkerPointerUp}
+                        onKeyDown={onMarkerKeyDown("x0")}
+                      >
+                        <span className="absolute left-1/2 top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary ring-2 ring-background" />
+                      </div>
                     </div>
                   )}
                   {calib.xRef !== undefined && (
-                    <div className="pointer-events-none absolute top-0 bottom-0 w-px bg-destructive" style={{ left: `${calib.xRef * 100}%` }}>
-                      <span className="absolute left-1 top-1 rounded bg-destructive px-1 text-[10px] font-bold text-white">{calib.refMeters}m</span>
+                    <div className="pointer-events-none absolute top-0 bottom-0" style={{ left: `${calib.xRef * 100}%` }}>
+                      <div className="absolute top-0 bottom-0 -translate-x-1/2 w-px bg-destructive" />
+                      <span className="pointer-events-none absolute left-1 top-1 rounded bg-destructive px-1 text-[10px] font-bold text-white">{calib.refMeters}m</span>
+                      <div
+                        role="slider"
+                        tabIndex={0}
+                        aria-label={`Repère ${calib.refMeters} m (glisser pour ajuster)`}
+                        className="pointer-events-auto absolute top-0 bottom-0 -translate-x-1/2 w-4 cursor-ew-resize touch-none"
+                        onPointerDown={onMarkerPointerDown("xRef")}
+                        onPointerMove={onMarkerPointerMove("xRef")}
+                        onPointerUp={onMarkerPointerUp}
+                        onPointerCancel={onMarkerPointerUp}
+                        onKeyDown={onMarkerKeyDown("xRef")}
+                      >
+                        <span className="absolute left-1/2 top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-destructive ring-2 ring-background" />
+                      </div>
                     </div>
                   )}
                   {calibStep !== "none" && (
@@ -414,15 +507,72 @@ export function SprintVideoAnalyzer({ distances, testDistance, onClose, onConfir
                 </div>
               </div>
 
-              <input
-                type="range"
-                min={0}
-                max={duration || 0}
-                step={FRAME_STEP}
-                value={currentTime}
-                onChange={(e) => { const v = videoRef.current; if (v) v.currentTime = parseFloat(e.target.value); }}
-                className="w-full accent-primary"
-              />
+              {/* Timeline avec crop pour l'analyse IA */}
+              <div className="space-y-1">
+                <div
+                  ref={cropTrackRef}
+                  className="relative h-7 w-full select-none rounded bg-muted/60"
+                  onClick={onTrackClick}
+                >
+                  {duration > 0 && (
+                    <>
+                      <div
+                        className="absolute top-0 bottom-0 bg-primary/20"
+                        style={{ left: `${(cropStart / duration) * 100}%`, right: `${100 - (cropEnd / duration) * 100}%` }}
+                      />
+                      <div
+                        className="pointer-events-none absolute top-0 bottom-0 w-0.5 bg-foreground"
+                        style={{ left: `${(currentTime / duration) * 100}%` }}
+                      />
+                      <div
+                        role="slider"
+                        aria-label="Début de la zone d'analyse IA"
+                        tabIndex={0}
+                        className="absolute top-0 bottom-0 -translate-x-1/2 w-4 cursor-ew-resize touch-none"
+                        style={{ left: `${(cropStart / duration) * 100}%` }}
+                        onPointerDown={onCropHandleDown("start")}
+                        onPointerMove={onCropHandleMove("start")}
+                        onPointerUp={onCropHandleUp}
+                        onPointerCancel={onCropHandleUp}
+                      >
+                        <span className="absolute left-1/2 top-0 bottom-0 -translate-x-1/2 w-1 rounded bg-primary" />
+                      </div>
+                      <div
+                        role="slider"
+                        aria-label="Fin de la zone d'analyse IA"
+                        tabIndex={0}
+                        className="absolute top-0 bottom-0 -translate-x-1/2 w-4 cursor-ew-resize touch-none"
+                        style={{ left: `${(cropEnd / duration) * 100}%` }}
+                        onPointerDown={onCropHandleDown("end")}
+                        onPointerMove={onCropHandleMove("end")}
+                        onPointerUp={onCropHandleUp}
+                        onPointerCancel={onCropHandleUp}
+                      >
+                        <span className="absolute left-1/2 top-0 bottom-0 -translate-x-1/2 w-1 rounded bg-primary" />
+                      </div>
+                    </>
+                  )}
+                </div>
+                <input
+                  type="range"
+                  min={0}
+                  max={duration || 0}
+                  step={FRAME_STEP}
+                  value={currentTime}
+                  onChange={(e) => { const v = videoRef.current; if (v) v.currentTime = parseFloat(e.target.value); }}
+                  className="w-full accent-primary"
+                />
+                <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                  <span className="font-mono">Crop IA : {cropStart.toFixed(2)}s → {cropEnd.toFixed(2)}s</span>
+                  <button
+                    type="button"
+                    className="rounded border px-2 py-0.5 hover:bg-muted"
+                    onClick={() => { setCropStart(0); setCropEnd(duration || 0); }}
+                  >
+                    Réinitialiser le crop
+                  </button>
+                </div>
+              </div>
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-1">
                   <Button size="icon" variant="outline" onClick={() => stepFrame(-FRAME_STEP)} aria-label="Frame -1"><ChevronLeft className="h-4 w-4" /></Button>
