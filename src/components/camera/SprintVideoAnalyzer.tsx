@@ -326,6 +326,70 @@ export function SprintVideoAnalyzer({ distances, testDistance, onClose, onConfir
     const v = videoRef.current; if (v) v.currentTime = t;
   };
 
+  const detectMarkersAI = async () => {
+    const v = videoRef.current; if (!v) return;
+    setAiMarkersError("");
+    setAiMarkersBusy(true);
+    setAiMarkersNotes("");
+    try {
+      // Seek to first frame of crop window
+      await new Promise<void>((resolve) => {
+        const onSeek = () => { v.removeEventListener("seeked", onSeek); resolve(); };
+        v.addEventListener("seeked", onSeek);
+        const target = Math.min(cropStart, Math.max(0, (v.duration || 0) - 0.05));
+        if (Math.abs(v.currentTime - target) < 0.01) { v.removeEventListener("seeked", onSeek); resolve(); }
+        else v.currentTime = target;
+      });
+      // Draw current frame to a canvas
+      const w = v.videoWidth || 1280;
+      const h = v.videoHeight || 720;
+      const canvas = document.createElement("canvas");
+      // Downscale for cost/latency, keep aspect
+      const maxW = 1280;
+      const scale = w > maxW ? maxW / w : 1;
+      canvas.width = Math.round(w * scale);
+      canvas.height = Math.round(h * scale);
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new Error("Canvas indisponible");
+      ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+      const imageBase64 = dataUrl.substring(dataUrl.indexOf(",") + 1);
+
+      const distancesWithZero = Array.from(new Set([0, ...distances, calib.refMeters].filter((d) => Number.isFinite(d)))).sort((a, b) => a - b);
+
+      const { data, error } = await supabase.functions.invoke("detect-sprint-markers", {
+        body: { imageBase64, distances: distancesWithZero, mimeType: "image/jpeg" },
+      });
+      if (error) {
+        const status = (error as { context?: { status?: number } }).context?.status;
+        if (status === 429) throw new Error("Trop de requêtes IA, réessayez dans quelques secondes.");
+        if (status === 402) throw new Error("Crédits IA épuisés, ajoutez du crédit dans Lovable Cloud.");
+        throw new Error(error.message || "Erreur de détection IA");
+      }
+      const markers = ((data as { markers?: Array<{ distance: number; xNorm: number; confidence: number }> })?.markers) ?? [];
+      const notes = (data as { notes?: string })?.notes ?? "";
+      if (markers.length === 0) {
+        setAiMarkersError("Aucun repère détecté — ajustez manuellement.");
+      } else {
+        const map: Record<number, number> = {};
+        for (const m of markers) map[m.distance] = m.xNorm;
+        setExtraMarkers(map);
+        // Auto-fill primary calib points if detected
+        const next: { x0?: number; xRef?: number } = {};
+        if (map[0] !== undefined) next.x0 = map[0];
+        if (map[calib.refMeters] !== undefined) next.xRef = map[calib.refMeters];
+        if (Object.keys(next).length > 0) {
+          setCalib((c) => ({ ...c, ...next }));
+        }
+      }
+      if (notes) setAiMarkersNotes(notes);
+    } catch (e) {
+      setAiMarkersError((e as Error).message || "Erreur de détection IA");
+    } finally {
+      setAiMarkersBusy(false);
+    }
+  };
+
   const runAI = async () => {
     const v = videoRef.current;
     if (!v) return;
@@ -343,12 +407,17 @@ export function SprintVideoAnalyzer({ distances, testDistance, onClose, onConfir
     try {
       const collected = await trackPelvisX(v, { sampleRateHz: 30, onProgress: setAiProgress, startTime: cropStart, endTime: cropEnd });
       setSamples(collected);
-      const computed = computeSplitTimesFromSamples(
-        collected,
-        distances,
-        { x0Norm: calib.x0, xRefNorm: calib.xRef, refMeters: calib.refMeters },
-        startOffset,
-      );
+      // Build calib: prefer piecewise if ≥2 extra markers, ensuring x0/xRef are included
+      const allMarkers: Record<number, number> = { ...extraMarkers };
+      if (calib.x0 !== undefined) allMarkers[0] = calib.x0;
+      if (calib.xRef !== undefined) allMarkers[calib.refMeters] = calib.xRef;
+      const markerEntries = Object.entries(allMarkers)
+        .map(([m, x]) => ({ meters: parseFloat(m), xNorm: x }))
+        .filter((p) => Number.isFinite(p.meters));
+      const calibInput = markerEntries.length >= 2
+        ? { markers: markerEntries }
+        : { x0Norm: calib.x0, xRefNorm: calib.xRef, refMeters: calib.refMeters };
+      const computed = computeSplitTimesFromSamples(collected, distances, calibInput, startOffset);
       const next: typeof tags = {};
       for (const c of computed) {
         next[c.distance] = { time: c.time, source: "ai", confidence: c.confidence };
