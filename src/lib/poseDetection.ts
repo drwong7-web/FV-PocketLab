@@ -60,9 +60,12 @@ export async function trackPelvisX(
   const wasPaused = video.paused;
   if (!wasPaused) video.pause();
 
-  let t = 0;
+  const start = Math.max(0, opts.startTime ?? 0);
+  const end = Math.min(duration, opts.endTime ?? duration);
+  const span = Math.max(0.001, end - start);
+  let t = start;
   let frameIdx = 0;
-  while (t < duration) {
+  while (t < end) {
     if (opts.signal?.aborted) break;
     await seekTo(t);
     const ts = Math.round(t * 1000) + frameIdx;
@@ -74,7 +77,7 @@ export async function trackPelvisX(
       const visR = (lms[24] as { visibility?: number }).visibility ?? 0.5;
       samples.push({ t, x, confidence: (visL + visR) / 2 });
     }
-    opts.onProgress?.(t / duration);
+    opts.onProgress?.((t - start) / span);
     t += dt;
     frameIdx++;
   }
