@@ -3,8 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ChevronLeft, ChevronRight, Circle, Crosshair, Flag, Pause, Play, Sparkles, Square, Upload, Video, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Circle, Crosshair, Flag, Pause, Play, Sparkles, Square, Upload, Video, Wand2, X } from "lucide-react";
 import { trackPelvisX, computeSplitTimesFromSamples, type PoseSample } from "@/lib/poseDetection";
+import { supabase } from "@/integrations/supabase/client";
 
 export interface AnalyzerSplitResult {
   distance: number;
