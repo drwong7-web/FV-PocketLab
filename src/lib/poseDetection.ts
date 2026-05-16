@@ -85,16 +85,49 @@ export async function trackPelvisX(
   return samples;
 }
 
+export type CalibInput =
+  | { x0Norm: number; xRefNorm: number; refMeters: number }
+  | { markers: { xNorm: number; meters: number }[] };
+
+function buildXToMeters(calib: CalibInput): ((x: number) => number) | null {
+  if ("markers" in calib) {
+    const pts = [...calib.markers].sort((a, b) => a.xNorm - b.xNorm);
+    if (pts.length < 2) return null;
+    return (x: number) => {
+      if (x <= pts[0].xNorm) {
+        const a = pts[0], b = pts[1];
+        const slope = (b.meters - a.meters) / (b.xNorm - a.xNorm || 1e-9);
+        return a.meters + slope * (x - a.xNorm);
+      }
+      if (x >= pts[pts.length - 1].xNorm) {
+        const a = pts[pts.length - 2], b = pts[pts.length - 1];
+        const slope = (b.meters - a.meters) / (b.xNorm - a.xNorm || 1e-9);
+        return b.meters + slope * (x - b.xNorm);
+      }
+      for (let i = 1; i < pts.length; i++) {
+        if (x <= pts[i].xNorm) {
+          const a = pts[i - 1], b = pts[i];
+          const r = (x - a.xNorm) / (b.xNorm - a.xNorm || 1e-9);
+          return a.meters + r * (b.meters - a.meters);
+        }
+      }
+      return pts[pts.length - 1].meters;
+    };
+  }
+  const { x0Norm, xRefNorm, refMeters } = calib;
+  const denom = xRefNorm - x0Norm;
+  if (Math.abs(denom) < 1e-6 || refMeters <= 0) return null;
+  return (x: number) => ((x - x0Norm) / denom) * refMeters;
+}
+
 export function computeSplitTimesFromSamples(
   samples: PoseSample[],
   distances: number[],
-  calib: { x0Norm: number; xRefNorm: number; refMeters: number },
+  calib: CalibInput,
   startTimeOffset: number,
 ): { distance: number; time: number; confidence: number }[] {
-  const { x0Norm, xRefNorm, refMeters } = calib;
-  const denom = xRefNorm - x0Norm;
-  if (Math.abs(denom) < 1e-6 || refMeters <= 0) return [];
-  const xToMeters = (x: number) => ((x - x0Norm) / denom) * refMeters;
+  const xToMeters = buildXToMeters(calib);
+  if (!xToMeters) return [];
 
   const series = samples
     .filter((s) => s.t >= startTimeOffset)
