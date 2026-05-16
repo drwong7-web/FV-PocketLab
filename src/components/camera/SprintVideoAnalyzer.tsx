@@ -71,6 +71,23 @@ export function SprintVideoAnalyzer({ distances, testDistance, onClose, onConfir
   const [aiError, setAiError] = useState("");
   const [samples, setSamples] = useState<PoseSample[] | null>(null);
   const [measuredFps, setMeasuredFps] = useState<number | undefined>(undefined);
+  const fpsMeasuredRef = useRef(false);
+  const rafRef = useRef<number | null>(null);
+
+  // Fluid timeline: drive currentTime via rAF while playing
+  useEffect(() => {
+    if (!playing) {
+      if (rafRef.current !== null) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
+      return;
+    }
+    const loop = () => {
+      const v = videoRef.current;
+      if (v) setCurrentTime(v.currentTime);
+      rafRef.current = requestAnimationFrame(loop);
+    };
+    rafRef.current = requestAnimationFrame(loop);
+    return () => { if (rafRef.current !== null) { cancelAnimationFrame(rafRef.current); rafRef.current = null; } };
+  }, [playing]);
 
   useEffect(() => () => { if (videoUrl) URL.revokeObjectURL(videoUrl); }, [videoUrl]);
 
