@@ -93,8 +93,8 @@ export default {
         "accordion-up": { from: { height: "var(--radix-accordion-content-height)" }, to: { height: "0" } },
         "fade-in": { from: { opacity: "0.6" }, to: { opacity: "1" } },
         "page-in": {
-          from: { opacity: "0.85", transform: "translateY(2px)" },
-          to: { opacity: "1", transform: "translateY(0)" },
+          from: { opacity: "1", transform: "none" },
+          to: { opacity: "1", transform: "none" },
         },
         "pulse-glow": { "0%,100%": { boxShadow: "0 0 0 0 hsl(var(--primary)/0.4)" }, "50%": { boxShadow: "0 0 20px 4px hsl(var(--primary)/0.2)" } },
       },
