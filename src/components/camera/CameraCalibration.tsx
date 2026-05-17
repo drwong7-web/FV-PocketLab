@@ -27,19 +27,24 @@ export function CameraCalibration({ onConfirm, onClose }: CameraCalibrationProps
   // Horizontal sliding markers (ratio 0..1 on overlay)
   const [yTop, setYTop] = useState(0.3);
   const [yBottom, setYBottom] = useState(0.7);
+  const [placed, setPlaced] = useState(false);
   const [dragging, setDragging] = useState<"top" | "bottom" | null>(null);
 
   const openCamera = async () => {
     try {
-      streamRef.current?.getTracks().forEach((t) => t.stop());
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
+      }
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } },
         audio: false,
       });
       streamRef.current = stream;
-      if (liveVideoRef.current) {
-        liveVideoRef.current.srcObject = stream;
-        await liveVideoRef.current.play().catch(() => {});
+      const v = liveVideoRef.current;
+      if (v) {
+        v.srcObject = stream;
+        await v.play().catch(() => {});
       }
       setError("");
     } catch (e) {
@@ -47,8 +52,21 @@ export function CameraCalibration({ onConfirm, onClose }: CameraCalibrationProps
     }
   };
 
+  // Open / re-open the camera whenever we are back to the live preview phase.
+  // Using an effect ensures liveVideoRef is mounted before we attach the stream
+  // (prevents a black screen when "Retake" is pressed).
   useEffect(() => {
-    openCamera();
+    if (phase !== "idle") return;
+    if (!streamRef.current) {
+      openCamera();
+    } else if (liveVideoRef.current && liveVideoRef.current.srcObject !== streamRef.current) {
+      liveVideoRef.current.srcObject = streamRef.current;
+      liveVideoRef.current.play().catch(() => {});
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase]);
+
+  useEffect(() => {
     return () => {
       streamRef.current?.getTracks().forEach((t) => t.stop());
       if (photoUrl) URL.revokeObjectURL(photoUrl);
@@ -56,7 +74,7 @@ export function CameraCalibration({ onConfirm, onClose }: CameraCalibrationProps
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const resetMarkers = () => { setYTop(0.3); setYBottom(0.7); };
+  const resetMarkers = () => { setYTop(0.3); setYBottom(0.7); setPlaced(false); };
 
   const snap = () => {
     const v = liveVideoRef.current;
@@ -126,8 +144,27 @@ export function CameraCalibration({ onConfirm, onClose }: CameraCalibrationProps
 
   const retake = () => {
     if (photoUrl) URL.revokeObjectURL(photoUrl);
-    setPhotoUrl(null); resetMarkers(); setPhase("idle");
-    if (!streamRef.current) openCamera();
+    setPhotoUrl(null);
+    resetMarkers();
+    setPhase("idle");
+    // Camera is (re)attached by the [phase] effect once the <video> is mounted.
+  };
+
+  // First tap on overlay (markers not placed yet): position both lines around
+  // the tap and immediately start dragging the closest one.
+  const onOverlayPointerDown = (e: React.PointerEvent) => {
+    if (placed) return;
+    const overlay = overlayRef.current; if (!overlay) return;
+    const rect = overlay.getBoundingClientRect();
+    const y = Math.min(1, Math.max(0, (e.clientY - rect.top) / rect.height));
+    const top = Math.max(0, y - 0.08);
+    const bottom = Math.min(1, y + 0.08);
+    setYTop(top);
+    setYBottom(bottom);
+    setPlaced(true);
+    const which: "top" | "bottom" = Math.abs(y - top) < Math.abs(y - bottom) ? "top" : "bottom";
+    try { overlay.setPointerCapture(e.pointerId); } catch { /* noop */ }
+    setDragging(which);
   };
 
   // Displayed image box inside overlay (object-contain)
@@ -190,7 +227,12 @@ export function CameraCalibration({ onConfirm, onClose }: CameraCalibrationProps
 
   const renderMarker = (which: "top" | "bottom", yRatio: number, colorClass: string, label: string) => {
     const box = getDisplayBox();
-    const topPx = box ? box.offY + yRatio * box.dispH : yRatio * (overlayRef.current?.getBoundingClientRect().height || 0);
+    const overlayH = overlayRef.current?.getBoundingClientRect().height || 0;
+    const topPx = box ? box.offY + yRatio * box.dispH : yRatio * overlayH;
+    // Clamp the handle so it stays fully inside the overlay (handle is 32px tall).
+    const handleH = 32;
+    const desiredHandleTop = topPx - handleH / 2;
+    const handleTop = Math.min(Math.max(desiredHandleTop, 0), Math.max(0, overlayH - handleH));
     return (
       <div className="pointer-events-none absolute left-0 right-0" style={{ top: `${topPx}px` }}>
         <div className={`h-px w-full ${colorClass}`} />
@@ -203,12 +245,15 @@ export function CameraCalibration({ onConfirm, onClose }: CameraCalibrationProps
           tabIndex={0}
           onPointerDown={onHandlePointerDown(which)}
           onKeyDown={onHandleKeyDown(which)}
-          className="pointer-events-auto absolute -top-4 left-0 h-8 w-10 cursor-ns-resize touch-none"
-          style={{ touchAction: "none" }}
+          className="pointer-events-auto absolute left-0 h-8 w-10 cursor-ns-resize touch-none"
+          style={{ touchAction: "none", top: `${handleTop - topPx}px` }}
         >
           <span className={`absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 rounded-full border-2 border-white shadow-lg ${colorClass}`} />
         </div>
-        <span className={`pointer-events-none absolute left-12 -top-5 rounded-sm px-1 text-[10px] font-mono text-white ${colorClass}`}>
+        <span
+          className={`pointer-events-none absolute left-12 rounded-sm px-1 text-[10px] font-mono text-white ${colorClass}`}
+          style={{ top: `${handleTop - topPx + 4}px` }}
+        >
           {label}
         </span>
       </div>
@@ -234,13 +279,21 @@ export function CameraCalibration({ onConfirm, onClose }: CameraCalibrationProps
             <img ref={imgRef} src={photoUrl} alt="calibration" className="h-full w-full object-contain" />
             <div
               ref={overlayRef}
-              className={`absolute inset-0 ${dragging ? "pointer-events-auto" : "pointer-events-none"}`}
+              className={`absolute inset-0 ${(!placed || dragging) ? "pointer-events-auto" : "pointer-events-none"}`}
+              onPointerDown={onOverlayPointerDown}
               onPointerMove={onOverlayPointerMove}
               onPointerUp={endDrag}
               onPointerCancel={endDrag}
             >
-              {renderMarker("top", yTop, "bg-destructive", "top")}
-              {renderMarker("bottom", yBottom, "bg-primary", "bottom")}
+              {!placed && (
+                <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                  <div className="rounded-md bg-black/60 px-3 py-2 text-center text-xs text-white">
+                    Touchez l'écran pour placer les repères
+                  </div>
+                </div>
+              )}
+              {placed && renderMarker("top", yTop, "bg-destructive", "top")}
+              {placed && renderMarker("bottom", yBottom, "bg-primary", "bottom")}
             </div>
           </>
         )}
