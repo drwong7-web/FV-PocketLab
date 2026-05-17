@@ -271,13 +271,21 @@ export function CameraCalibration({ onConfirm, onClose }: CameraCalibrationProps
             <img ref={imgRef} src={photoUrl} alt="calibration" className="h-full w-full object-contain" />
             <div
               ref={overlayRef}
-              className={`absolute inset-0 ${dragging ? "pointer-events-auto" : "pointer-events-none"}`}
+              className={`absolute inset-0 ${(!placed || dragging) ? "pointer-events-auto" : "pointer-events-none"}`}
+              onPointerDown={onOverlayPointerDown}
               onPointerMove={onOverlayPointerMove}
               onPointerUp={endDrag}
               onPointerCancel={endDrag}
             >
-              {renderMarker("top", yTop, "bg-destructive", "top")}
-              {renderMarker("bottom", yBottom, "bg-primary", "bottom")}
+              {!placed && (
+                <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                  <div className="rounded-md bg-black/60 px-3 py-2 text-center text-xs text-white">
+                    Touchez l'écran pour placer les repères
+                  </div>
+                </div>
+              )}
+              {placed && renderMarker("top", yTop, "bg-destructive", "top")}
+              {placed && renderMarker("bottom", yBottom, "bg-primary", "bottom")}
             </div>
           </>
         )}
