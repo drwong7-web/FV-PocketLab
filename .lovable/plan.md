@@ -1,17 +1,54 @@
+# Import d'athlètes par fichier (PDF / Word / Image)
+
 ## Objectif
 
-Supprimer le flash où les cartes/widgets disparaissent brièvement à chaque navigation, même après retour depuis le mode review.
+Sur la page d'une équipe (`/app/teams/:teamId`), ajouter un bouton "Importer une liste" à côté de "Player". L'utilisateur dépose un fichier (PDF, DOCX ou autre extension microsoft word, image PNG/JPG ou autre forme image), l'app extrait les athlètes (prénom, nom, masse, taille, position, date de naissance si présents) et les crée automatiquement dans l'équipe après validation.
 
-## Plan
+## Flux utilisateur
 
-1. **Rendre le layout persistant visuellement**
-  - Garder `AppLayout` monté sans animation de page.
-  - Donner au `<main>` une hauteur minimale stable entre header et bottom nav, pour éviter qu’il se vide visuellement pendant un changement de route.
-2. **Neutraliser les animations globales de page**
-  - Supprimer/neutraliser l’effet `page-in` restant dans la configuration Tailwind au lieu de seulement l’adoucir.
-  - Ainsi, même si une classe `animate-page-in` est réintroduite par un état review/preview, elle ne démarre plus avec une opacité basse.
-3. **Stabiliser la première hydratation/auth**
-  - Vérifier `ProtectedRoute` et le flux `AuthProvider` : s’il affiche un fallback vide pendant quelques millisecondes à chaque remount, remplacer ce fallback par un conteneur stable/non vide ou éviter le remount inutile.
-4. **Validation ciblée**
-  - Vérifier les navigations `/app`, `/app/teams`, `/app/tests` et retour via bottom nav.
-  - Confirmer que header/bottom nav restent fixes et que le contenu ne disparaît plus en laissant seulement le background.
+1. Bouton "Importer" sur `TeamDetail`.
+2. Dialog : zone de drop + sélecteur de fichier (`.pdf,.docx,.png,.jpg,.jpeg,.webp`).
+3. Spinner "Analyse en cours…" pendant l'extraction.
+4. Tableau éditable des athlètes détectés (cases à cocher, champs modifiables, masse par défaut 75 si absente).
+5. Bouton "Créer N athlètes" → crée via `createPlayer` et ferme le dialog.
+
+## Architecture technique
+
+### 1. Edge function `parse-athletes-list`
+
+Nouvelle fonction Supabase (`supabase/functions/parse-athletes-list/index.ts`) qui reçoit un fichier en base64 + son type MIME et renvoie un JSON `{ athletes: [{ firstName, lastName, mass?, height?, position?, birthDate? }] }`.
+
+- **Images** (`image/*`) : envoyées directement à `google/gemini-2.5-flash` via Lovable AI Gateway en multimodal (vision + extraction structurée JSON).
+- **PDF** : Gemini 2.5 supporte les PDF en entrée multimodale via `image_url` data URL `application/pdf` — utilisé tel quel (pas de parsing serveur lourd nécessaire).
+- **DOCX** : extraction texte côté edge function avec un parseur ZIP minimal (lecture de `word/document.xml`, strip des balises) puis envoi du texte à Gemini pour structuration JSON. Pas de dépendance npm lourde — implémentation directe avec `JSZip` via `npm:jszip`.
+
+Prompt système : "Tu extrais une liste d'athlètes depuis un document. Réponds uniquement en JSON strict suivant le schéma. Masse en kg, taille en cm, date au format ISO si présente. Ignore les en-têtes/totaux."
+
+Utilise `tool_calls` / `response_format: json_schema` pour garantir un JSON valide.
+
+### 2. Frontend
+
+- Nouveau composant `src/components/players/ImportPlayersDialog.tsx` :
+  - dropzone simple (input file stylé)
+  - lit le fichier en base64, appelle `supabase.functions.invoke('parse-athletes-list', { body: { fileBase64, mimeType, fileName } })`
+  - affiche la table éditable des résultats
+  - crée les joueurs avec `createPlayer` au clic "Confirmer"
+- Modification de `src/pages/TeamDetail.tsx` : ajouter le bouton "Importer" à côté de "Player".
+
+### 3. Sécurité & coût
+
+- Pas de secret à ajouter : `LOVABLE_API_KEY` déjà présent.
+- Limite taille fichier : 10 MB côté client avec message d'erreur clair.
+- Gestion des 429/402 retournés par l'AI Gateway avec toast utilisateur.
+
+## Fichiers touchés
+
+- `supabase/functions/parse-athletes-list/index.ts` (nouveau)
+- `src/components/players/ImportPlayersDialog.tsx` (nouveau)
+- `src/pages/TeamDetail.tsx` (ajout bouton + dialog)
+
+## Hors scope
+
+- Pas de modification du schéma DB (les joueurs sont en localStorage via `createPlayer`).
+- Pas d'historique des imports.
+- Pas de dédoublonnage automatique (l'utilisateur décoche dans la table de prévisualisation).
