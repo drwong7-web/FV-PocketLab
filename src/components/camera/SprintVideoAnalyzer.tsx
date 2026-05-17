@@ -574,7 +574,7 @@ export function SprintVideoAnalyzer({ distances, testDistance, onClose, onConfir
                     src={videoUrl}
                     className="block max-h-[50vh] w-auto max-w-full"
                     playsInline
-                    onLoadedMetadata={(e) => { setDuration((e.target as HTMLVideoElement).duration); }}
+                    onLoadedMetadata={(e) => { probeDurationIfInfinite(e.target as HTMLVideoElement); }}
                     onTimeUpdate={(e) => { if (!playing) setCurrentTime((e.target as HTMLVideoElement).currentTime); }}
                     onPlay={() => { setPlaying(true); measureFpsFromVideo(); }}
                     onPause={() => setPlaying(false)}
