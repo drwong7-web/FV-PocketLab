@@ -699,7 +699,7 @@ export function SprintVideoAnalyzer({ distances, testDistance, onClose, onConfir
                   max={duration || 0}
                   step={FRAME_STEP}
                   value={currentTime}
-                  onChange={(e) => { const v = videoRef.current; if (v) v.currentTime = parseFloat(e.target.value); }}
+                  onChange={(e) => { const v = videoRef.current; if (v) safeSeek(v, parseFloat(e.target.value)); }}
                   className="w-full accent-primary"
                 />
                 <div className="flex items-center justify-between text-[11px] text-muted-foreground">
