@@ -27,6 +27,7 @@ export function CameraCalibration({ onConfirm, onClose }: CameraCalibrationProps
   // Horizontal sliding markers (ratio 0..1 on overlay)
   const [yTop, setYTop] = useState(0.3);
   const [yBottom, setYBottom] = useState(0.7);
+  const [placed, setPlaced] = useState(false);
   const [dragging, setDragging] = useState<"top" | "bottom" | null>(null);
 
   const openCamera = async () => {
