@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
+import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Activity, Check, Folder, Home, Languages, LogOut, Moon, Palette, Settings as SettingsIcon, Sun, Users } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
@@ -18,6 +18,7 @@ const navItems = [
 export default function AppLayout() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const { lang, theme, accent, setLang, setTheme, setAccent, t } = useSettings();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [exportDir, setExportDir] = useState<string | null>(null);
@@ -254,8 +255,10 @@ export default function AppLayout() {
         </DialogContent>
       </Dialog>
 
-      <main className="flex-1 container max-w-5xl pb-28 pt-4 animate-fade-in">
-        <Outlet />
+      <main className="flex-1 container max-w-5xl pb-28 pt-4">
+        <div key={location.pathname} className="animate-page-in">
+          <Outlet />
+        </div>
       </main>
 
       <nav

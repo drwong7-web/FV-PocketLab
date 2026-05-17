@@ -16,7 +16,7 @@ export default function Teams() {
   const [sport, setSport] = useState("");
   const [, force] = useState(0);
 
-  if (!user) return null;
+  if (!user) return <div className="min-h-[60vh]" aria-hidden />;
   const teams = listTeams(user.organizationId);
   const allPlayers = listPlayers(undefined, user.organizationId);
 

@@ -1,106 +1,71 @@
-## Objectif
+## Problème
 
-Détection automatique, via Lovable AI (Gemini multimodal), des repères de distance physiques visibles dans la vidéo (0 m, 5 m, 10 m, …). Les positions retournées :
-1. Sont affichées en surimpression sur la vidéo (en plus des poignées 0 m / X m déjà draggables).
-2. Sont **utilisées dans le calcul F-V** via une fonction `xToMeters` par interpolation linéaire morceaux par morceaux entre repères voisins (plutôt qu'une calibration 2 points).
+Lors de chaque changement de route dans `/app/*`, on voit un bref flash sombre (<300 ms). Causes identifiées :
 
----
+1. **`animate-fade-in` sur `<main>`** (`AppLayout.tsx:257`) — la keyframe va de `opacity: 0.6` → `1`. Comme `<main>` est conservé entre les routes, l'animation ne se rejoue pas… mais plusieurs pages remontent un nouvel arbre vide pendant 1 frame, laissant apparaître le **fond `--background` foncé + `--gradient-hero`** du `body`.
+2. **Pages qui retournent `null`** pendant le chargement (`Dashboard`, `Teams`, `TestList` : `if (!user) return null`) — pendant ce micro-instant, seul le fond sombre du body est visible.
+3. Absence de transition CSS sur le conteneur de l'`Outlet` : le swap est instantané et sans cross-fade.
 
-## 1. Edge function `detect-sprint-markers`
+## Correctif proposé
 
-### `supabase/functions/detect-sprint-markers/index.ts`
+Tout reste en frontend, aucun changement de logique métier.
 
-- POST JSON `{ imageBase64: string, distances: number[] }` (image PNG/JPEG d'une frame, ex. 0.7 MB max).
-- Utilise `@ai-sdk/openai-compatible` + `generateText` AI SDK avec `Output.object` (sortie structurée Zod) :
-  ```ts
-  z.object({
-    markers: z.array(z.object({
-      distance: z.number(),   // mètres
-      xNorm: z.number(),       // 0..1, position horizontale dans l'image
-      yNorm: z.number().optional(),
-      confidence: z.number().min(0).max(1),
-    })),
-    notes: z.string().optional(),
-  })
-  ```
-- Modèle : `google/gemini-3-flash-preview`. Prompt système : « Tu reçois une image extraite d'une vidéo de sprint linéaire vue de côté. La piste a des cônes/lignes/plots à des distances connues : {distances} m mesurées depuis la ligne de départ. Pour chaque distance, donne la coordonnée x normalisée (0=gauche, 1=droite) du repère visible. Renvoie uniquement les repères réellement visibles dans l'image, avec une confiance ∈[0,1]. »
-- Message user : image (`type: "image"`) + texte rappelant la liste des distances et la convention.
-- Gère 402 / 429 → renvoie JSON `{ error, status }`.
-- `verify_jwt = false` (fonctionnalité publique de l'app authentifiée côté front, pas de données sensibles).
+### 1. `src/components/AppLayout.tsx`
+- Encapsuler `<Outlet />` dans un `<div>` **keyé par `location.pathname`** pour rejouer une transition à chaque changement de route.
+- Retirer `animate-fade-in` de `<main>` (qui ne se déclenche jamais réellement) et l'appliquer au div interne avec une variante plus douce.
 
-### Auth
+```tsx
+const location = useLocation();
+...
+<main className="flex-1 container max-w-5xl pb-28 pt-4">
+  <div key={location.pathname} className="animate-page-in">
+    <Outlet />
+  </div>
+</main>
+```
 
-Pas de JWT requis (calcul stateless, pas de DB). Aucune table ajoutée.
+### 2. `tailwind.config.ts`
+Remplacer la keyframe `fade-in` (qui part de `0.6` et crée la sensation d'assombrissement) par une transition `page-in` plus subtile, sans drop d'opacité visible :
 
----
+```ts
+keyframes: {
+  "page-in": {
+    from: { opacity: "0", transform: "translateY(4px)" },
+    to:   { opacity: "1", transform: "translateY(0)" },
+  },
+},
+animation: {
+  "page-in": "page-in 180ms ease-out",
+}
+```
 
-## 2. Front : capture frame + appel edge
+Conserver l'ancienne `fade-in` si elle est utilisée ailleurs (vérification : un seul usage trouvé dans `AppLayout`).
 
-### `src/components/camera/SprintVideoAnalyzer.tsx`
+### 3. Éviter le « vide » pendant le chargement (`Dashboard.tsx`, `Teams.tsx`, `TestList.tsx`)
+Remplacer `if (!user) return null;` par un placeholder neutre de même hauteur, par ex. :
 
-- Nouveau bouton **« Détecter les repères (IA) »** près de la section calibration / au-dessus de la timeline.
-- Au clic :
-  1. Seek la vidéo à `cropStart` (1re frame du crop IA), attendre `seeked`.
-  2. Dessiner la frame sur un `<canvas>` temporaire à la taille naturelle de la vidéo, exporter en JPEG base64 (`toDataURL('image/jpeg', 0.85)`).
-  3. Appeler `supabase.functions.invoke('detect-sprint-markers', { body: { imageBase64, distances: distancesWithZero } })` où `distancesWithZero = [0, ...distances]`.
-  4. Stocker la réponse dans un nouvel état `detectedMarkers: { distance: number; xNorm: number; confidence: number }[]`.
-- État d'appel : `aiMarkersBusy`, `aiMarkersError`.
-- Si la détection contient 0 m et `testDistance` m → pré-remplit `calib.x0` et `calib.xRef` automatiquement (sauf si l'utilisateur les a déjà placés manuellement → propose un toast « Remplacer ? » non bloquant ; pour simplifier, on remplace toujours, l'utilisateur peut re-drag).
+```tsx
+if (!user) return <div className="min-h-[60vh]" aria-hidden />;
+```
 
-### Overlay sur la vidéo
+Cela évite que le `<main>` se retrouve momentanément vide → plus de fond sombre visible.
 
-- Pour chaque repère détecté (sauf 0 m et `testDistance` déjà rendus comme poignées primaires) :
-  - Ligne verticale `bg-amber-400/70` (couleur distincte des deux poignées principales).
-  - Étiquette `{d}m` en haut.
-  - Petite poignée draggable identique à `x0`/`xRef` (réutilise la mécanique drag : on étend `draggingMarker` en `"x0" | "xRef" | { kind: "extra"; distance: number }`).
+### 4. (Optionnel) Atténuer le contraste du `body`
+Le `body` utilise `--gradient-hero` + `--background` très sombre en thème dark. On peut donner au `<main>` un fond identique à `--background` pour qu'il n'y ait pas de « différence visible » même si l'arbre est vide :
 
-### Persistance du état des repères extras
+```tsx
+<main className="flex-1 container max-w-5xl pb-28 pt-4 bg-background">
+```
 
-- Nouvel état : `extraMarkers: Record<number, number>` (clé = distance m, valeur = `xNorm`).
-- Initialisé / écrasé par la détection IA, modifiable au drag.
-- Inclut 0 m et `testDistance` aussi → source de vérité unique pour le calcul (les poignées principales lisent/écrivent `extraMarkers[0]` et `extraMarkers[refMeters]` au lieu de `calib.x0` / `calib.xRef`). Conserver `calib` pour `refMeters` uniquement, ou tout migrer dans `extraMarkers`.
+(à valider visuellement — pourrait masquer le dégradé voulu ; à ne faire que si nécessaire).
 
----
+## Fichiers modifiés
 
-## 3. Calcul : interpolation piecewise
+- `src/components/AppLayout.tsx` — wrap Outlet keyé + classe d'animation
+- `tailwind.config.ts` — keyframe `page-in`
+- `src/pages/Dashboard.tsx`, `src/pages/Teams.tsx`, `src/pages/TestList.tsx` — placeholder au lieu de `return null`
 
-### `src/lib/poseDetection.ts`
+## Vérification
 
-- Étendre `computeSplitTimesFromSamples` avec une variante :
-  ```ts
-  computeSplitTimesFromSamples(
-    samples,
-    distances,
-    calib: { markers: { xNorm: number; meters: number }[] } | { x0Norm; xRefNorm; refMeters },
-    startTimeOffset,
-  )
-  ```
-- Si `markers` fourni (≥ 2 points triés par `xNorm`) → `xToMeters(x)` fait une interpolation linéaire morceaux par morceaux entre les `markers` (extrapolation linéaire aux extrémités à partir des 2 plus proches).
-- Sinon → comportement actuel (2 points).
-
-### `runAI` dans l'analyzer
-
-- Si `Object.keys(extraMarkers).length ≥ 2` → on passe `{ markers: [...] }`, sinon on retombe sur l'ancien chemin.
-
----
-
-## 4. Hors-scope
-
-- Pas de détection des chronos / des positions de l'athlète (toujours MediaPipe Pose).
-- Pas de détection multi-frame agrégée (juste 1 frame, celle de `cropStart`).
-- Pas de réglage de la couleur/forme des cônes — on fait confiance à Gemini.
-- Pas de stockage des repères détectés en DB.
-
----
-
-## Fichiers créés / modifiés
-
-- **Créé** : `supabase/functions/detect-sprint-markers/index.ts`
-- **Créé** : `supabase/functions/_shared/ai-gateway.ts` (helper provider, s'il n'existe pas déjà)
-- **Modifié** : `src/components/camera/SprintVideoAnalyzer.tsx` (bouton, capture canvas, état `extraMarkers`, overlays, drag étendu)
-- **Modifié** : `src/lib/poseDetection.ts` (`computeSplitTimesFromSamples` accepte des repères multiples)
-
-## Erreurs IA à surfacer
-- 429 → toast « Trop de requêtes IA, réessayez dans quelques secondes ».
-- 402 → toast « Crédits IA épuisés, ajoutez du crédit dans Lovable Cloud ».
-- Aucune réponse exploitable → message inline « Aucun repère détecté — ajustez manuellement ».
+- Naviguer Dashboard ↔ Teams ↔ Tests ↔ Player detail : la transition doit être un léger fondu vers le haut, sans flash sombre intermédiaire.
+- Vérifier sur viewport mobile (393×714) que le placeholder évite tout reflow.

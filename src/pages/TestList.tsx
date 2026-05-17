@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 
 export default function TestList() {
   const { user } = useAuth();
-  if (!user) return null;
+  if (!user) return <div className="min-h-[60vh]" aria-hidden />;
   const tests = listUnifiedTests(user.organizationId);
 
   return (
