@@ -144,8 +144,27 @@ export function CameraCalibration({ onConfirm, onClose }: CameraCalibrationProps
 
   const retake = () => {
     if (photoUrl) URL.revokeObjectURL(photoUrl);
-    setPhotoUrl(null); resetMarkers(); setPhase("idle");
-    if (!streamRef.current) openCamera();
+    setPhotoUrl(null);
+    resetMarkers();
+    setPhase("idle");
+    // Camera is (re)attached by the [phase] effect once the <video> is mounted.
+  };
+
+  // First tap on overlay (markers not placed yet): position both lines around
+  // the tap and immediately start dragging the closest one.
+  const onOverlayPointerDown = (e: React.PointerEvent) => {
+    if (placed) return;
+    const overlay = overlayRef.current; if (!overlay) return;
+    const rect = overlay.getBoundingClientRect();
+    const y = Math.min(1, Math.max(0, (e.clientY - rect.top) / rect.height));
+    const top = Math.max(0, y - 0.08);
+    const bottom = Math.min(1, y + 0.08);
+    setYTop(top);
+    setYBottom(bottom);
+    setPlaced(true);
+    const which: "top" | "bottom" = Math.abs(y - top) < Math.abs(y - bottom) ? "top" : "bottom";
+    try { overlay.setPointerCapture(e.pointerId); } catch { /* noop */ }
+    setDragging(which);
   };
 
   // Displayed image box inside overlay (object-contain)
