@@ -8,7 +8,7 @@ import { MetricCard } from "@/components/MetricCard";
 
 export default function Dashboard() {
   const { user } = useAuth();
-  if (!user) return null;
+  if (!user) return <div className="min-h-[60vh]" aria-hidden />;
   const org = getOrganization(user.organizationId);
   const teams = listTeams(user.organizationId);
   const players = listPlayers(undefined, user.organizationId);
