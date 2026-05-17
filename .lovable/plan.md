@@ -1,37 +1,41 @@
-Le problème n’est pas l’écran noir : après avoir arrêté l’enregistrement, la modale ne bascule pas de façon fiable vers l’écran d’analyse avec la vidéo enregistrée.
+# Marqueurs glissants pour le marquage manuel du saut vertical
 
-Do I know what the issue is? Oui.
+## Objectif
+Dans `CameraDistance` (utilisé pour le marquage manuel du saut vertical), remplacer le système actuel "cliquer pour placer 2 points" par deux **lignes horizontales glissantes** que l'on déplace verticalement sur la vidéo — équivalent vertical des marqueurs glissants verticaux du `SprintVideoAnalyzer`.
 
-Cause probable dans `src/components/camera/SprintVideoAnalyzer.tsx` : le handler `MediaRecorder.onstop` appelle `stopStream()`, et `stopStream()` tente à nouveau de stopper le recorder encore référencé. Sur certains navigateurs, surtout mobile/Safari, `onstop`/`dataavailable` peut se déclencher de manière particulière ou multiple, ce qui rend le flux instable : la vidéo peut être créée trop tôt, écrasée, ou l’interface peut retomber sur l’état de choix au lieu d’afficher l’analyse.
+## Comportement cible
 
-Plan de correction :
+- Deux lignes horizontales superposées à la vidéo en lecture :
+  - **Ligne 1 (rouge)** : cheville au décollage (position basse de référence).
+  - **Ligne 2 (verte)** : cheville à l'apex (position haute).
+- Chaque ligne traverse toute la largeur de la vidéo, avec une **poignée** (handle circulaire) au centre pour la saisir.
+- Déplacement **vertical uniquement** par drag (pointer events) + ajustement fin au clavier (`ArrowUp` / `ArrowDown` = 1 px naturel).
+- Position par défaut à l'ouverture : ligne 1 à 70 % de la hauteur, ligne 2 à 30 %.
+- Hauteur calculée en continu : `|y1 - y2| en px naturels / pxPerCm / 100` (mètres) — affichée live.
+- Étiquette `cm` à droite de chaque ligne + valeur globale `h = xx.x cm` déjà présente.
 
-1. Séparer proprement l’arrêt caméra et l’arrêt recorder
-   - Créer une fonction dédiée qui arrête uniquement les tracks caméra.
-   - Éviter d’appeler `recorder.stop()` depuis `onstop`.
-   - Nettoyer `recorderRef.current` seulement après traitement du blob.
+## Changements UI
 
-2. Rendre `onstop` idempotent
-   - Ajouter une garde pour ignorer un éventuel second `onstop`.
-   - Ne créer l’URL vidéo que si le blob contient vraiment des données.
-   - Afficher une erreur claire si l’enregistrement est vide.
+- Supprimer le toggle `Playback / Mark` et le bouton `Undo last marker` (devenus inutiles, les lignes sont toujours visibles et déplaçables).
+- Supprimer le clic sur l'overlay pour placer un point (`handleOverlayClick`, `toNatural`, `ankleTakeoff` / `ankleApex` en tant que points cliqués).
+- Garder : contrôles de lecture (playbackRate, ±1 frame), redo, confirm, calibration warning.
+- Garder l'overlay au-dessus de la vidéo, mais `pointer-events-none` sauf sur les poignées (comme dans `SprintVideoAnalyzer`).
 
-3. Forcer l’écran d’analyse après capture valide
-   - Après création de `videoUrl`, rester en `mode="choose"` mais s’assurer que `videoUrl` est non nul avant de nettoyer la caméra.
-   - Réinitialiser les états d’analyse uniquement après validation du blob.
+## Détails techniques
 
-4. Sécuriser le chargement vidéo
-   - Garder le correctif de durée WebM déjà ajouté.
-   - Ajouter `onLoadedData`/`onCanPlay` si nécessaire pour synchroniser l’affichage de la timeline.
+- État interne :
+  ```ts
+  const [yTakeoff, setYTakeoff] = useState<number>(0.7); // ratio 0..1 sur la hauteur affichée
+  const [yApex, setYApex]       = useState<number>(0.3);
+  const [dragging, setDragging] = useState<"takeoff" | "apex" | null>(null);
+  ```
+- Calcul de la hauteur en mètres : convertir les ratios → pixels naturels via `videoHeight` et le `object-contain` fit (réutiliser la logique de `toNatural` mais sur Y) ; puis `heightM = |y1Nat - y2Nat| / pxPerCm / 100`.
+- Drag : `onPointerDown` sur la poignée → `setPointerCapture` → `onPointerMove` met à jour le ratio Y (clamp 0..1) → `onPointerUp` libère.
+- Clavier : focus sur la poignée, `ArrowUp/Down` déplacent d'1 px (1 / `rect.height`).
+- Style : lignes pleine largeur (`absolute left-0 right-0 h-px`), poignée centrée (`left-1/2 -translate-x-1/2 h-5 w-5 rounded-full`), couleurs `bg-destructive` et `bg-primary` (ou `bg-emerald-500` via classe sémantique existante si dispo).
 
-5. Vérification
-   - Tester le chemin “Filmer maintenant” → “Démarrer” → “Arrêter”.
-   - Confirmer que la modale affiche directement la vidéo, la timeline et les contrôles d’analyse.
+## Fichier modifié
+- `src/components/camera/CameraDistance.tsx` uniquement.
 
-<presentation-actions>
-  <presentation-open-history>View History</presentation-open-history>
-</presentation-actions>
-
-<presentation-actions>
-<presentation-link url="https://docs.lovable.dev/tips-tricks/troubleshooting">Troubleshooting docs</presentation-link>
-</presentation-actions>
+## Vérification
+- Recompiler, ouvrir Vertical Jump test → Camera (manuel) → enregistrer ou importer une vidéo → vérifier que deux lignes horizontales apparaissent immédiatement en review, qu'on peut les glisser au doigt sur mobile et à la souris, et que la valeur `h = xx.x cm` se met à jour en temps réel.

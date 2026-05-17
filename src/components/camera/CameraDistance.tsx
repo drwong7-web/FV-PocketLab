@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 
-import { Camera, CircleStop, Hand, MousePointer2, Play, RotateCcw, Upload, Video, X } from "lucide-react";
+import { Camera, CircleStop, RotateCcw, Upload, Video, X } from "lucide-react";
 
 interface CameraDistanceProps {
   pxPerCm: number;
@@ -11,8 +11,6 @@ interface CameraDistanceProps {
   point1Label?: string;
   point2Label?: string;
 }
-
-type Pt = { natX: number; natY: number; dispX: number; dispY: number };
 
 export function CameraDistance({
   pxPerCm, onConfirm, onClose,
@@ -36,9 +34,10 @@ export function CameraDistance({
   const [playbackRate, setPlaybackRate] = useState(0.5);
   const [error, setError] = useState("");
 
-  const [marking, setMarking] = useState(false);
-  const [ankleTakeoff, setAnkleTakeoff] = useState<Pt | null>(null);
-  const [ankleApex, setAnkleApex] = useState<Pt | null>(null);
+  // Sliding horizontal markers — ratio 0..1 on the overlay height
+  const [yTakeoff, setYTakeoff] = useState<number>(0.7);
+  const [yApex, setYApex] = useState<number>(0.3);
+  const [dragging, setDragging] = useState<"takeoff" | "apex" | null>(null);
 
   const openCamera = async () => {
     try {
@@ -81,6 +80,11 @@ export function CameraDistance({
     return "";
   };
 
+  const resetMarkers = () => {
+    setYTakeoff(0.7);
+    setYApex(0.3);
+  };
+
   const startRecording = () => {
     if (!streamRef.current) return;
     chunksRef.current = [];
@@ -91,14 +95,12 @@ export function CameraDistance({
       const blob = new Blob(chunksRef.current, { type: mimeType || "video/webm" });
       setVideoUrl(URL.createObjectURL(blob));
       setPhase("review");
-      setMarking(false);
+      resetMarkers();
     };
     recorder.start();
     recorderRef.current = recorder;
     startTimeRef.current = performance.now();
     setElapsed(0);
-    setAnkleTakeoff(null);
-    setAnkleApex(null);
     setPhase("recording");
   };
 
@@ -114,9 +116,7 @@ export function CameraDistance({
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
     setVideoUrl(URL.createObjectURL(file));
-    setAnkleTakeoff(null);
-    setAnkleApex(null);
-    setMarking(false);
+    resetMarkers();
     setError("");
     setPhase("review");
   };
@@ -124,11 +124,9 @@ export function CameraDistance({
   const restart = async () => {
     if (videoUrl) URL.revokeObjectURL(videoUrl);
     setVideoUrl(null);
-    setAnkleTakeoff(null);
-    setAnkleApex(null);
+    resetMarkers();
     setElapsed(0);
     setPhase("idle");
-    setMarking(false);
     const tracksAlive = streamRef.current?.getVideoTracks().some((t) => t.readyState === "live");
     if (!tracksAlive) await openCamera();
   };
@@ -141,46 +139,91 @@ export function CameraDistance({
     v.play().catch(() => {});
   }, [phase, videoUrl]);
 
-  const toNatural = (clientX: number, clientY: number): Pt | null => {
+  // Compute the displayed video area inside the overlay (object-contain)
+  const getDisplayBox = () => {
     const v = playbackRef.current;
     const overlay = overlayRef.current;
     if (!v || !overlay) return null;
     const rect = overlay.getBoundingClientRect();
-    const x = clientX - rect.left, y = clientY - rect.top;
     const nW = v.videoWidth, nH = v.videoHeight;
-    if (!nW || !nH) return null;
+    if (!nW || !nH) return { offY: 0, dispH: rect.height, rect, nH: rect.height };
     const elAR = rect.width / rect.height;
     const natAR = nW / nH;
-    let dispW: number, dispH: number, offX = 0, offY = 0;
-    if (natAR > elAR) { dispW = rect.width; dispH = rect.width / natAR; offY = (rect.height - dispH) / 2; }
-    else { dispH = rect.height; dispW = rect.height * natAR; offX = (rect.width - dispW) / 2; }
-    if (x < offX || x > offX + dispW || y < offY || y > offY + dispH) return null;
-    return { natX: ((x - offX) / dispW) * nW, natY: ((y - offY) / dispH) * nH, dispX: x, dispY: y };
+    let dispH: number, offY: number;
+    if (natAR > elAR) { dispH = rect.width / natAR; offY = (rect.height - dispH) / 2; }
+    else { dispH = rect.height; offY = 0; }
+    return { offY, dispH, rect, nH };
   };
 
-  const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!marking) return;
-    const pt = toNatural(e.clientX, e.clientY);
-    if (!pt) return;
-    if (!ankleTakeoff) setAnkleTakeoff(pt);
-    else setAnkleApex(pt);
-  };
-
-  const computeHeight = (): number | null => {
-    if (!ankleTakeoff || !ankleApex || !pxPerCm) return null;
-    const verticalPxNat = Math.abs(ankleTakeoff.natY - ankleApex.natY);
-    return verticalPxNat / pxPerCm / 100;
-  };
-  const heightM = computeHeight();
+  const heightM = (() => {
+    const box = getDisplayBox();
+    if (!box || !pxPerCm) return null;
+    const verticalDispPx = Math.abs(yTakeoff - yApex) * box.dispH;
+    // Convert displayed px → natural px
+    const naturalPx = box.nH ? verticalDispPx * (box.nH / box.dispH) : verticalDispPx;
+    return naturalPx / pxPerCm / 100;
+  })();
 
   const confirm = () => {
-    if (heightM == null) { setError("Mark the ankle at takeoff and apex."); return; }
+    if (heightM == null || heightM <= 0) { setError("Adjust the markers on the video first."); return; }
     onConfirm(heightM);
   };
 
-  const undoLast = () => {
-    if (ankleApex) setAnkleApex(null);
-    else if (ankleTakeoff) setAnkleTakeoff(null);
+  const onHandlePointerDown = (which: "takeoff" | "apex") => (e: React.PointerEvent) => {
+    e.stopPropagation();
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    setDragging(which);
+  };
+  const onHandlePointerMove = (which: "takeoff" | "apex") => (e: React.PointerEvent) => {
+    if (dragging !== which) return;
+    const overlay = overlayRef.current; if (!overlay) return;
+    const rect = overlay.getBoundingClientRect();
+    const y = Math.min(1, Math.max(0, (e.clientY - rect.top) / rect.height));
+    if (which === "takeoff") setYTakeoff(y); else setYApex(y);
+  };
+  const onHandlePointerUp = (e: React.PointerEvent) => {
+    try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId); } catch { /* noop */ }
+    setDragging(null);
+  };
+  const onHandleKeyDown = (which: "takeoff" | "apex") => (e: React.KeyboardEvent) => {
+    const overlay = overlayRef.current; if (!overlay) return;
+    const step = 1 / overlay.getBoundingClientRect().height;
+    const cur = which === "takeoff" ? yTakeoff : yApex;
+    const set = which === "takeoff" ? setYTakeoff : setYApex;
+    if (e.key === "ArrowUp") { e.preventDefault(); set(Math.max(0, cur - step)); }
+    else if (e.key === "ArrowDown") { e.preventDefault(); set(Math.min(1, cur + step)); }
+  };
+
+  const renderMarker = (which: "takeoff" | "apex", yRatio: number, colorClass: string, label: string) => {
+    const box = getDisplayBox();
+    const topPx = box ? box.offY + yRatio * box.dispH : yRatio * 100;
+    const isPx = !!box;
+    return (
+      <div
+        className="pointer-events-none absolute left-0 right-0"
+        style={isPx ? { top: `${topPx}px` } : { top: `${yRatio * 100}%` }}
+      >
+        <div className={`h-0.5 w-full ${colorClass}`} />
+        <div
+          role="slider"
+          aria-label={label}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={Math.round(yRatio * 100)}
+          tabIndex={0}
+          onPointerDown={onHandlePointerDown(which)}
+          onPointerMove={onHandlePointerMove(which)}
+          onPointerUp={onHandlePointerUp}
+          onPointerCancel={onHandlePointerUp}
+          onKeyDown={onHandleKeyDown(which)}
+          className={`pointer-events-auto absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2 h-6 w-6 cursor-ns-resize touch-none rounded-full border-2 border-white shadow-lg ${colorClass}`}
+          style={{ touchAction: "none" }}
+        />
+        <span className={`absolute right-1 -top-5 rounded-sm px-1 text-[10px] font-mono text-white ${colorClass}`}>
+          {label}
+        </span>
+      </div>
+    );
   };
 
   return (
@@ -200,14 +243,9 @@ export function CameraDistance({
               ref={(el) => { playbackRef.current = el; if (el) el.playbackRate = playbackRate; }}
               src={videoUrl} playsInline controls className="h-full w-full object-contain"
             />
-            <div ref={overlayRef} onClick={handleOverlayClick} className={`absolute inset-0 ${marking ? "cursor-crosshair" : "pointer-events-none"}`}>
-              {ankleTakeoff && <span className="absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-destructive" style={{ left: ankleTakeoff.dispX, top: ankleTakeoff.dispY }} />}
-              {ankleApex && <span className="absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-destructive" style={{ left: ankleApex.dispX, top: ankleApex.dispY }} />}
-              {ankleTakeoff && ankleApex && (
-                <svg className="pointer-events-none absolute inset-0 h-full w-full">
-                  <line x1={ankleTakeoff.dispX} y1={ankleTakeoff.dispY} x2={ankleTakeoff.dispX} y2={ankleApex.dispY} stroke="hsl(var(--destructive))" strokeWidth={2} />
-                </svg>
-              )}
+            <div ref={overlayRef} className="absolute inset-0 pointer-events-none">
+              {renderMarker("takeoff", yTakeoff, "bg-destructive", point1Label)}
+              {renderMarker("apex", yApex, "bg-primary", point2Label)}
             </div>
           </>
         )}
@@ -223,19 +261,8 @@ export function CameraDistance({
 
       {phase === "review" && (
         <div className="max-h-[45vh] shrink-0 space-y-2 overflow-y-auto bg-black/85 p-3">
-            <div className="flex gap-1">
-              <button onClick={() => setMarking(false)} className={`flex flex-1 items-center justify-center gap-1 rounded-md px-2 py-2 text-xs font-medium ${!marking ? "bg-primary text-primary-foreground" : "bg-white/10 text-white"}`}>
-                <Play className="h-3.5 w-3.5" /> Playback
-              </button>
-              <button onClick={() => setMarking(true)} className={`flex flex-1 items-center justify-center gap-1 rounded-md px-2 py-2 text-xs font-medium ${marking ? "bg-primary text-primary-foreground" : "bg-white/10 text-white"}`}>
-                <MousePointer2 className="h-3.5 w-3.5" /> Mark
-              </button>
-            </div>
-
             <div className="flex items-center justify-between text-xs text-white">
-              <span className="font-medium">
-                {!ankleTakeoff ? `Mark: ${point1Label}` : !ankleApex ? `Mark: ${point2Label}` : "✓ Markers placed"}
-              </span>
+              <span className="font-medium">Slide the two horizontal lines to the ankle position.</span>
               <span className="font-mono opacity-70">{captureFps} fps · {playbackRate}×</span>
             </div>
 
@@ -254,10 +281,6 @@ export function CameraDistance({
               <button onClick={() => { if (playbackRef.current) { playbackRef.current.pause(); playbackRef.current.currentTime = playbackRef.current.currentTime + 1 / captureFps; } }}
                 className="flex-1 rounded-md bg-white/10 px-2 py-1 text-xs font-medium text-white">+1 frame ▶</button>
             </div>
-
-            <Button onClick={undoLast} variant="outline" size="sm" disabled={!ankleTakeoff && !ankleApex} className="w-full">
-              <Hand className="mr-1 h-3.5 w-3.5" /> Undo last marker
-            </Button>
         </div>
       )}
       {error && <p className="bg-destructive px-3 py-1.5 text-xs text-destructive-foreground">{error}</p>}
