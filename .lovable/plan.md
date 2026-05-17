@@ -1,24 +1,26 @@
-## Corrections calibration (CameraCalibration.tsx)
+## Poignées plus marquées sur tous les marqueurs horizontaux
 
-### 1. Marqueurs cachés tant que l'utilisateur n'a pas touché l'écran
-
-**Problème** : les marqueurs initiaux (yTop=0.3 / yBottom=0.7) peuvent se retrouver hors de la zone tactile utile, et la poignée à `-top-4` peut sortir en haut quand yRatio est très petit, rendant la manipulation impossible.
-
-**Solution** :
-- Nouvel état `placed: boolean` (faux au départ après snap/upload).
-- Tant que `!placed`, ne rien afficher (lignes + poignées masquées) ; un texte d'aide au centre indique « Touchez l'écran pour placer le repère ».
-- Au premier `pointerdown` sur l'overlay : on calcule le Y du clic, on positionne `yTop = y - 0.1` et `yBottom = y + 0.1` (clampés 0..1), on passe `placed = true`, et on démarre immédiatement le drag du marqueur le plus proche.
-- `resetMarkers()` remet `placed = false` (au snap, upload, retake).
-- La poignée garde sa hit-box 32×40 px mais on clampe `topPx` pour qu'elle ne sorte jamais de l'overlay (translateY ajustée si la poignée déborderait en haut/bas).
-
-### 2. Blackout au "Retake"
-
-**Cause** : `retake()` appelle `openCamera()` mais `liveVideoRef.current` est encore `null` à ce moment-là (le `<video>` n'est monté qu'après `setPhase("idle")`, donc au render suivant). Le stream est attaché à un élément inexistant → écran noir.
-
-**Solution** :
-- `retake()` ne fait que nettoyer l'URL photo, reset markers, `setPhase("idle")`.
-- Ajouter un `useEffect` qui se déclenche quand `phase === "idle"` : si pas de stream actif, ouvrir la caméra ; quand le stream est prêt, l'attacher au `liveVideoRef.current` (qui existe maintenant) et appeler `.play()`.
-- Cleanup adapté pour éviter les doubles streams.
-
-### Fichier modifié
+Augmenter la taille **visuelle** et la **zone tactile** des poignées dans :
 - `src/components/camera/CameraCalibration.tsx`
+- `src/components/camera/CameraDistance.tsx`
+
+### Changements
+
+**Poignée visible (le rond coloré)**
+- Diamètre ≈ 5 mm physiques → `h-5 w-5` (20 px CSS) au lieu de `h-4 w-4`.
+- Bordure blanche plus épaisse (`border-2` → `border-[3px]`) et `shadow-lg` conservé pour bien la voir sur n'importe quel fond.
+- Toujours alignée à gauche (`left-2`) pour ne pas masquer la zone centrale de la vidéo.
+
+**Zone tactile (le `div` cliquable autour)**
+- Passe de `h-8 w-10` (32×40) à `h-12 w-16` (48×64) → couvre largement la poignée et offre une cible tactile confortable >9 mm.
+- Toujours invisible (juste un hit-box), `cursor-ns-resize`, `touch-action: none`.
+- Le clamp vertical existant est mis à jour : `handleH = 48` au lieu de `32`, pour que la zone reste entièrement dans l'overlay aux extrémités.
+
+**Label**
+- Repositionné en fonction de la nouvelle hauteur de poignée (suit `handleTop`).
+- Léger agrandissement : `text-[10px]` → `text-[11px]` pour rester lisible à côté d'une poignée plus grosse.
+
+### Hors scope
+- Pas de changement de logique de drag, de calibration, ou de calcul `pxPerCm`.
+- Pas de modification de la fluidité (déjà gérée par `requestAnimationFrame` + pointer capture sur l'overlay).
+- L'épaisseur des lignes reste `h-px` (1 px) pour préserver la précision visuelle.
