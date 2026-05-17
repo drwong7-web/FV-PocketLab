@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import ImportPlayersDialog from "@/components/players/ImportPlayersDialog";
 import { toast } from "sonner";
 
 export default function TeamDetail() {
@@ -64,12 +65,18 @@ export default function TeamDetail() {
           <h1 className="text-2xl font-bold tracking-tight">{team.name}</h1>
           <p className="text-sm text-muted-foreground">{team.sport ?? "Sport not set"}</p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-gradient-primary text-primary-foreground font-semibold">
-              <Plus className="w-4 h-4 mr-1" /> Player
-            </Button>
-          </DialogTrigger>
+        <div className="flex items-center gap-2">
+          <ImportPlayersDialog
+            teamId={team.id}
+            organizationId={user.organizationId}
+            onImported={() => force((n) => n + 1)}
+          />
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-gradient-primary text-primary-foreground font-semibold">
+                <Plus className="w-4 h-4 mr-1" /> Player
+              </Button>
+            </DialogTrigger>
           <DialogContent className="max-w-sm">
             <DialogHeader><DialogTitle>Add player</DialogTitle></DialogHeader>
             <form onSubmit={onCreate} className="space-y-3 mt-2">
@@ -100,7 +107,8 @@ export default function TeamDetail() {
               <Button type="submit" className="w-full bg-gradient-primary text-primary-foreground font-semibold">Add</Button>
             </form>
           </DialogContent>
-        </Dialog>
+          </Dialog>
+        </div>
       </div>
 
       {players.length === 0 ? (
