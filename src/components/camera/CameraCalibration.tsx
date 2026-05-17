@@ -230,7 +230,7 @@ export function CameraCalibration({ onConfirm, onClose }: CameraCalibrationProps
     const overlayH = overlayRef.current?.getBoundingClientRect().height || 0;
     const topPx = box ? box.offY + yRatio * box.dispH : yRatio * overlayH;
     // Clamp the handle so it stays fully inside the overlay (handle is 32px tall).
-    const handleH = 32;
+    const handleH = 48;
     const desiredHandleTop = topPx - handleH / 2;
     const handleTop = Math.min(Math.max(desiredHandleTop, 0), Math.max(0, overlayH - handleH));
     return (
@@ -245,13 +245,13 @@ export function CameraCalibration({ onConfirm, onClose }: CameraCalibrationProps
           tabIndex={0}
           onPointerDown={onHandlePointerDown(which)}
           onKeyDown={onHandleKeyDown(which)}
-          className="pointer-events-auto absolute left-0 h-8 w-10 cursor-ns-resize touch-none"
+          className="pointer-events-auto absolute left-0 h-12 w-16 cursor-ns-resize touch-none"
           style={{ touchAction: "none", top: `${handleTop - topPx}px` }}
         >
-          <span className={`absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 rounded-full border-2 border-white shadow-lg ${colorClass}`} />
+          <span className={`absolute left-2 top-1/2 -translate-y-1/2 h-5 w-5 rounded-full border-[3px] border-white shadow-lg ${colorClass}`} />
         </div>
         <span
-          className={`pointer-events-none absolute left-12 rounded-sm px-1 text-[10px] font-mono text-white ${colorClass}`}
+          className={`pointer-events-none absolute left-12 rounded-sm px-1 text-[11px] font-mono text-white ${colorClass}`}
           style={{ top: `${handleTop - topPx + 4}px` }}
         >
           {label}
