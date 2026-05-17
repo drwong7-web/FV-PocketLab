@@ -253,7 +253,7 @@ export function SprintVideoAnalyzer({ distances, testDistance, onClose, onConfir
   const stepFrame = (delta: number) => {
     const v = videoRef.current; if (!v) return;
     v.pause(); setPlaying(false);
-    v.currentTime = Math.max(0, Math.min(duration, v.currentTime + delta));
+    safeSeek(v, v.currentTime + delta);
   };
 
   const markStart = () => {
