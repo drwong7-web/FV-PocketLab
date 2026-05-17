@@ -254,8 +254,10 @@ export default function AppLayout() {
         </DialogContent>
       </Dialog>
 
-      <main className="flex-1 container max-w-5xl pb-28 pt-4 animate-fade-in">
-        <Outlet />
+      <main className="flex-1 container max-w-5xl pb-28 pt-4">
+        <div key={location.pathname} className="animate-page-in">
+          <Outlet />
+        </div>
       </main>
 
       <nav
