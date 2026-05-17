@@ -82,7 +82,37 @@ export function SprintVideoAnalyzer({ distances, testDistance, onClose, onConfir
   const [aiMarkersError, setAiMarkersError] = useState("");
   const [aiMarkersNotes, setAiMarkersNotes] = useState("");
 
-  useEffect(() => { setCropStart(0); setCropEnd(duration || 0); }, [duration]);
+  useEffect(() => {
+    if (Number.isFinite(duration) && duration > 0) {
+      setCropStart(0);
+      setCropEnd(duration);
+    }
+  }, [duration]);
+
+  // WebM produit par MediaRecorder n'a pas de durée dans le header
+  // → on force le navigateur à scanner le blob pour exposer la vraie durée.
+  const probeDurationIfInfinite = (v: HTMLVideoElement) => {
+    if (Number.isFinite(v.duration) && v.duration > 0) {
+      setDuration(v.duration);
+      return;
+    }
+    const onDurationChange = () => {
+      if (Number.isFinite(v.duration) && v.duration > 0) {
+        v.removeEventListener("durationchange", onDurationChange);
+        const real = v.duration;
+        try { v.currentTime = 0; } catch { /* noop */ }
+        setDuration(real);
+      }
+    };
+    v.addEventListener("durationchange", onDurationChange);
+    try { v.currentTime = 1e9; } catch { /* noop */ }
+  };
+
+  const safeSeek = (v: HTMLVideoElement, t: number) => {
+    if (!Number.isFinite(t)) return;
+    const max = Number.isFinite(v.duration) && v.duration > 0 ? v.duration : t;
+    v.currentTime = Math.max(0, Math.min(max, t));
+  };
   const fpsMeasuredRef = useRef(false);
   const rafRef = useRef<number | null>(null);
 
@@ -223,7 +253,7 @@ export function SprintVideoAnalyzer({ distances, testDistance, onClose, onConfir
   const stepFrame = (delta: number) => {
     const v = videoRef.current; if (!v) return;
     v.pause(); setPlaying(false);
-    v.currentTime = Math.max(0, Math.min(duration, v.currentTime + delta));
+    safeSeek(v, v.currentTime + delta);
   };
 
   const markStart = () => {
@@ -323,7 +353,7 @@ export function SprintVideoAnalyzer({ distances, testDistance, onClose, onConfir
     if (draggingCrop) return;
     const t = getCropTime(e.clientX);
     if (t < cropStart || t > cropEnd) return;
-    const v = videoRef.current; if (v) v.currentTime = t;
+    const v = videoRef.current; if (v) safeSeek(v, t);
   };
 
   const detectMarkersAI = async () => {
@@ -544,7 +574,7 @@ export function SprintVideoAnalyzer({ distances, testDistance, onClose, onConfir
                     src={videoUrl}
                     className="block max-h-[50vh] w-auto max-w-full"
                     playsInline
-                    onLoadedMetadata={(e) => { setDuration((e.target as HTMLVideoElement).duration); }}
+                    onLoadedMetadata={(e) => { probeDurationIfInfinite(e.target as HTMLVideoElement); }}
                     onTimeUpdate={(e) => { if (!playing) setCurrentTime((e.target as HTMLVideoElement).currentTime); }}
                     onPlay={() => { setPlaying(true); measureFpsFromVideo(); }}
                     onPause={() => setPlaying(false)}
@@ -669,7 +699,7 @@ export function SprintVideoAnalyzer({ distances, testDistance, onClose, onConfir
                   max={duration || 0}
                   step={FRAME_STEP}
                   value={currentTime}
-                  onChange={(e) => { const v = videoRef.current; if (v) v.currentTime = parseFloat(e.target.value); }}
+                  onChange={(e) => { const v = videoRef.current; if (v) safeSeek(v, parseFloat(e.target.value)); }}
                   className="w-full accent-primary"
                 />
                 <div className="flex items-center justify-between text-[11px] text-muted-foreground">
