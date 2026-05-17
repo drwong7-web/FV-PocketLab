@@ -107,7 +107,8 @@ export default function TeamDetail() {
               <Button type="submit" className="w-full bg-gradient-primary text-primary-foreground font-semibold">Add</Button>
             </form>
           </DialogContent>
-        </Dialog>
+          </Dialog>
+        </div>
       </div>
 
       {players.length === 0 ? (
