@@ -203,7 +203,7 @@ export function CameraDistance({
         className="pointer-events-none absolute left-0 right-0"
         style={isPx ? { top: `${topPx}px` } : { top: `${yRatio * 100}%` }}
       >
-        <div className={`h-0.5 w-full ${colorClass}`} />
+        <div className={`h-px w-full ${colorClass}`} />
         <div
           role="slider"
           aria-label={label}
@@ -216,10 +216,10 @@ export function CameraDistance({
           onPointerUp={onHandlePointerUp}
           onPointerCancel={onHandlePointerUp}
           onKeyDown={onHandleKeyDown(which)}
-          className={`pointer-events-auto absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2 h-6 w-6 cursor-ns-resize touch-none rounded-full border-2 border-white shadow-lg ${colorClass}`}
+          className={`pointer-events-auto absolute left-2 top-0 -translate-y-1/2 h-4 w-4 cursor-ns-resize touch-none rounded-full border-2 border-white shadow-lg ${colorClass}`}
           style={{ touchAction: "none" }}
         />
-        <span className={`absolute right-1 -top-5 rounded-sm px-1 text-[10px] font-mono text-white ${colorClass}`}>
+        <span className={`absolute left-8 -top-5 rounded-sm px-1 text-[10px] font-mono text-white ${colorClass}`}>
           {label}
         </span>
       </div>
