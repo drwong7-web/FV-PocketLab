@@ -32,15 +32,19 @@ export function CameraCalibration({ onConfirm, onClose }: CameraCalibrationProps
 
   const openCamera = async () => {
     try {
-      streamRef.current?.getTracks().forEach((t) => t.stop());
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
+      }
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } },
         audio: false,
       });
       streamRef.current = stream;
-      if (liveVideoRef.current) {
-        liveVideoRef.current.srcObject = stream;
-        await liveVideoRef.current.play().catch(() => {});
+      const v = liveVideoRef.current;
+      if (v) {
+        v.srcObject = stream;
+        await v.play().catch(() => {});
       }
       setError("");
     } catch (e) {
@@ -48,8 +52,21 @@ export function CameraCalibration({ onConfirm, onClose }: CameraCalibrationProps
     }
   };
 
+  // Open / re-open the camera whenever we are back to the live preview phase.
+  // Using an effect ensures liveVideoRef is mounted before we attach the stream
+  // (prevents a black screen when "Retake" is pressed).
   useEffect(() => {
-    openCamera();
+    if (phase !== "idle") return;
+    if (!streamRef.current) {
+      openCamera();
+    } else if (liveVideoRef.current && liveVideoRef.current.srcObject !== streamRef.current) {
+      liveVideoRef.current.srcObject = streamRef.current;
+      liveVideoRef.current.play().catch(() => {});
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase]);
+
+  useEffect(() => {
     return () => {
       streamRef.current?.getTracks().forEach((t) => t.stop());
       if (photoUrl) URL.revokeObjectURL(photoUrl);
@@ -57,7 +74,7 @@ export function CameraCalibration({ onConfirm, onClose }: CameraCalibrationProps
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const resetMarkers = () => { setYTop(0.3); setYBottom(0.7); };
+  const resetMarkers = () => { setYTop(0.3); setYBottom(0.7); setPlaced(false); };
 
   const snap = () => {
     const v = liveVideoRef.current;
