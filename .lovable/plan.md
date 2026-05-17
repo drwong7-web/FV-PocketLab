@@ -1,26 +1,57 @@
-## Poignées plus marquées sur tous les marqueurs horizontaux
+## Problème
 
-Augmenter la taille **visuelle** et la **zone tactile** des poignées dans :
-- `src/components/camera/CameraCalibration.tsx`
-- `src/components/camera/CameraDistance.tsx`
+Dans `src/components/AppLayout.tsx`, le `<Outlet />` est enveloppé ainsi :
 
-### Changements
+```tsx
+<div key={location.pathname} className="animate-page-in">
+  <Outlet />
+</div>
+```
 
-**Poignée visible (le rond coloré)**
-- Diamètre ≈ 5 mm physiques → `h-5 w-5` (20 px CSS) au lieu de `h-4 w-4`.
-- Bordure blanche plus épaisse (`border-2` → `border-[3px]`) et `shadow-lg` conservé pour bien la voir sur n'importe quel fond.
-- Toujours alignée à gauche (`left-2`) pour ne pas masquer la zone centrale de la vidéo.
+Deux causes au flash de fond entre les pages :
 
-**Zone tactile (le `div` cliquable autour)**
-- Passe de `h-8 w-10` (32×40) à `h-12 w-16` (48×64) → couvre largement la poignée et offre une cible tactile confortable >9 mm.
-- Toujours invisible (juste un hit-box), `cursor-ns-resize`, `touch-action: none`.
-- Le clamp vertical existant est mis à jour : `handleH = 48` au lieu de `32`, pour que la zone reste entièrement dans l'overlay aux extrémités.
+1. **`key={location.pathname}`** force React à démonter complètement l'ancienne page et à remonter la nouvelle à chaque navigation. Pendant ce remount, le conteneur est vide → on voit le background.
+2. **`animate-page-in`** part de `opacity: 0` + `translateY(4px)` (défini dans `tailwind.config.ts`). Donc même après le mount, la nouvelle page est invisible pendant ~100 ms → flash supplémentaire.
 
-**Label**
-- Repositionné en fonction de la nouvelle hauteur de poignée (suit `handleTop`).
-- Léger agrandissement : `text-[10px]` → `text-[11px]` pour rester lisible à côté d'une poignée plus grosse.
+L'effet combiné = "ça disparaît / réapparaît" comme décrit.
 
-### Hors scope
-- Pas de changement de logique de drag, de calibration, ou de calcul `pxPerCm`.
-- Pas de modification de la fluidité (déjà gérée par `requestAnimationFrame` + pointer capture sur l'overlay).
-- L'épaisseur des lignes reste `h-px` (1 px) pour préserver la précision visuelle.
+## Solution
+
+Garder une transition douce sans vider l'écran.
+
+### 1. `src/components/AppLayout.tsx`
+
+Remplacer le wrapper par :
+
+```tsx
+<main className="flex-1 container max-w-5xl pb-28 pt-4">
+  <Outlet />
+</main>
+```
+
+- Supprimer `key={location.pathname}` → plus de démontage forcé, React Router gère la transition de routes proprement (le layout et son fond restent stables).
+- Supprimer `animate-page-in` sur le wrapper.
+
+### 2. `tailwind.config.ts`
+
+Adoucir la keyframe `page-in` pour qu'elle ne parte plus de `opacity: 0` (au cas où elle reste utilisée ailleurs) :
+
+```ts
+"page-in": {
+  from: { opacity: "0.85", transform: "translateY(2px)" },
+  to:   { opacity: "1",    transform: "translateY(0)" },
+},
+"page-in": "page-in 120ms ease-out",
+```
+
+Ainsi, si on souhaite réintroduire une micro-animation par page (par exemple sur un sous-élément spécifique), elle reste subtile et ne crée pas de blackout.
+
+## Hors scope
+
+- Pas de changement de logique métier, pas de modif des pages elles-mêmes.
+- Pas d'ajout de librairie d'animations.
+- Pas de modif aux composants caméra/calibration.
+
+## Vérification
+
+Naviguer entre Dashboard → Teams → Tests et inversement : plus de flash de fond, le header/bottom nav restent fixes, le contenu se remplace instantanément.
