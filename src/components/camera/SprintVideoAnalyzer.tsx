@@ -137,15 +137,25 @@ export function SprintVideoAnalyzer({ distances, testDistance, onClose, onConfir
 
   useEffect(() => () => { stopStream(); }, []);
 
-  const stopStream = () => {
-    if (recTimerRef.current !== null) { window.clearInterval(recTimerRef.current); recTimerRef.current = null; }
-    if (recorderRef.current && recorderRef.current.state !== "inactive") {
-      try { recorderRef.current.stop(); } catch { /* noop */ }
-    }
-    recorderRef.current = null;
+  // Stoppe uniquement les pistes caméra (pas le recorder, pour éviter les boucles depuis onstop)
+  const stopCameraTracks = () => {
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
+    }
+    if (liveRef.current) {
+      try { liveRef.current.srcObject = null; } catch { /* noop */ }
+    }
+  };
+
+  const stopStream = () => {
+    if (recTimerRef.current !== null) { window.clearInterval(recTimerRef.current); recTimerRef.current = null; }
+    const rec = recorderRef.current;
+    if (rec && rec.state !== "inactive") {
+      try { rec.stop(); } catch { /* noop */ }
+    } else {
+      // Recorder déjà inactif → on peut couper la caméra immédiatement
+      stopCameraTracks();
     }
   };
 
