@@ -9,21 +9,25 @@ interface CameraCalibrationProps {
   onClose: () => void;
 }
 
-type Pt = { natX: number; natY: number; dispX: number; dispY: number };
-
 export function CameraCalibration({ onConfirm, onClose }: CameraCalibrationProps) {
   const liveVideoRef = useRef<HTMLVideoElement | null>(null);
+  const imgRef = useRef<HTMLImageElement | null>(null);
   const overlayRef = useRef<HTMLDivElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const rafRef = useRef<number | null>(null);
+  const pendingYRef = useRef<number | null>(null);
 
   const [phase, setPhase] = useState<"idle" | "snapped">("idle");
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [naturalSize, setNaturalSize] = useState<{ w: number; h: number } | null>(null);
-  const [a, setA] = useState<Pt | null>(null);
-  const [b, setB] = useState<Pt | null>(null);
   const [calibCm, setCalibCm] = useState("100");
   const [error, setError] = useState("");
+
+  // Horizontal sliding markers (ratio 0..1 on overlay)
+  const [yTop, setYTop] = useState(0.3);
+  const [yBottom, setYBottom] = useState(0.7);
+  const [dragging, setDragging] = useState<"top" | "bottom" | null>(null);
 
   const openCamera = async () => {
     try {
@@ -52,6 +56,8 @@ export function CameraCalibration({ onConfirm, onClose }: CameraCalibrationProps
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const resetMarkers = () => { setYTop(0.3); setYBottom(0.7); };
+
   const snap = () => {
     const v = liveVideoRef.current;
     if (!v) return;
@@ -66,6 +72,7 @@ export function CameraCalibration({ onConfirm, onClose }: CameraCalibrationProps
       const url = URL.createObjectURL(blob);
       setPhotoUrl(url);
       setNaturalSize({ w, h });
+      resetMarkers();
       setPhase("snapped");
     }, "image/jpeg", 0.9);
   };
@@ -88,12 +95,11 @@ export function CameraCalibration({ onConfirm, onClose }: CameraCalibrationProps
         await new Promise<void>((res, rej) => { img.onload = () => res(); img.onerror = () => rej(new Error("Failed to load image")); img.src = url; });
         setPhotoUrl(url);
         setNaturalSize({ w: img.naturalWidth, h: img.naturalHeight });
-        setA(null); setB(null);
+        resetMarkers();
         setPhase("snapped");
         return;
       }
 
-      // Video: extract a frame
       const tmpUrl = URL.createObjectURL(file);
       const v = document.createElement("video");
       v.src = tmpUrl; v.muted = true; v.playsInline = true; v.preload = "auto";
@@ -111,7 +117,7 @@ export function CameraCalibration({ onConfirm, onClose }: CameraCalibrationProps
       URL.revokeObjectURL(tmpUrl);
       setPhotoUrl(URL.createObjectURL(blob));
       setNaturalSize({ w, h });
-      setA(null); setB(null);
+      resetMarkers();
       setPhase("snapped");
     } catch (err) {
       setError("Could not read file: " + (err as Error).message);
@@ -120,39 +126,94 @@ export function CameraCalibration({ onConfirm, onClose }: CameraCalibrationProps
 
   const retake = () => {
     if (photoUrl) URL.revokeObjectURL(photoUrl);
-    setPhotoUrl(null); setA(null); setB(null); setPhase("idle");
+    setPhotoUrl(null); resetMarkers(); setPhase("idle");
     if (!streamRef.current) openCamera();
   };
 
-  const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (phase !== "snapped" || !overlayRef.current || !naturalSize) return;
-    const rect = overlayRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+  // Displayed image box inside overlay (object-contain)
+  const getDisplayBox = () => {
+    const overlay = overlayRef.current;
+    if (!overlay || !naturalSize) return null;
+    const rect = overlay.getBoundingClientRect();
     const nW = naturalSize.w, nH = naturalSize.h;
     const elAR = rect.width / rect.height;
     const natAR = nW / nH;
-    let dispW: number, dispH: number, offX = 0, offY = 0;
-    if (natAR > elAR) {
-      dispW = rect.width; dispH = rect.width / natAR; offY = (rect.height - dispH) / 2;
-    } else {
-      dispH = rect.height; dispW = rect.height * natAR; offX = (rect.width - dispW) / 2;
-    }
-    if (x < offX || x > offX + dispW || y < offY || y > offY + dispH) return;
-    const natX = ((x - offX) / dispW) * nW;
-    const natY = ((y - offY) / dispH) * nH;
-    const pt: Pt = { natX, natY, dispX: x, dispY: y };
-    if (!a) setA(pt);
-    else if (!b) setB(pt);
-    else { setA(pt); setB(null); }
+    let dispH: number, offY: number;
+    if (natAR > elAR) { dispH = rect.width / natAR; offY = (rect.height - dispH) / 2; }
+    else { dispH = rect.height; offY = 0; }
+    return { offY, dispH, nH };
   };
 
   const pxPerCm = (() => {
     const cm = parseFloat(calibCm);
-    if (!a || !b || !cm) return 0;
-    const px = Math.hypot(b.natX - a.natX, b.natY - a.natY);
-    return px / cm;
+    const box = getDisplayBox();
+    if (!box || !cm) return 0;
+    const verticalDispPx = Math.abs(yTop - yBottom) * box.dispH;
+    const naturalPx = verticalDispPx * (box.nH / box.dispH);
+    return naturalPx / cm;
   })();
+
+  // Drag handled at overlay level
+  const flushY = () => {
+    rafRef.current = null;
+    const y = pendingYRef.current;
+    if (y == null || !dragging) return;
+    if (dragging === "top") setYTop(y); else setYBottom(y);
+  };
+  const onOverlayPointerMove = (e: React.PointerEvent) => {
+    if (!dragging) return;
+    const overlay = overlayRef.current; if (!overlay) return;
+    const rect = overlay.getBoundingClientRect();
+    const y = Math.min(1, Math.max(0, (e.clientY - rect.top) / rect.height));
+    pendingYRef.current = y;
+    if (rafRef.current == null) rafRef.current = requestAnimationFrame(flushY);
+  };
+  const endDrag = (e: React.PointerEvent) => {
+    if (!dragging) return;
+    try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId); } catch { /* noop */ }
+    setDragging(null);
+  };
+  const onHandlePointerDown = (which: "top" | "bottom") => (e: React.PointerEvent) => {
+    e.stopPropagation();
+    const overlay = overlayRef.current;
+    if (overlay) { try { overlay.setPointerCapture(e.pointerId); } catch { /* noop */ } }
+    setDragging(which);
+  };
+  const onHandleKeyDown = (which: "top" | "bottom") => (e: React.KeyboardEvent) => {
+    const overlay = overlayRef.current; if (!overlay) return;
+    const step = 1 / overlay.getBoundingClientRect().height;
+    const cur = which === "top" ? yTop : yBottom;
+    const set = which === "top" ? setYTop : setYBottom;
+    if (e.key === "ArrowUp") { e.preventDefault(); set(Math.max(0, cur - step)); }
+    else if (e.key === "ArrowDown") { e.preventDefault(); set(Math.min(1, cur + step)); }
+  };
+
+  const renderMarker = (which: "top" | "bottom", yRatio: number, colorClass: string, label: string) => {
+    const box = getDisplayBox();
+    const topPx = box ? box.offY + yRatio * box.dispH : yRatio * (overlayRef.current?.getBoundingClientRect().height || 0);
+    return (
+      <div className="pointer-events-none absolute left-0 right-0" style={{ top: `${topPx}px` }}>
+        <div className={`h-px w-full ${colorClass}`} />
+        <div
+          role="slider"
+          aria-label={label}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={Math.round(yRatio * 100)}
+          tabIndex={0}
+          onPointerDown={onHandlePointerDown(which)}
+          onKeyDown={onHandleKeyDown(which)}
+          className="pointer-events-auto absolute -top-4 left-0 h-8 w-10 cursor-ns-resize touch-none"
+          style={{ touchAction: "none" }}
+        >
+          <span className={`absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 rounded-full border-2 border-white shadow-lg ${colorClass}`} />
+        </div>
+        <span className={`pointer-events-none absolute left-12 -top-5 rounded-sm px-1 text-[10px] font-mono text-white ${colorClass}`}>
+          {label}
+        </span>
+      </div>
+    );
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-black">
@@ -170,15 +231,16 @@ export function CameraCalibration({ onConfirm, onClose }: CameraCalibrationProps
         {phase === "idle" && <video ref={liveVideoRef} playsInline muted className="h-full w-full object-cover" />}
         {phase === "snapped" && photoUrl && (
           <>
-            <img src={photoUrl} alt="calibration" className="h-full w-full object-contain" />
-            <div ref={overlayRef} onClick={handleClick} className="absolute inset-0 cursor-crosshair">
-              {a && <span className="absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-primary" style={{ left: a.dispX, top: a.dispY }} />}
-              {b && <span className="absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-primary" style={{ left: b.dispX, top: b.dispY }} />}
-              {a && b && (
-                <svg className="pointer-events-none absolute inset-0 h-full w-full">
-                  <line x1={a.dispX} y1={a.dispY} x2={b.dispX} y2={b.dispY} stroke="hsl(var(--primary))" strokeWidth={2} strokeDasharray="4 3" />
-                </svg>
-              )}
+            <img ref={imgRef} src={photoUrl} alt="calibration" className="h-full w-full object-contain" />
+            <div
+              ref={overlayRef}
+              className={`absolute inset-0 ${dragging ? "pointer-events-auto" : "pointer-events-none"}`}
+              onPointerMove={onOverlayPointerMove}
+              onPointerUp={endDrag}
+              onPointerCancel={endDrag}
+            >
+              {renderMarker("top", yTop, "bg-destructive", "top")}
+              {renderMarker("bottom", yBottom, "bg-primary", "bottom")}
             </div>
           </>
         )}
@@ -187,9 +249,7 @@ export function CameraCalibration({ onConfirm, onClose }: CameraCalibrationProps
       {phase === "snapped" && (
         <div className="space-y-2 bg-black/85 p-3 text-white">
           <p className="text-xs">
-            {!a ? "1. Click the first end of the reference object."
-              : !b ? "2. Click the second end."
-              : "✓ Markers placed. Enter the real length and confirm."}
+            Align the two horizontal lines on the top and bottom ends of a <strong>vertical</strong> reference object (e.g. a 1 m ruler standing up).
           </p>
           <div className="flex items-center gap-2">
             <Label className="shrink-0 text-xs">Real length (cm)</Label>

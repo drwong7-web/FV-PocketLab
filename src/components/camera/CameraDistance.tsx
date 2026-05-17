@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 
-import { Camera, CircleStop, RotateCcw, Upload, Video, X } from "lucide-react";
+import { Camera, CircleStop, Pause, Play, RotateCcw, Upload, Video, X } from "lucide-react";
 
 interface CameraDistanceProps {
   pxPerCm: number;
@@ -26,6 +26,8 @@ export function CameraDistance({
   const chunksRef = useRef<Blob[]>([]);
   const startTimeRef = useRef<number>(0);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const rafRef = useRef<number | null>(null);
+  const pendingYRef = useRef<number | null>(null);
 
   const [phase, setPhase] = useState<"idle" | "recording" | "review">("idle");
   const [elapsed, setElapsed] = useState(0);
@@ -38,6 +40,11 @@ export function CameraDistance({
   const [yTakeoff, setYTakeoff] = useState<number>(0.7);
   const [yApex, setYApex] = useState<number>(0.3);
   const [dragging, setDragging] = useState<"takeoff" | "apex" | null>(null);
+
+  // Custom playback controls
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
 
   const openCamera = async () => {
     try {
@@ -159,7 +166,6 @@ export function CameraDistance({
     const box = getDisplayBox();
     if (!box || !pxPerCm) return null;
     const verticalDispPx = Math.abs(yTakeoff - yApex) * box.dispH;
-    // Convert displayed px → natural px
     const naturalPx = box.nH ? verticalDispPx * (box.nH / box.dispH) : verticalDispPx;
     return naturalPx / pxPerCm / 100;
   })();
@@ -169,22 +175,37 @@ export function CameraDistance({
     onConfirm(heightM);
   };
 
-  const onHandlePointerDown = (which: "takeoff" | "apex") => (e: React.PointerEvent) => {
-    e.stopPropagation();
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    setDragging(which);
+  // Drag handled at overlay level for fluid movement
+  const flushY = () => {
+    rafRef.current = null;
+    const y = pendingYRef.current;
+    if (y == null || !dragging) return;
+    if (dragging === "takeoff") setYTakeoff(y); else setYApex(y);
   };
-  const onHandlePointerMove = (which: "takeoff" | "apex") => (e: React.PointerEvent) => {
-    if (dragging !== which) return;
+
+  const onOverlayPointerMove = (e: React.PointerEvent) => {
+    if (!dragging) return;
     const overlay = overlayRef.current; if (!overlay) return;
     const rect = overlay.getBoundingClientRect();
     const y = Math.min(1, Math.max(0, (e.clientY - rect.top) / rect.height));
-    if (which === "takeoff") setYTakeoff(y); else setYApex(y);
+    pendingYRef.current = y;
+    if (rafRef.current == null) rafRef.current = requestAnimationFrame(flushY);
   };
-  const onHandlePointerUp = (e: React.PointerEvent) => {
+  const endDrag = (e: React.PointerEvent) => {
+    if (!dragging) return;
     try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId); } catch { /* noop */ }
     setDragging(null);
   };
+
+  const onHandlePointerDown = (which: "takeoff" | "apex") => (e: React.PointerEvent) => {
+    e.stopPropagation();
+    const overlay = overlayRef.current;
+    if (overlay) {
+      try { overlay.setPointerCapture(e.pointerId); } catch { /* noop */ }
+    }
+    setDragging(which);
+  };
+
   const onHandleKeyDown = (which: "takeoff" | "apex") => (e: React.KeyboardEvent) => {
     const overlay = overlayRef.current; if (!overlay) return;
     const step = 1 / overlay.getBoundingClientRect().height;
@@ -204,6 +225,7 @@ export function CameraDistance({
         style={isPx ? { top: `${topPx}px` } : { top: `${yRatio * 100}%` }}
       >
         <div className={`h-px w-full ${colorClass}`} />
+        {/* enlarged invisible hit-box around the visible handle */}
         <div
           role="slider"
           aria-label={label}
@@ -212,18 +234,22 @@ export function CameraDistance({
           aria-valuenow={Math.round(yRatio * 100)}
           tabIndex={0}
           onPointerDown={onHandlePointerDown(which)}
-          onPointerMove={onHandlePointerMove(which)}
-          onPointerUp={onHandlePointerUp}
-          onPointerCancel={onHandlePointerUp}
           onKeyDown={onHandleKeyDown(which)}
-          className={`pointer-events-auto absolute left-2 top-0 -translate-y-1/2 h-4 w-4 cursor-ns-resize touch-none rounded-full border-2 border-white shadow-lg ${colorClass}`}
+          className="pointer-events-auto absolute -top-4 left-0 h-8 w-10 cursor-ns-resize touch-none"
           style={{ touchAction: "none" }}
-        />
-        <span className={`absolute left-8 -top-5 rounded-sm px-1 text-[10px] font-mono text-white ${colorClass}`}>
+        >
+          <span className={`absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 rounded-full border-2 border-white shadow-lg ${colorClass}`} />
+        </div>
+        <span className={`pointer-events-none absolute left-12 -top-5 rounded-sm px-1 text-[10px] font-mono text-white ${colorClass}`}>
           {label}
         </span>
       </div>
     );
+  };
+
+  const togglePlay = () => {
+    const v = playbackRef.current; if (!v) return;
+    if (v.paused) v.play().catch(() => {}); else v.pause();
   };
 
   return (
@@ -240,10 +266,25 @@ export function CameraDistance({
         {phase === "review" && videoUrl && (
           <>
             <video
-              ref={(el) => { playbackRef.current = el; if (el) el.playbackRate = playbackRate; }}
-              src={videoUrl} playsInline controls className="h-full w-full object-contain"
+              ref={(el) => {
+                playbackRef.current = el;
+                if (el) el.playbackRate = playbackRate;
+              }}
+              src={videoUrl}
+              playsInline
+              className="h-full w-full object-contain"
+              onPlay={() => setIsPlaying(true)}
+              onPause={() => setIsPlaying(false)}
+              onTimeUpdate={(e) => setCurrentTime((e.target as HTMLVideoElement).currentTime)}
+              onLoadedMetadata={(e) => setDuration((e.target as HTMLVideoElement).duration || 0)}
             />
-            <div ref={overlayRef} className="absolute inset-0 pointer-events-none">
+            <div
+              ref={overlayRef}
+              className={`absolute inset-0 ${dragging ? "pointer-events-auto" : "pointer-events-none"}`}
+              onPointerMove={onOverlayPointerMove}
+              onPointerUp={endDrag}
+              onPointerCancel={endDrag}
+            >
               {renderMarker("takeoff", yTakeoff, "bg-destructive", point1Label)}
               {renderMarker("apex", yApex, "bg-primary", point2Label)}
             </div>
@@ -267,6 +308,28 @@ export function CameraDistance({
             </div>
 
             {heightM != null && <div className="rounded-md bg-primary/20 px-2 py-1 text-center font-mono text-sm text-primary">h = {(heightM * 100).toFixed(1)} cm</div>}
+
+            {/* Custom playback controls — no overlap with markers */}
+            <div className="flex items-center gap-2">
+              <button onClick={togglePlay} className="rounded-md bg-white/15 p-2 text-white">
+                {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+              </button>
+              <input
+                type="range"
+                min={0}
+                max={duration || 0}
+                step={1 / captureFps}
+                value={currentTime}
+                onChange={(e) => {
+                  const v = playbackRef.current; if (!v) return;
+                  v.currentTime = parseFloat(e.target.value);
+                }}
+                className="flex-1 accent-primary"
+              />
+              <span className="w-14 text-right font-mono text-[10px] text-white/80">
+                {currentTime.toFixed(2)}s
+              </span>
+            </div>
 
             <div className="flex gap-1">
               {[0.1, 0.25, 0.5, 1].map((r) => (
