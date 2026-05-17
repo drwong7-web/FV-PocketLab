@@ -235,12 +235,12 @@ export function CameraDistance({
           tabIndex={0}
           onPointerDown={onHandlePointerDown(which)}
           onKeyDown={onHandleKeyDown(which)}
-          className="pointer-events-auto absolute -top-4 left-0 h-8 w-10 cursor-ns-resize touch-none"
+          className="pointer-events-auto absolute -top-6 left-0 h-12 w-16 cursor-ns-resize touch-none"
           style={{ touchAction: "none" }}
         >
-          <span className={`absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 rounded-full border-2 border-white shadow-lg ${colorClass}`} />
+          <span className={`absolute left-2 top-1/2 -translate-y-1/2 h-5 w-5 rounded-full border-[3px] border-white shadow-lg ${colorClass}`} />
         </div>
-        <span className={`pointer-events-none absolute left-12 -top-5 rounded-sm px-1 text-[10px] font-mono text-white ${colorClass}`}>
+        <span className={`pointer-events-none absolute left-12 -top-7 rounded-sm px-1 text-[11px] font-mono text-white ${colorClass}`}>
           {label}
         </span>
       </div>
