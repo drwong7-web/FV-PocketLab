@@ -196,19 +196,35 @@ export function SprintVideoAnalyzer({ distances, testDistance, onClose, onConfir
     chunksRef.current = [];
     const mimeType = pickMimeType();
     try {
-      const rec = new MediaRecorder(streamRef.current, mimeType ? { mimeType } : undefined);
+    const rec = new MediaRecorder(streamRef.current, mimeType ? { mimeType } : undefined);
+      let stopHandled = false;
       rec.ondataavailable = (ev) => { if (ev.data && ev.data.size > 0) chunksRef.current.push(ev.data); };
       rec.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: mimeType || "video/webm" });
+        if (stopHandled) return;
+        stopHandled = true;
+        const chunks = chunksRef.current;
         chunksRef.current = [];
+        recorderRef.current = null;
+        // Couper la caméra maintenant que le recorder est arrêté
+        stopCameraTracks();
+        if (recTimerRef.current !== null) { window.clearInterval(recTimerRef.current); recTimerRef.current = null; }
+        setRecording(false);
+
+        const totalSize = chunks.reduce((s, b) => s + b.size, 0);
+        if (totalSize === 0) {
+          setRecError("Enregistrement vide — réessayez (vérifiez les autorisations caméra).");
+          setMode("choose");
+          return;
+        }
+        const blob = new Blob(chunks, { type: mimeType || "video/webm" });
         if (videoUrl) URL.revokeObjectURL(videoUrl);
         const url = URL.createObjectURL(blob);
-        setVideoUrl(url);
+        // Réinitialiser les états d'analyse puis exposer la vidéo
         setStartOffset(null);
         setTags({});
         setSamples(null);
         setCalib({ refMeters: testDistance });
-        stopStream();
+        setVideoUrl(url);
         setMode("choose");
       };
       recorderRef.current = rec;
