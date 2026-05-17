@@ -230,7 +230,7 @@ export function CameraCalibration({ onConfirm, onClose }: CameraCalibrationProps
     const overlayH = overlayRef.current?.getBoundingClientRect().height || 0;
     const topPx = box ? box.offY + yRatio * box.dispH : yRatio * overlayH;
     // Clamp the handle so it stays fully inside the overlay (handle is 32px tall).
-    const handleH = 32;
+    const handleH = 48;
     const desiredHandleTop = topPx - handleH / 2;
     const handleTop = Math.min(Math.max(desiredHandleTop, 0), Math.max(0, overlayH - handleH));
     return (
