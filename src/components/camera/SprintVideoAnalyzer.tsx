@@ -353,7 +353,7 @@ export function SprintVideoAnalyzer({ distances, testDistance, onClose, onConfir
     if (draggingCrop) return;
     const t = getCropTime(e.clientX);
     if (t < cropStart || t > cropEnd) return;
-    const v = videoRef.current; if (v) v.currentTime = t;
+    const v = videoRef.current; if (v) safeSeek(v, t);
   };
 
   const detectMarkersAI = async () => {
