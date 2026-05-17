@@ -82,7 +82,37 @@ export function SprintVideoAnalyzer({ distances, testDistance, onClose, onConfir
   const [aiMarkersError, setAiMarkersError] = useState("");
   const [aiMarkersNotes, setAiMarkersNotes] = useState("");
 
-  useEffect(() => { setCropStart(0); setCropEnd(duration || 0); }, [duration]);
+  useEffect(() => {
+    if (Number.isFinite(duration) && duration > 0) {
+      setCropStart(0);
+      setCropEnd(duration);
+    }
+  }, [duration]);
+
+  // WebM produit par MediaRecorder n'a pas de durée dans le header
+  // → on force le navigateur à scanner le blob pour exposer la vraie durée.
+  const probeDurationIfInfinite = (v: HTMLVideoElement) => {
+    if (Number.isFinite(v.duration) && v.duration > 0) {
+      setDuration(v.duration);
+      return;
+    }
+    const onDurationChange = () => {
+      if (Number.isFinite(v.duration) && v.duration > 0) {
+        v.removeEventListener("durationchange", onDurationChange);
+        const real = v.duration;
+        try { v.currentTime = 0; } catch { /* noop */ }
+        setDuration(real);
+      }
+    };
+    v.addEventListener("durationchange", onDurationChange);
+    try { v.currentTime = 1e9; } catch { /* noop */ }
+  };
+
+  const safeSeek = (v: HTMLVideoElement, t: number) => {
+    if (!Number.isFinite(t)) return;
+    const max = Number.isFinite(v.duration) && v.duration > 0 ? v.duration : t;
+    v.currentTime = Math.max(0, Math.min(max, t));
+  };
   const fpsMeasuredRef = useRef(false);
   const rafRef = useRef<number | null>(null);
 
