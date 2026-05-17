@@ -255,7 +255,7 @@ export default function AppLayout() {
         </DialogContent>
       </Dialog>
 
-      <main className="flex-1 container max-w-5xl pb-28 pt-4">
+      <main className="flex-1 container max-w-5xl pb-28 pt-4 min-h-[calc(100svh-3.5rem)] bg-background">
         <Outlet />
       </main>
 
