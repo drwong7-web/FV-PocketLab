@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Camera, CircleStop, RotateCcw, Sparkles, Upload, X, Loader2, Play, Pause } from "lucide-react";
 import { getPoseLandmarker, PL, LOWER_BODY_CONNECTIONS, type FrameSample } from "@/lib/poseDetector";
 import { detectJump, type JumpDetectionResult } from "@/lib/jumpDetection";
+import { createFrameEnhancer } from "@/lib/videoFilters";
 
 interface CameraAIJumpProps {
   onConfirm: (result: { jumpHeight: number; flightTime: number }) => void;
@@ -212,10 +213,17 @@ export function CameraAIJump({ onConfirm, onClose }: CameraAIJumpProps) {
 
     let t = start;
     let firstT: number | null = null;
+    const enhancer = createFrameEnhancer({ sharpenAmount: 0.55, targetMinHeight: 720 });
     while (t <= end - stepSec / 2) {
       await seekTo(t);
       try {
-        const res = landmarker.detectForVideo(v, performance.now());
+        let detectionSource: HTMLCanvasElement | HTMLVideoElement = v;
+        try {
+          detectionSource = enhancer.enhance(v);
+        } catch {
+          detectionSource = v;
+        }
+        const res = landmarker.detectForVideo(detectionSource, performance.now());
         const lm = res.landmarks?.[0] ?? null;
         if (lm) {
           const ids = [PL.LEFT_ANKLE, PL.RIGHT_ANKLE, PL.LEFT_HEEL, PL.RIGHT_HEEL, PL.LEFT_FOOT_INDEX, PL.RIGHT_FOOT_INDEX];
