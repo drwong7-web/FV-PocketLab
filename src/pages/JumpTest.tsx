@@ -16,6 +16,19 @@ import {
 } from "@/lib/localHistory";
 import { toast } from "sonner";
 
+function roundTo5(n: number) {
+  return Math.round(n / 5) * 5;
+}
+
+function defaultTrials(mass: number): JumpTrial[] {
+  return [
+    { load: 0, jumpHeight: 0 },
+    { load: roundTo5(mass * 0.20), jumpHeight: 0 },
+    { load: roundTo5(mass * 0.50), jumpHeight: 0 },
+    { load: roundTo5(mass * 0.70), jumpHeight: 0 },
+  ];
+}
+
 export default function JumpTest() {
   const navigate = useNavigate();
   const { user } = useAuth();
