@@ -79,6 +79,13 @@ export default function JumpTest() {
   }, [athleteId]);
 
   useEffect(() => {
+    const mass = parseFloat(bodyMass);
+    if (!isNaN(mass) && mass > 0) {
+      setTrials(defaultTrials(mass));
+    }
+  }, [bodyMass]);
+
+  useEffect(() => {
     if (!athleteId) return;
     const draft = consumeTestDraft("jump", athleteId);
     if (!draft) return;
