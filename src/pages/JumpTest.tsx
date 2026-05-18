@@ -16,6 +16,19 @@ import {
 } from "@/lib/localHistory";
 import { toast } from "sonner";
 
+function roundTo5(n: number) {
+  return Math.round(n / 5) * 5;
+}
+
+function defaultTrials(mass: number): JumpTrial[] {
+  return [
+    { load: 0, jumpHeight: 0 },
+    { load: roundTo5(mass * 0.20), jumpHeight: 0 },
+    { load: roundTo5(mass * 0.50), jumpHeight: 0 },
+    { load: roundTo5(mass * 0.70), jumpHeight: 0 },
+  ];
+}
+
 export default function JumpTest() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -31,9 +44,9 @@ export default function JumpTest() {
   const [pushOff, setPushOff] = useState("0.30");
   const [trials, setTrials] = useState<JumpTrial[]>([
     { load: 0, jumpHeight: 0 },
-    { load: 20, jumpHeight: 0 },
-    { load: 40, jumpHeight: 0 },
-    { load: 60, jumpHeight: 0 },
+    { load: 0, jumpHeight: 0 },
+    { load: 0, jumpHeight: 0 },
+    { load: 0, jumpHeight: 0 },
   ]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -58,7 +71,10 @@ export default function JumpTest() {
 
   useEffect(() => {
     const a = getPlayer(athleteId);
-    if (a?.mass) setBodyMass(String(a.mass));
+    if (a?.mass) {
+      setBodyMass(String(a.mass));
+      setTrials(defaultTrials(a.mass));
+    }
     if (a?.height) setPushOff(((a.height / 100) * 0.4).toFixed(2));
   }, [athleteId]);
 
