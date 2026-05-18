@@ -233,7 +233,7 @@ export default function JumpTest() {
                 <Trash2 className="h-4 w-4 text-destructive" />
               </Button>
             </div>
-          ))}
+          );})}
           <p className="mt-2 text-xs text-muted-foreground">
             ✨ <strong>AI</strong> auto-detects takeoff & landing from video (no calibration needed). 📷 manual marker uses px/cm calibration.
           </p>
