@@ -94,7 +94,7 @@ export function createFrameEnhancer(opts: EnhanceOptions = {}) {
             state.lastStats = estimateStats(imgData.data, dw, dh);
           }
           // Denoise if noisy
-          let data = imgData.data;
+          let data: Uint8ClampedArray = imgData.data;
           if (state.lastStats && state.lastStats.noise > 12) {
             data = gaussianBlur3(data, dw, dh);
           }
@@ -102,7 +102,9 @@ export function createFrameEnhancer(opts: EnhanceOptions = {}) {
           if (sharpen > 0) {
             data = unsharpMask(data, dw, dh, sharpen);
           }
-          ctx.putImageData(new ImageData(data, dw, dh), 0, 0);
+          const out = ctx.createImageData(dw, dh);
+          out.data.set(data);
+          ctx.putImageData(out, 0, 0);
         } catch {
           // CORS / tainted canvas — skip ImageData ops, keep CSS-filtered output
         }
