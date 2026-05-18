@@ -18,6 +18,10 @@
  * a position-time array into `analyzePositionTime`).
  */
 
+import { butterworthLowpass, savitzkyGolay } from "./signalFilters";
+
+
+
 export interface Split {
   distance: number; // meters
   time: number;     // seconds
@@ -335,11 +339,20 @@ export function analyzePositionTime(
   // Smooth positions with EMA, then Kalman
   const emaPos = ema(positions, opts.emaAlpha ?? 0.35);
   const k = kalmanPosition(times, emaPos, opts.kalman);
-  const x = k.x;
-  // Velocity & acceleration via central differences on smoothed position
-  const v = centralDiff(times, x).map((val) => Math.max(0, val));
+  let x = k.x;
+
+  // Auto Butterworth low-pass (8 Hz) on position — removes HF noise without phase lag
+  const n = times.length;
+  const dt = n > 1 ? (times[n - 1] - times[0]) / (n - 1) : 0.02;
+  const fs = 1 / Math.max(1e-3, dt);
+  if (n >= 8) x = butterworthLowpass(x, fs, 8);
+
+  // Velocity & acceleration with Savitzky-Golay derivative smoothing
+  let v = centralDiff(times, x).map((val) => Math.max(0, val));
+  v = savitzkyGolay(v);
   const vSmooth = ema(v, 0.4);
-  const a = centralDiff(times, vSmooth);
+  let a = centralDiff(times, vSmooth);
+  a = savitzkyGolay(a);
   const aSmooth = ema(a, 0.4);
 
   const samples: SamplePoint[] = times.map((t, i) => ({
@@ -363,6 +376,7 @@ export function analyzePositionTime(
     distanceCovered: x[x.length - 1] - x[0],
   };
 }
+
 
 export function analyzeSplits(
   splits: Split[],

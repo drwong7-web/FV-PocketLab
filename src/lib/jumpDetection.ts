@@ -1,4 +1,5 @@
 import type { FrameSample } from "./poseDetector";
+import { butterworthLowpass, oneEuroSeries, interpolateGaps } from "./signalFilters";
 
 const G = 9.81;
 
@@ -16,19 +17,6 @@ export interface JumpDetectionResult {
   confidence: number;       // 0..1
 }
 
-function smooth(arr: number[], window = 3): number[] {
-  const out = new Array(arr.length).fill(0);
-  for (let i = 0; i < arr.length; i++) {
-    let s = 0, n = 0;
-    for (let k = -window; k <= window; k++) {
-      const j = i + k;
-      if (j >= 0 && j < arr.length) { s += arr[j]; n++; }
-    }
-    out[i] = s / n;
-  }
-  return out;
-}
-
 /**
  * Detect takeoff/apex/landing from a time series of foot Y positions.
  * Y is normalized image coordinate (0 = top, 1 = bottom). Lower Y = higher in air.
@@ -39,7 +27,19 @@ export function detectJump(samples: FrameSample[]): JumpDetectionResult | null {
 
   const t = valid.map((s) => s.t);
   const yRaw = valid.map((s) => s.footY);
-  const y = smooth(yRaw, 2);
+
+  // Estimate sample rate from median dt
+  const dts: number[] = [];
+  for (let i = 1; i < t.length; i++) dts.push(t[i] - t[i - 1]);
+  dts.sort((a, b) => a - b);
+  const medDt = dts[Math.floor(dts.length / 2)] || 1 / 30;
+  const fs = 1 / Math.max(1e-3, medDt);
+
+  // Fill any holes, one-euro then butterworth lowpass at 8 Hz
+  const yFilled = interpolateGaps(yRaw, 3);
+  const yOE = oneEuroSeries(t, yFilled, 1.2, 0.05);
+  const y = butterworthLowpass(yOE, fs, 8);
+
 
   // Apex = global minimum of Y (highest point in air)
   let apexIdx = 0;

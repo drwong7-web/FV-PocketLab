@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Camera, CircleStop, RotateCcw, Sparkles, Upload, X, Loader2, Play, Pause } from "lucide-react";
 import { getPoseLandmarker, PL, LOWER_BODY_CONNECTIONS, type FrameSample } from "@/lib/poseDetector";
 import { detectJump, type JumpDetectionResult } from "@/lib/jumpDetection";
+import { createFrameEnhancer } from "@/lib/videoFilters";
 
 interface CameraAIJumpProps {
   onConfirm: (result: { jumpHeight: number; flightTime: number }) => void;
@@ -212,10 +213,17 @@ export function CameraAIJump({ onConfirm, onClose }: CameraAIJumpProps) {
 
     let t = start;
     let firstT: number | null = null;
+    const enhancer = createFrameEnhancer({ sharpenAmount: 0.55, targetMinHeight: 720 });
     while (t <= end - stepSec / 2) {
       await seekTo(t);
       try {
-        const res = landmarker.detectForVideo(v, performance.now());
+        let detectionSource: HTMLCanvasElement | HTMLVideoElement = v;
+        try {
+          detectionSource = enhancer.enhance(v);
+        } catch {
+          detectionSource = v;
+        }
+        const res = landmarker.detectForVideo(detectionSource, performance.now());
         const lm = res.landmarks?.[0] ?? null;
         if (lm) {
           const ids = [PL.LEFT_ANKLE, PL.RIGHT_ANKLE, PL.LEFT_HEEL, PL.RIGHT_HEEL, PL.LEFT_FOOT_INDEX, PL.RIGHT_FOOT_INDEX];
@@ -318,7 +326,7 @@ export function CameraAIJump({ onConfirm, onClose }: CameraAIJumpProps) {
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-black" style={{ height: "100svh" }}>
       <div className="flex items-center justify-between bg-black/80 px-3 py-2 text-white">
-        <div className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-primary" /><span className="font-display text-sm uppercase">AI jump detection</span></div>
+        <div className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-primary" /><span className="font-display text-sm uppercase">AI jump detection</span><span className="ml-1 rounded-full bg-primary/15 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wide text-primary" title="Pré-traitement vidéo automatique : netteté, exposition, lissage">Auto-HD</span></div>
         <Button size="icon" variant="ghost" onClick={onClose} className="h-8 w-8 text-white hover:bg-white/10"><X className="h-5 w-5" /></Button>
       </div>
 
