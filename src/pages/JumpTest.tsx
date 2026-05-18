@@ -44,9 +44,9 @@ export default function JumpTest() {
   const [pushOff, setPushOff] = useState("0.30");
   const [trials, setTrials] = useState<JumpTrial[]>([
     { load: 0, jumpHeight: 0 },
-    { load: 20, jumpHeight: 0 },
-    { load: 40, jumpHeight: 0 },
-    { load: 60, jumpHeight: 0 },
+    { load: 0, jumpHeight: 0 },
+    { load: 0, jumpHeight: 0 },
+    { load: 0, jumpHeight: 0 },
   ]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
