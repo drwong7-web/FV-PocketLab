@@ -98,6 +98,13 @@ export async function trackPelvisX(
     frameIdx++;
   }
   opts.onProgress?.(1);
+  // One Euro smoothing on the X series to remove micro-jitter without lag
+  if (samples.length >= 4) {
+    const times = samples.map((s) => s.t);
+    const xs = samples.map((s) => s.x);
+    const smoothed = oneEuroSeries(times, xs, 1.0, 0.05);
+    for (let i = 0; i < samples.length; i++) samples[i].x = smoothed[i];
+  }
   return samples;
 }
 
