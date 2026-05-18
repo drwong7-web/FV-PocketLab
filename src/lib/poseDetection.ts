@@ -1,4 +1,8 @@
 import { FilesetResolver, PoseLandmarker, type PoseLandmarkerResult } from "@mediapipe/tasks-vision";
+import { createFrameEnhancer } from "./videoFilters";
+import { createStabilizer } from "./videoStabilizer";
+import { oneEuroSeries } from "./signalFilters";
+
 
 let landmarker: PoseLandmarker | null = null;
 let initPromise: Promise<PoseLandmarker> | null = null;
@@ -46,6 +50,8 @@ export async function trackPelvisX(
   const dt = 1 / rate;
   const duration = video.duration;
   const samples: PoseSample[] = [];
+  const enhancer = createFrameEnhancer({ sharpenAmount: 0.5, targetMinHeight: 720 });
+  const stabilizer = createStabilizer();
 
   const seekTo = (t: number) =>
     new Promise<void>((resolve) => {
@@ -69,7 +75,17 @@ export async function trackPelvisX(
     if (opts.signal?.aborted) break;
     await seekTo(t);
     const ts = Math.round(t * 1000) + frameIdx;
-    const result: PoseLandmarkerResult = lm.detectForVideo(video, ts);
+    // Auto-enhancement: exposure / contrast / denoise / sharpen / upscale
+    let sourceForDetection: HTMLCanvasElement | HTMLVideoElement = video;
+    try {
+      const enhanced = enhancer.enhance(video);
+      const stabilized = stabilizer.stabilize(enhanced);
+      sourceForDetection = stabilized;
+    } catch {
+      // CORS or other failure → fall back to raw video
+      sourceForDetection = video;
+    }
+    const result: PoseLandmarkerResult = lm.detectForVideo(sourceForDetection, ts);
     const lms = result.landmarks?.[0];
     if (lms && lms[23] && lms[24]) {
       const x = (lms[23].x + lms[24].x) / 2;
