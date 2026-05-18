@@ -67,12 +67,10 @@ export function createFrameEnhancer(opts: EnhanceOptions = {}) {
       if (stats) {
         // Auto-exposure: target mean luminance ~ 128
         const mean = stats.mean;
-        if (mean < 90 || mean > 165) {
-          const gamma = mean < 90 ? 0.8 : 1.2; // brighten dark, darken bright
-          const brightnessPct = mean < 90 ? 115 : 92;
-          cssFilter += ` brightness(${brightnessPct}%)`;
-          // gamma approximation via contrast
-          if (gamma !== 1) cssFilter += ` contrast(${gamma < 1 ? 108 : 95}%)`;
+        if (mean < 90) {
+          cssFilter += ` brightness(115%) contrast(108%)`;
+        } else if (mean > 165) {
+          cssFilter += ` brightness(92%) contrast(95%)`;
         }
         // Low contrast → CLAHE-lite via contrast()
         if (stats.std < 35) {
