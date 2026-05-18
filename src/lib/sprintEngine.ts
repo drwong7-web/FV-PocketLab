@@ -18,6 +18,10 @@
  * a position-time array into `analyzePositionTime`).
  */
 
+import { butterworthLowpass, savitzkyGolay } from "./signalFilters";
+
+
+
 export interface Split {
   distance: number; // meters
   time: number;     // seconds
@@ -336,42 +340,28 @@ export function analyzePositionTime(
   const emaPos = ema(positions, opts.emaAlpha ?? 0.35);
   const k = kalmanPosition(times, emaPos, opts.kalman);
   let x = k.x;
-  // Estimate sample rate for Butterworth/SG
+
+  // Auto Butterworth low-pass (8 Hz) on position — removes HF noise without phase lag
   const n = times.length;
   const dt = n > 1 ? (times[n - 1] - times[0]) / (n - 1) : 0.02;
   const fs = 1 / Math.max(1e-3, dt);
-  // Auto Butterworth low-pass on position (8 Hz) — eliminates HF noise without phase lag
-  try {
-    const { butterworthLowpass, savitzkyGolay } = require("./signalFilters") as typeof import("./signalFilters");
-    if (n >= 8) x = butterworthLowpass(x, fs, 8);
-    // Velocity & acceleration via central differences on smoothed position
-    let v = centralDiff(times, x).map((val) => Math.max(0, val));
-    v = savitzkyGolay(v);
-    const vSmooth = ema(v, 0.4);
-    let a = centralDiff(times, vSmooth);
-    a = savitzkyGolay(a);
-    const aSmooth = ema(a, 0.4);
-    const samples: SamplePoint[] = times.map((t, i) => ({
-      t, x: x[i], v: vSmooth[i], a: aSmooth[i], f: opts.mass * aSmooth[i],
-    }));
-    const fv = computeFVProfile(samples, opts.mass);
-    const phases = detectPhases(samples);
-    return {
-      samples,
-      vmax: Math.max(...samples.map((s) => s.v)),
-      fv, phases, mass: opts.mass,
-      duration: times[times.length - 1] - times[0],
-      distanceCovered: x[x.length - 1] - x[0],
-    };
-  } catch {
-    // Fallback (legacy): plain EMA path
-    const v = centralDiff(times, x).map((val) => Math.max(0, val));
-    const vSmooth = ema(v, 0.4);
-    const a = centralDiff(times, vSmooth);
-    const aSmooth = ema(a, 0.4);
-    const samples: SamplePoint[] = times.map((t, i) => ({
-      t, x: x[i], v: vSmooth[i], a: aSmooth[i], f: opts.mass * aSmooth[i],
-    }));
+  if (n >= 8) x = butterworthLowpass(x, fs, 8);
+
+  // Velocity & acceleration with Savitzky-Golay derivative smoothing
+  let v = centralDiff(times, x).map((val) => Math.max(0, val));
+  v = savitzkyGolay(v);
+  const vSmooth = ema(v, 0.4);
+  let a = centralDiff(times, vSmooth);
+  a = savitzkyGolay(a);
+  const aSmooth = ema(a, 0.4);
+
+  const samples: SamplePoint[] = times.map((t, i) => ({
+    t,
+    x: x[i],
+    v: vSmooth[i],
+    a: aSmooth[i],
+    f: opts.mass * aSmooth[i],
+  }));
 
   const fv = computeFVProfile(samples, opts.mass);
   const phases = detectPhases(samples);
@@ -386,6 +376,7 @@ export function analyzePositionTime(
     distanceCovered: x[x.length - 1] - x[0],
   };
 }
+
 
 export function analyzeSplits(
   splits: Split[],
