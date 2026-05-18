@@ -526,6 +526,7 @@ export function SprintVideoAnalyzer({ distances, testDistance, onClose, onConfir
           <div className="flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-primary" />
             <h2 className="font-display text-sm font-bold uppercase">Analyse vidéo IA — Sprint</h2>
+            <span className="rounded-full bg-primary/15 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wide text-primary" title="Pré-traitement vidéo automatique : exposition, contraste, netteté, débruitage, stabilisation, lissage signal">Auto-HD</span>
           </div>
           <Button size="icon" variant="ghost" onClick={() => { stopStream(); onClose(); }}><X className="h-4 w-4" /></Button>
         </div>
