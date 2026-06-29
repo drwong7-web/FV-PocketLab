@@ -318,6 +318,95 @@ export default function AppLayout() {
 
             <section className="space-y-3">
               <div className="flex items-center gap-2 text-sm font-semibold">
+                <ShieldCheck className="h-4 w-4 text-primary" />
+                <h3>Sécurité de l'appareil</h3>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Timer className="h-3.5 w-3.5" /> Verrouillage auto après inactivité
+                </div>
+                <div className="grid grid-cols-4 gap-2">
+                  {[5, 15, 60, 240].map((m) => (
+                    <button
+                      key={m}
+                      onClick={() => onChangeAutoLock(m)}
+                      className={cn(
+                        "rounded-lg border px-2 py-1.5 text-xs font-medium transition-all",
+                        autoLock === m
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border bg-card hover:border-primary/40",
+                      )}
+                    >
+                      {m < 60 ? `${m} min` : `${m / 60} h`}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-2 pt-1">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Fingerprint className="h-3.5 w-3.5" /> Biométrie (Face ID / Touch ID / Windows Hello)
+                </div>
+                {!bioAvailable ? (
+                  <p className="text-xs text-muted-foreground">Non disponible sur cet appareil/navigateur.</p>
+                ) : bioEnrolled ? (
+                  <Button variant="outline" size="sm" onClick={onDisableBio} className="w-full">
+                    Désactiver la biométrie
+                  </Button>
+                ) : (
+                  <div className="flex gap-2">
+                    <Input
+                      type="password"
+                      inputMode="numeric"
+                      placeholder="PIN actuel"
+                      value={pinCurrent}
+                      onChange={(e) => setPinCurrent(e.target.value.replace(/\D/g, "").slice(0, 8))}
+                      className="h-9"
+                    />
+                    <Button variant="outline" size="sm" onClick={onEnableBio}>Activer</Button>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2 pt-1">
+                <div className="text-xs text-muted-foreground">Changer le PIN</div>
+                <Input
+                  type="password" inputMode="numeric" placeholder="PIN actuel"
+                  value={pinCurrent}
+                  onChange={(e) => setPinCurrent(e.target.value.replace(/\D/g, "").slice(0, 8))}
+                  className="h-9"
+                />
+                <Input
+                  type="password" inputMode="numeric" placeholder="Nouveau PIN (4-8 chiffres)"
+                  value={pinNew}
+                  onChange={(e) => setPinNew(e.target.value.replace(/\D/g, "").slice(0, 8))}
+                  className="h-9"
+                />
+                <Button variant="outline" size="sm" onClick={onChangePin} className="w-full">
+                  Mettre à jour le PIN
+                </Button>
+              </div>
+
+              <Button
+                variant="ghost" size="sm"
+                onClick={() => {
+                  if (confirm("Effacer profil, PIN, biométrie et clé IA ?")) {
+                    signOut();
+                    setSettingsOpen(false);
+                    navigate("/auth");
+                  }
+                }}
+                className="w-full text-destructive hover:text-destructive"
+              >
+                <LogOut className="h-4 w-4 mr-1" /> Réinitialiser tout (effacer profil et secrets)
+              </Button>
+            </section>
+
+
+
+            <section className="space-y-3">
+              <div className="flex items-center gap-2 text-sm font-semibold">
                 <Key className="h-4 w-4 text-primary" />
                 <h3>Clé IA (Google Gemini)</h3>
               </div>
