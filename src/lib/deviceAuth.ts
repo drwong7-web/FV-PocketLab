@@ -23,6 +23,11 @@ export function b64(buf: ArrayBuffer | Uint8Array): string {
   for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
   return btoa(s);
 }
+/** Crypto APIs expect a BufferSource — TS strict mode rejects Uint8Array<ArrayBufferLike>. */
+const bs = (u: Uint8Array): BufferSource => u as unknown as BufferSource;
+  for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+  return btoa(s);
+}
 export function unb64(s: string): Uint8Array {
   const bin = atob(s);
   const out = new Uint8Array(bin.length);
