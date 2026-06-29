@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { Activity, Check, Folder, Home, Key, Languages, LogOut, Moon, Palette, Settings as SettingsIcon, Sun, Users } from "lucide-react";
+import { Activity, Check, Fingerprint, Folder, Home, Key, Languages, Lock, LogOut, Moon, Palette, Settings as SettingsIcon, ShieldCheck, Sun, Timer, Users } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,10 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { useSettings, type Lang, type Theme } from "@/lib/settings";
 import { clearExportDirectory, getExportDirectoryLabel, isDirectoryPickerSupported, isInIframe, pickExportDirectory } from "@/lib/exportTarget";
 import { getAIKey, setAIKey, getAIModel, setAIModel } from "@/lib/ai/client";
+import {
+  enrollPasskey, hasPasskey, isPasskeySupported, removePasskey,
+  getAutoLockMinutes, setAutoLockMinutes, changePin,
+} from "@/lib/deviceAuth";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -18,7 +22,7 @@ const navItems = [
 ];
 
 export default function AppLayout() {
-  const { user, signOut } = useAuth();
+  const { user, lock, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const { lang, theme, accent, setLang, setTheme, setAccent, t } = useSettings();
@@ -27,6 +31,11 @@ export default function AppLayout() {
   const [aiKey, setAIKeyState] = useState("");
   const [aiModel, setAIModelState] = useState("gemini-2.5-pro");
   const [showKey, setShowKey] = useState(false);
+  const [bioAvailable, setBioAvailable] = useState(false);
+  const [bioEnrolled, setBioEnrolled] = useState(false);
+  const [autoLock, setAutoLockState] = useState<number>(15);
+  const [pinCurrent, setPinCurrent] = useState("");
+  const [pinNew, setPinNew] = useState("");
   const pickerSupported = isDirectoryPickerSupported();
   const inIframe = isInIframe();
 
@@ -36,14 +45,57 @@ export default function AppLayout() {
       setAIKeyState(getAIKey());
       setAIModelState(getAIModel());
       setShowKey(false);
+      setBioEnrolled(hasPasskey());
+      setAutoLockState(getAutoLockMinutes());
+      setPinCurrent(""); setPinNew("");
+      isPasskeySupported().then(setBioAvailable);
     }
   }, [settingsOpen]);
 
-  const saveAISettings = () => {
-    setAIKey(aiKey.trim());
-    setAIModel(aiModel.trim() || "gemini-2.5-pro");
-    toast.success(aiKey.trim() ? "Clé IA enregistrée" : "Clé IA supprimée");
+  const saveAISettings = async () => {
+    try {
+      await setAIKey(aiKey.trim());
+      setAIModel(aiModel.trim() || "gemini-2.5-pro");
+      toast.success(aiKey.trim() ? "Clé IA enregistrée (chiffrée)" : "Clé IA supprimée");
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
   };
+
+  const onEnableBio = async () => {
+    if (!pinCurrent) { toast.error("Saisissez votre PIN actuel pour activer la biométrie."); return; }
+    try {
+      await enrollPasskey(pinCurrent);
+      setBioEnrolled(true);
+      setPinCurrent("");
+      toast.success("Biométrie activée.");
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
+  };
+  const onDisableBio = () => {
+    removePasskey();
+    setBioEnrolled(false);
+    toast.success("Biométrie désactivée.");
+  };
+  const onChangeAutoLock = (m: number) => {
+    setAutoLockMinutes(m);
+    setAutoLockState(m);
+    toast.success(`Auto-verrouillage : ${m} min`);
+  };
+  const onChangePin = async () => {
+    if (!/^\d{4,8}$/.test(pinNew)) { toast.error("Nouveau PIN : 4 à 8 chiffres."); return; }
+    try {
+      await changePin(pinCurrent, pinNew);
+      setBioEnrolled(false);
+      setPinCurrent(""); setPinNew("");
+      toast.success("PIN modifié. Réactivez la biométrie si besoin.");
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
+  };
+
+
 
   const handlePickFolder = async () => {
     const res = await pickExportDirectory();
