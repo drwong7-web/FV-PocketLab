@@ -155,7 +155,7 @@ export async function enrollPasskey(currentPin: string): Promise<void> {
   const wrapKeyRaw = await crypto.subtle.exportKey("raw", wrapKey);
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const ct = await crypto.subtle.encrypt(
-    { name: "AES-GCM", iv }, wrapKey, new TextEncoder().encode(currentPin),
+    { name: "AES-GCM", iv: bs(iv) }, wrapKey, new TextEncoder().encode(currentPin),
   );
   localStorage.setItem(PASSKEY_CRED_KEY, b64(cred.rawId));
   localStorage.setItem(PASSKEY_WRAP_KEY, b64(wrapKeyRaw));
@@ -178,18 +178,18 @@ export async function unlockWithPasskey(): Promise<void> {
     publicKey: {
       challenge,
       rpId: rpId(),
-      allowCredentials: [{ type: "public-key", id: unb64(credIdB) }],
+      allowCredentials: [{ type: "public-key", id: bs(unb64(credIdB)) }],
       userVerification: "required",
       timeout: 60_000,
     },
   })) as PublicKeyCredential | null;
   if (!assertion) throw new Error("Vérification biométrique annulée.");
   const wrapKey = await crypto.subtle.importKey(
-    "raw", unb64(wrapKeyB), "AES-GCM", false, ["decrypt"],
+    "raw", bs(unb64(wrapKeyB)), "AES-GCM", false, ["decrypt"],
   );
   const [ivb, ctb] = blob.split(":");
   const pinBuf = await crypto.subtle.decrypt(
-    { name: "AES-GCM", iv: unb64(ivb) }, wrapKey, unb64(ctb),
+    { name: "AES-GCM", iv: bs(unb64(ivb)) }, wrapKey, bs(unb64(ctb)),
   );
   const pin = new TextDecoder().decode(pinBuf);
   await unlockWithPin(pin);
