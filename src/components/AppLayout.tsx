@@ -152,7 +152,7 @@ export default function AppLayout() {
             </div>
           </Link>
           <div className="flex items-center gap-1">
-            <span className="text-xs text-muted-foreground hidden sm:block mr-1">{user?.email}</span>
+            <span className="text-xs text-muted-foreground hidden sm:block mr-1">{user?.name}</span>
             <Button
               variant="ghost"
               size="icon"
@@ -164,14 +164,16 @@ export default function AppLayout() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => { signOut(); navigate("/auth"); }}
-              aria-label={t("logout")}
+              onClick={() => { lock(); navigate("/auth"); }}
+              aria-label="Verrouiller"
+              title="Verrouiller"
             >
-              <LogOut className="w-4 h-4" />
+              <Lock className="w-4 h-4" />
             </Button>
           </div>
         </div>
       </header>
+
 
       <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
         <DialogContent className="max-w-lg">
