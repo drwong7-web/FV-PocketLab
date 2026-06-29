@@ -1,7 +1,7 @@
 import { useState, ChangeEvent } from "react";
 import { Upload, Loader2, Trash2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { createPlayer } from "@/lib/storage";
+import { parseAthletesFile, hasAIKey, AIKeyMissingError } from "@/lib/ai/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,18 +31,6 @@ interface Props {
 const MAX_SIZE = 10 * 1024 * 1024;
 const ACCEPT = ".pdf,.docx,.doc,.png,.jpg,.jpeg,.webp";
 
-function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const r = new FileReader();
-    r.onload = () => {
-      const result = r.result as string;
-      resolve(result.substring(result.indexOf(",") + 1));
-    };
-    r.onerror = reject;
-    r.readAsDataURL(file);
-  });
-}
-
 export default function ImportPlayersDialog({ teamId, organizationId, onImported }: Props) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -58,15 +46,14 @@ export default function ImportPlayersDialog({ teamId, organizationId, onImported
       toast.error("Fichier trop volumineux (max 10 MB).");
       return;
     }
+    if (!hasAIKey()) {
+      toast.error("Configurez votre clé IA dans Paramètres pour utiliser l'import.");
+      return;
+    }
     setLoading(true);
     setRows([]);
     try {
-      const fileBase64 = await fileToBase64(file);
-      const { data, error } = await supabase.functions.invoke("parse-athletes-list", {
-        body: { fileBase64, mimeType: file.type, fileName: file.name },
-      });
-      if (error) throw error;
-      const athletes: ParsedAthlete[] = data?.athletes ?? [];
+      const athletes = await parseAthletesFile(file);
       if (athletes.length === 0) {
         toast.error("Aucun athlète détecté dans ce fichier.");
         setLoading(false);
@@ -75,10 +62,8 @@ export default function ImportPlayersDialog({ teamId, organizationId, onImported
       setRows(athletes.map((a) => ({ ...a, selected: true })));
       toast.success(`${athletes.length} athlète(s) détecté(s)`);
     } catch (err) {
-      const msg = (err as Error)?.message ?? "Erreur";
-      if (msg.includes("429")) toast.error("Trop de requêtes — réessayez dans un instant.");
-      else if (msg.includes("402")) toast.error("Crédits IA épuisés — ajoutez des crédits.");
-      else toast.error("Échec de l'analyse : " + msg);
+      if (err instanceof AIKeyMissingError) toast.error(err.message);
+      else toast.error("Échec de l'analyse : " + ((err as Error)?.message ?? "Erreur"));
     } finally {
       setLoading(false);
     }
