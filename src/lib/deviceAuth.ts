@@ -41,7 +41,7 @@ async function deriveMaster(pin: string, salt: Uint8Array): Promise<CryptoKey> {
     ["deriveKey"],
   );
   return crypto.subtle.deriveKey(
-    { name: "PBKDF2", salt, iterations: 250_000, hash: "SHA-256" },
+    { name: "PBKDF2", salt: bs(salt), iterations: 250_000, hash: "SHA-256" },
     baseKey,
     { name: "AES-GCM", length: 256 },
     false,
@@ -52,7 +52,7 @@ async function deriveMaster(pin: string, salt: Uint8Array): Promise<CryptoKey> {
 export async function aesEncrypt(key: CryptoKey, plain: string): Promise<string> {
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const ct = await crypto.subtle.encrypt(
-    { name: "AES-GCM", iv },
+    { name: "AES-GCM", iv: bs(iv) },
     key,
     new TextEncoder().encode(plain),
   );
@@ -61,9 +61,9 @@ export async function aesEncrypt(key: CryptoKey, plain: string): Promise<string>
 export async function aesDecrypt(key: CryptoKey, payload: string): Promise<string> {
   const [ivb, ctb] = payload.split(":");
   const pt = await crypto.subtle.decrypt(
-    { name: "AES-GCM", iv: unb64(ivb) },
+    { name: "AES-GCM", iv: bs(unb64(ivb)) },
     key,
-    unb64(ctb),
+    bs(unb64(ctb)),
   );
   return new TextDecoder().decode(pt);
 }
