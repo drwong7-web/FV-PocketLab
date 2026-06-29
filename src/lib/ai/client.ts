@@ -1,34 +1,67 @@
 /**
- * Client IA local — appelle directement Google Gemini avec la clé API
- * fournie par l'utilisateur (stockée localement). Aucun backend requis.
+ * Client IA local — Google Gemini. La clé API utilisateur est stockée
+ * chiffrée (AES-GCM via la master key device) et déchiffrée en mémoire
+ * uniquement quand l'app est déverrouillée.
  */
 import JSZip from "jszip";
+import { aesDecrypt, aesEncrypt, b64, getMasterKey, unb64 } from "@/lib/deviceAuth";
 
-const KEY_STORAGE = "fv:ai-key:v1";
+const KEY_STORAGE = "fv:ai-key:v2";
 const MODEL_STORAGE = "fv:ai-model:v1";
 const DEFAULT_MODEL = "gemini-2.5-pro";
 
-export function getAIKey(): string {
-  try { return localStorage.getItem(KEY_STORAGE) ?? ""; } catch { return ""; }
-}
-export function setAIKey(key: string) {
-  try {
-    if (key) localStorage.setItem(KEY_STORAGE, key.trim());
-    else localStorage.removeItem(KEY_STORAGE);
-  } catch { /* */ }
-}
+let _decryptedAIKey: string | null = null;
+
 export function getAIModel(): string {
   try { return localStorage.getItem(MODEL_STORAGE) || DEFAULT_MODEL; } catch { return DEFAULT_MODEL; }
 }
 export function setAIModel(model: string) {
   try { localStorage.setItem(MODEL_STORAGE, model || DEFAULT_MODEL); } catch { /* */ }
 }
-export function hasAIKey(): boolean { return getAIKey().length > 0; }
+
+export function getAIKey(): string {
+  return _decryptedAIKey ?? "";
+}
+export function hasAIKey(): boolean {
+  return !!_decryptedAIKey;
+}
+export function clearAIKeyFromMemory(): void {
+  _decryptedAIKey = null;
+}
+
+/** Charge et déchiffre la clé IA depuis le stockage local (après unlock). */
+export async function loadAIKey(): Promise<void> {
+  _decryptedAIKey = null;
+  const mk = getMasterKey();
+  const blob = (() => { try { return localStorage.getItem(KEY_STORAGE); } catch { return null; } })();
+  if (!mk || !blob) return;
+  try {
+    _decryptedAIKey = await aesDecrypt(mk, blob);
+  } catch {
+    _decryptedAIKey = null;
+  }
+}
+
+/** Chiffre + persiste la clé IA. Nécessite que l'app soit déverrouillée. */
+export async function setAIKey(key: string): Promise<void> {
+  const trimmed = key.trim();
+  const mk = getMasterKey();
+  if (!mk) throw new Error("Application verrouillée — déverrouillez avant d'enregistrer la clé.");
+  if (!trimmed) {
+    try { localStorage.removeItem(KEY_STORAGE); } catch { /* */ }
+    _decryptedAIKey = null;
+    return;
+  }
+  const blob = await aesEncrypt(mk, trimmed);
+  try { localStorage.setItem(KEY_STORAGE, blob); } catch { /* */ }
+  _decryptedAIKey = trimmed;
+}
 
 export class AIKeyMissingError extends Error {
   constructor() { super("Clé IA manquante — configurez-la dans Paramètres."); this.name = "AIKeyMissingError"; }
 }
 
+// ---------- Gemini call ----------
 interface GeminiPart {
   text?: string;
   inlineData?: { mimeType: string; data: string };
@@ -63,8 +96,7 @@ async function callGemini(opts: {
     throw new Error(`Erreur IA ${res.status} : ${txt.slice(0, 200)}`);
   }
   const json = await res.json();
-  const text = json?.candidates?.[0]?.content?.parts?.map((p: GeminiPart) => p.text ?? "").join("") ?? "";
-  return text;
+  return json?.candidates?.[0]?.content?.parts?.map((p: GeminiPart) => p.text ?? "").join("") ?? "";
 }
 
 function safeJsonParse<T>(raw: string): T {
@@ -83,7 +115,7 @@ Réponds UNIQUEMENT en JSON valide au format suivant, sans markdown ni texte add
 export interface DetectedMarker { distance: number; xNorm: number; confidence: number }
 
 export async function detectSprintMarkers(opts: {
-  imageBase64: string; // pure base64 (no data URL prefix)
+  imageBase64: string;
   distances: number[];
   mimeType?: string;
 }): Promise<{ markers: DetectedMarker[]; notes?: string }> {
@@ -139,16 +171,8 @@ export interface ParsedAthlete {
   birthDate?: string;
 }
 
-function b64ToBytes(b64: string): Uint8Array {
-  const clean = b64.startsWith("data:") ? b64.substring(b64.indexOf(",") + 1) : b64;
-  const bin = atob(clean);
-  const bytes = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-  return bytes;
-}
-
-async function extractDocxText(b64: string): Promise<string> {
-  const bytes = b64ToBytes(b64);
+async function extractDocxText(b64Str: string): Promise<string> {
+  const bytes = unb64(b64Str.startsWith("data:") ? b64Str.substring(b64Str.indexOf(",") + 1) : b64Str);
   const zip = await JSZip.loadAsync(bytes);
   const docFile = zip.file("word/document.xml");
   if (!docFile) throw new Error("DOCX invalide : word/document.xml introuvable");
@@ -228,3 +252,6 @@ export async function parseAthletesFile(file: File): Promise<ParsedAthlete[]> {
   }
   return athletes;
 }
+
+// silence unused-export warning for b64 if needed by future modules
+export { b64 };
