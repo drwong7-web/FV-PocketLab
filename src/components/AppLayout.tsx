@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { Activity, Check, Folder, Home, Languages, LogOut, Moon, Palette, Settings as SettingsIcon, Sun, Users } from "lucide-react";
+import { Activity, Check, Folder, Home, Key, Languages, LogOut, Moon, Palette, Settings as SettingsIcon, Sun, Users } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useSettings, type Lang, type Theme } from "@/lib/settings";
 import { clearExportDirectory, getExportDirectoryLabel, isDirectoryPickerSupported, isInIframe, pickExportDirectory } from "@/lib/exportTarget";
+import { getAIKey, setAIKey, getAIModel, setAIModel } from "@/lib/ai/client";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -22,12 +24,26 @@ export default function AppLayout() {
   const { lang, theme, accent, setLang, setTheme, setAccent, t } = useSettings();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [exportDir, setExportDir] = useState<string | null>(null);
+  const [aiKey, setAIKeyState] = useState("");
+  const [aiModel, setAIModelState] = useState("gemini-2.5-pro");
+  const [showKey, setShowKey] = useState(false);
   const pickerSupported = isDirectoryPickerSupported();
   const inIframe = isInIframe();
 
   useEffect(() => {
-    if (settingsOpen) setExportDir(getExportDirectoryLabel());
+    if (settingsOpen) {
+      setExportDir(getExportDirectoryLabel());
+      setAIKeyState(getAIKey());
+      setAIModelState(getAIModel());
+      setShowKey(false);
+    }
   }, [settingsOpen]);
+
+  const saveAISettings = () => {
+    setAIKey(aiKey.trim());
+    setAIModel(aiModel.trim() || "gemini-2.5-pro");
+    toast.success(aiKey.trim() ? "Clé IA enregistrée" : "Clé IA supprimée");
+  };
 
   const handlePickFolder = async () => {
     const res = await pickExportDirectory();
@@ -245,7 +261,41 @@ export default function AppLayout() {
                 </p>
               )}
             </section>
+
+            <section className="space-y-3">
+              <div className="flex items-center gap-2 text-sm font-semibold">
+                <Key className="h-4 w-4 text-primary" />
+                <h3>Clé IA (Google Gemini)</h3>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Vos clés et données restent sur votre appareil. Obtenez une clé gratuite sur{" "}
+                <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer" className="text-primary underline">aistudio.google.com/apikey</a>.
+              </p>
+              <div className="flex gap-2">
+                <Input
+                  type={showKey ? "text" : "password"}
+                  value={aiKey}
+                  onChange={(e) => setAIKeyState(e.target.value)}
+                  placeholder="AIza…"
+                  className="font-mono text-xs"
+                  autoComplete="off"
+                />
+                <Button variant="outline" size="sm" onClick={() => setShowKey((s) => !s)}>
+                  {showKey ? "Masquer" : "Voir"}
+                </Button>
+              </div>
+              <Input
+                value={aiModel}
+                onChange={(e) => setAIModelState(e.target.value)}
+                placeholder="gemini-2.5-pro"
+                className="font-mono text-xs"
+              />
+              <Button variant="outline" size="sm" onClick={saveAISettings} className="w-full">
+                Enregistrer la clé IA
+              </Button>
+            </section>
           </div>
+
 
           <DialogFooter>
             <Button onClick={() => setSettingsOpen(false)} className="bg-gradient-primary text-primary-foreground">

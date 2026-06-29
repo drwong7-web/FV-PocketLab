@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ChevronLeft, ChevronRight, Circle, Crosshair, Flag, Pause, Play, Sparkles, Square, Upload, Video, Wand2, X } from "lucide-react";
 import { trackPelvisX, computeSplitTimesFromSamples, type PoseSample } from "@/lib/poseDetection";
-import { supabase } from "@/integrations/supabase/client";
+import { detectSprintMarkers, hasAIKey, AIKeyMissingError } from "@/lib/ai/client";
 
 export interface AnalyzerSplitResult {
   distance: number;
@@ -413,17 +413,20 @@ export function SprintVideoAnalyzer({ distances, testDistance, onClose, onConfir
 
       const distancesWithZero = Array.from(new Set([0, ...distances, calib.refMeters].filter((d) => Number.isFinite(d)))).sort((a, b) => a - b);
 
-      const { data, error } = await supabase.functions.invoke("detect-sprint-markers", {
-        body: { imageBase64, distances: distancesWithZero, mimeType: "image/jpeg" },
-      });
-      if (error) {
-        const status = (error as { context?: { status?: number } }).context?.status;
-        if (status === 429) throw new Error("Trop de requêtes IA, réessayez dans quelques secondes.");
-        if (status === 402) throw new Error("Crédits IA épuisés, ajoutez du crédit dans Lovable Cloud.");
-        throw new Error(error.message || "Erreur de détection IA");
+      if (!hasAIKey()) {
+        setAiMarkersError("Configurez votre clé IA dans Paramètres pour activer la détection automatique.");
+        return;
       }
-      const markers = ((data as { markers?: Array<{ distance: number; xNorm: number; confidence: number }> })?.markers) ?? [];
-      const notes = (data as { notes?: string })?.notes ?? "";
+      let markers: Array<{ distance: number; xNorm: number; confidence: number }> = [];
+      let notes = "";
+      try {
+        const res = await detectSprintMarkers({ imageBase64, distances: distancesWithZero, mimeType: "image/jpeg" });
+        markers = res.markers;
+        notes = res.notes ?? "";
+      } catch (err) {
+        if (err instanceof AIKeyMissingError) throw err;
+        throw new Error((err as Error).message || "Erreur de détection IA");
+      }
       if (markers.length === 0) {
         setAiMarkersError("Aucun repère détecté — ajustez manuellement.");
       } else {

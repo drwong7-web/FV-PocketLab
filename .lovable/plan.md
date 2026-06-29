@@ -1,62 +1,107 @@
-## Pipeline automatique d'amélioration vidéo pour analyse
+## Objectif
 
-Objectif : améliorer automatiquement chaque frame **avant** la détection de pose et lisser le signal **après**, sans réglages utilisateur. Un seul pipeline « best quality » appliqué par défaut sur `SprintVideoAnalyzer`, `CameraAIJump` et les autres composants caméra.
+Retirer entièrement Supabase / Lovable Cloud et passer à une architecture **local-first** :
+- Base de données 100% sur l'appareil (IndexedDB)
+- Sync optionnelle avec un cloud personnel choisi par l'utilisateur (**BYOC** : Bring Your Own Cloud)
+- Authentification via la sécurité native de l'appareil (PIN / biométrie via **WebAuthn / Passkeys**), plus de mot de passe stocké
 
-### Filtres appliqués automatiquement
+---
 
-**A. Pré-traitement image (avant MediaPipe), par frame**
+## 1. Suppression de Supabase
 
-1. **Auto-exposition / gamma adaptatif** — calcul de la luminance moyenne sur une frame de référence, correction gamma pour ramener à ~0.5. Compense sur/sous-exposition.
-2. **CLAHE (Contrast Limited Adaptive Histogram Equalization)** simplifié sur le canal luminance — rend les articulations visibles en basse lumière et en contre-jour.
-3. **Réduction de bruit légère** — blur gaussien 3×3 (σ≈0.6) appliqué seulement si le bruit estimé dépasse un seuil (variance locale).
-4. **Netteté (unsharp mask)** — kernel 3×3 avec amount ≈ 0.6, appliqué après le débruitage. Renforce les contours pour MediaPipe.
-5. **Upscale conditionnel** — si la frame fait < 720p, upscale bicubique × 1.5 vers ≥ 720p (MediaPipe est plus précis à cette résolution). Désactivé au-dessus pour rester rapide.
+**Fichiers à supprimer**
+- `src/integrations/supabase/` (client + types)
+- `supabase/` (config + edge functions `parse-athletes-list`, `detect-sprint-markers`)
+- Variables `VITE_SUPABASE_*` dans `.env`
+- Dépendance `@supabase/supabase-js` du `package.json`
 
-Pipeline implémenté en une seule passe sur un OffscreenCanvas → ImageBitmap → MediaPipe. Filtres CSS gratuits (`contrast`, `brightness`) en première passe, convolutions en ImageData en seconde passe.
+**Fichiers à nettoyer**
+- `src/components/camera/SprintVideoAnalyzer.tsx` : remplacer `supabase.functions.invoke("detect-sprint-markers", …)` par un appel direct côté client (voir §4 IA)
+- `src/components/players/ImportPlayersDialog.tsx` : idem pour `parse-athletes-list`
 
-**B. Stabilisation inter-frames (sprint uniquement, caméra mobile)**
+---
 
-6. **Phase-correlation downscalée** entre frame N et N-1 → vecteur de translation → recadrage compensatoire. Annule le micro-tremblement caméra à main levée. Seuil : ignore les déplacements > 15% (vrai pan de caméra).
+## 2. Base de données locale (IndexedDB via Dexie)
 
-**C. Post-traitement du signal pose**
+Migration de `localStorage` → **IndexedDB** (plus robuste, async, supporte blobs vidéo, indexes).
 
-7. **Interpolation des trous** — frames où la pose n'est pas détectée sont comblées par interpolation cubique entre voisins (max 3 frames consécutives).
-8. **One Euro Filter** sur chaque landmark (x, y) — lissage adaptatif : très lisse au repos, très réactif en mouvement rapide. Paramètres : `minCutoff=1.0`, `beta=0.05`.
-9. **Filtre Butterworth passe-bas ordre 2 à 8 Hz** sur les séries temporelles utilisées pour vitesse/accélération (déplacement bassin pour sprint, hauteur pieds pour jump).
-10. **Savitzky-Golay (fenêtre 7, ordre 3)** pour la dérivation propre des courbes vitesse/accélération sans amplifier le bruit.
+Schéma Dexie (`src/lib/db.ts`) — mêmes entités que `src/lib/types.ts` :
+- `users`, `organizations`, `teams`, `players`, `tests`, `media` (blobs vidéo)
+- Chaque ligne porte `updatedAt` + `deletedAt` (soft delete) + `rev` pour la sync
+- Conservation de l'API publique de `src/lib/storage.ts` (mêmes signatures `listTeams`, `createPlayer`, etc.) → zéro casse pour les pages existantes
+- Suppression du `hashPassword` (plus d'authent locale par mot de passe)
 
-### Fichiers à créer / modifier
+---
 
-- **`src/lib/videoFilters.ts`** *(nouveau)* — pipeline image : `enhanceFrame(videoOrCanvas) → ImageBitmap` (auto-exposure + CLAHE + denoise + sharpen + upscale conditionnel) + helpers convolution.
-- **`src/lib/videoStabilizer.ts`** *(nouveau)* — `stabilize(prevFrame, currFrame) → {dx, dy}` via phase-correlation downscalée 64×64.
-- **`src/lib/signalFilters.ts`** *(nouveau)* — `OneEuroFilter`, `butterworthLowpass`, `savitzkyGolay`, `interpolateGaps`.
-- **`src/lib/poseDetection.ts`** *(modifié)* — `trackPelvisX` : passe la frame dans `enhanceFrame()` avant `detectForVideo`, applique stabilisation, applique One Euro sur la série X retournée.
-- **`src/lib/poseDetector.ts`** *(modifié)* — même intégration pour le pipeline jump.
-- **`src/lib/sprintEngine.ts`** *(modifié)* — applique Butterworth + Savitzky-Golay sur la trajectoire avant calcul des splits.
-- **`src/lib/jumpDetection.ts`** *(modifié)* — applique Butterworth sur la trajectoire pieds/bassin avant détection des phases.
-- **`src/components/camera/SprintVideoAnalyzer.tsx`** *(modifié)* — utilise les pipelines améliorés (aucune UI ajoutée, juste un petit badge « Amélioration auto activée » discret).
-- **`src/components/camera/CameraAIJump.tsx`** *(modifié)* — idem.
+## 3. Authentification device-native (WebAuthn / Passkeys)
 
-### Performances
+Remplacement de `src/lib/auth.tsx` + `src/pages/Auth.tsx` par un flux Passkey :
 
-- Tous les filtres image en un seul passage ImageData par frame.
-- Convolutions 3×3 → ~5 ms par frame 720p sur CPU moyen.
-- Stabilisation downscalée 64×64 → ~2 ms.
-- One Euro + Butterworth + S-G → négligeable (< 1 ms total sur 1000 points).
-- Upscale uniquement si nécessaire pour éviter la perte de FPS sur vidéos déjà HD.
-- Si la frame est déjà ≥ 1080p et bien exposée (détection auto via histogramme), les étapes lourdes sont skippées.
+- **Premier lancement** : création d'un compte local + enregistrement d'un passkey (`navigator.credentials.create` avec `authenticatorAttachment: "platform"`, `userVerification: "required"` → déclenche FaceID / TouchID / Windows Hello / verrouillage Android)
+- **Lancements suivants** : `navigator.credentials.get` → déverrouille la session
+- **Fallback** : PIN local 6 chiffres (hashé via Web Crypto `PBKDF2`) si l'appareil ne supporte pas WebAuthn
+- Stockage du `credentialId` dans IndexedDB ; la clé privée reste dans le secure enclave de l'appareil
+- `ProtectedRoute` reste, mais vérifie une session déverrouillée plutôt qu'un user distant
+- Auto-lock configurable (5 / 15 / 60 min d'inactivité)
 
-### Comportement
+---
 
-- Pipeline **toujours actif**, **transparent** pour l'utilisateur.
-- Aucun réglage exposé. Si plus tard tu veux des toggles, on les ajoutera sans toucher au cœur.
-- Tous les filtres ont des seuils auto-adaptatifs (luminance, bruit, résolution) pour ne rien dégrader sur une vidéo déjà propre.
+## 4. Fonctions IA (sans backend)
 
-### Validation post-implémentation
+Les 2 edge functions Gemini sont déplacées **côté client** :
 
-Tester sur :
-1. Vidéo sprint extérieure plein soleil → vérifier que netteté ne sature pas
-2. Vidéo gym basse lumière → vérifier CLAHE améliore détection
-3. Vidéo à main levée → vérifier stabilisation
-4. Vidéo 480p → vérifier upscale + détection plus fiable
-5. Vidéo 1080p propre → vérifier aucune régression et perf OK
+- Nouveau panneau **Paramètres → IA** : l'utilisateur colle sa propre clé API (Gemini, OpenAI, Anthropic au choix)
+- Clé stockée chiffrée dans IndexedDB (AES-GCM via WebCrypto, clé dérivée du passkey/PIN)
+- `src/lib/ai/` :
+  - `client.ts` : appel HTTP direct vers le provider choisi
+  - `detectMarkers.ts` : reprend le prompt de `detect-sprint-markers`
+  - `parseAthletes.ts` : reprend le prompt de `parse-athletes-list`
+- Si aucune clé n'est configurée : les boutons IA affichent un CTA "Configurer ma clé IA" au lieu d'échouer
+
+---
+
+## 5. Sync BYOC (Bring Your Own Cloud)
+
+Architecture en **adaptateurs** — l'utilisateur choisit son provider dans **Paramètres → Sync** :
+
+| Adaptateur | Méthode | Auth |
+|---|---|---|
+| **Aucun** (défaut) | — | — |
+| **Google Drive** | Fichier `sprintlab.db.json` chiffré dans `appDataFolder` | OAuth implicite |
+| **Dropbox** | Idem dans `/Apps/SprintLab/` | OAuth |
+| **WebDAV** (Nextcloud, ownCloud, iCloud via app passwords) | PUT/GET d'un fichier chiffré | URL + user/pass |
+| **Fichier local** (export/import manuel) | Téléchargement / upload `.slfv` | — |
+
+Mécanisme commun (`src/lib/sync/`) :
+- Export = snapshot complet de la DB + médias → JSON → compressé (gzip) → chiffré (AES-GCM, clé dérivée du passkey/PIN) → uploadé
+- Import = inverse, merge par `updatedAt` le plus récent gagne (LWW)
+- Bouton "Sync now" + sync auto à la fermeture / toutes les X minutes
+- Aucun secret OAuth dans le code : flows publics PKCE pour Google/Dropbox
+
+---
+
+## 6. Impact sur les pages
+
+- `Auth.tsx` → `Unlock.tsx` (passkey/PIN)
+- `Dashboard.tsx`, `Teams.tsx`, `TeamDetail.tsx`, `TestList.tsx`, `TestResults.tsx`, `JumpTest.tsx`, `SprintTest.tsx`, `PlayerDetail.tsx` → continuent d'utiliser l'API `storage.ts` (devenue async — ajout de `await` + petits `useEffect`)
+- `NewTest.tsx`, `ImportPlayersDialog.tsx`, `SprintVideoAnalyzer.tsx` → branchés sur `src/lib/ai/`
+- Nouvelle page `Settings.tsx` : Clé IA, Provider Sync, Auto-lock, Export/Import manuel, Reset
+
+---
+
+## Détails techniques
+
+- **Stack ajoutée** : `dexie` (~25 kb), aucune autre dépendance lourde ; WebCrypto / WebAuthn natifs
+- **Compatibilité** : migration one-shot au premier lancement qui lit l'ancien `localStorage` (`slfv:*`, `fv:*`) et le réinjecte dans Dexie, puis purge
+- **PWA / Capacitor** : 100% compatible — WebAuthn fonctionne sur iOS/Android via Capacitor, IndexedDB est persistante
+- **Sécurité** : aucune donnée ne quitte l'appareil sauf si l'utilisateur active explicitement un provider de sync ; les blobs cloud sont chiffrés bout en bout (la clé ne quitte jamais l'appareil)
+
+---
+
+## Livraison proposée en 3 lots
+
+1. **Lot 1 — Découplage** : Suppression Supabase + migration storage → Dexie + IA côté client avec clé utilisateur (app reste fonctionnelle, auth temporairement bypass)
+2. **Lot 2 — Auth device** : Passkeys + PIN fallback + auto-lock + chiffrement de la clé IA
+3. **Lot 3 — Sync BYOC** : Adaptateurs Google Drive + Dropbox + WebDAV + export/import fichier
+
+Confirme-tu ce plan (et l'ordre des lots) ? Je peux aussi commencer par un seul lot si tu préfères livrer incrémentalement.
