@@ -261,7 +261,41 @@ export default function AppLayout() {
                 </p>
               )}
             </section>
+
+            <section className="space-y-3">
+              <div className="flex items-center gap-2 text-sm font-semibold">
+                <Key className="h-4 w-4 text-primary" />
+                <h3>Clé IA (Google Gemini)</h3>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Vos clés et données restent sur votre appareil. Obtenez une clé gratuite sur{" "}
+                <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer" className="text-primary underline">aistudio.google.com/apikey</a>.
+              </p>
+              <div className="flex gap-2">
+                <Input
+                  type={showKey ? "text" : "password"}
+                  value={aiKey}
+                  onChange={(e) => setAIKeyState(e.target.value)}
+                  placeholder="AIza…"
+                  className="font-mono text-xs"
+                  autoComplete="off"
+                />
+                <Button variant="outline" size="sm" onClick={() => setShowKey((s) => !s)}>
+                  {showKey ? "Masquer" : "Voir"}
+                </Button>
+              </div>
+              <Input
+                value={aiModel}
+                onChange={(e) => setAIModelState(e.target.value)}
+                placeholder="gemini-2.5-pro"
+                className="font-mono text-xs"
+              />
+              <Button variant="outline" size="sm" onClick={saveAISettings} className="w-full">
+                Enregistrer la clé IA
+              </Button>
+            </section>
           </div>
+
 
           <DialogFooter>
             <Button onClick={() => setSettingsOpen(false)} className="bg-gradient-primary text-primary-foreground">
