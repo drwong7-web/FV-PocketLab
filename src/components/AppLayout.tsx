@@ -461,6 +461,89 @@ export default function AppLayout() {
               </Button>
             </section>
 
+            <section className="space-y-3">
+              <div className="flex items-center gap-2 text-sm font-semibold">
+                {syncProvider === "none" ? <CloudOff className="h-4 w-4 text-primary" /> : <Cloud className="h-4 w-4 text-primary" />}
+                <h3>Sync (BYOC — Bring Your Own Cloud)</h3>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Vos données restent sur l'appareil. Choisissez où exporter une copie chiffrée (clé dérivée de votre PIN, ne quitte jamais l'appareil).
+              </p>
+
+              <div className="grid grid-cols-4 gap-2">
+                {([
+                  { id: "none", label: "Aucun" },
+                  { id: "file", label: "Fichier" },
+                  { id: "webdav", label: "WebDAV" },
+                  { id: "gdrive", label: "Drive" },
+                ] as { id: SyncProvider; label: string }[]).map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => setSyncProviderState(p.id)}
+                    className={cn(
+                      "rounded-lg border px-2 py-1.5 text-xs font-medium transition-all",
+                      syncProvider === p.id
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border bg-card hover:border-primary/40",
+                    )}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+
+              {syncProvider === "webdav" && (
+                <div className="space-y-2">
+                  <Input value={webdavUrl} onChange={(e) => setWebdavUrl(e.target.value)} placeholder="https://cloud.example.com/remote.php/dav/files/user" className="h-9 text-xs" />
+                  <div className="grid grid-cols-2 gap-2">
+                    <Input value={webdavUser} onChange={(e) => setWebdavUser(e.target.value)} placeholder="Utilisateur" className="h-9 text-xs" />
+                    <Input type="password" value={webdavPass} onChange={(e) => setWebdavPass(e.target.value)} placeholder="Mot de passe / App password" className="h-9 text-xs" />
+                  </div>
+                  <Input value={webdavPath} onChange={(e) => setWebdavPath(e.target.value)} placeholder="/SprintLab/snapshot.slfv" className="h-9 text-xs font-mono" />
+                </div>
+              )}
+
+              {syncProvider === "gdrive" && (
+                <div className="space-y-2">
+                  <p className="text-[11px] text-muted-foreground">
+                    Créez un OAuth Client ID Web sur{" "}
+                    <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noreferrer" className="text-primary underline">Google Cloud Console</a>
+                    {" "}avec l'origin <code className="font-mono">{window.location.origin}</code> autorisée. Scope utilisé : <code className="font-mono">drive.appdata</code>.
+                  </p>
+                  <Input value={gdriveClientId} onChange={(e) => setGdriveClientId(e.target.value)} placeholder="123…apps.googleusercontent.com" className="h-9 text-xs font-mono" />
+                  <Input value={gdriveFileName} onChange={(e) => setGdriveFileName(e.target.value)} placeholder="sprintlab.slfv" className="h-9 text-xs font-mono" />
+                </div>
+              )}
+
+              {syncProvider !== "none" && (
+                <Button variant="outline" size="sm" onClick={saveSyncSettings} className="w-full">
+                  Enregistrer la configuration
+                </Button>
+              )}
+
+              {syncProvider !== "none" && (
+                <div className="grid grid-cols-3 gap-2 pt-1">
+                  <Button variant="outline" size="sm" disabled={!!syncBusy} onClick={() => runSync("pull")}>
+                    <Download className="h-3.5 w-3.5 mr-1" /> Pull
+                  </Button>
+                  <Button variant="outline" size="sm" disabled={!!syncBusy} onClick={() => runSync("push")}>
+                    <Upload className="h-3.5 w-3.5 mr-1" /> Push
+                  </Button>
+                  <Button size="sm" disabled={!!syncBusy || syncProvider === "file"} onClick={() => runSync("both")} className="bg-gradient-primary text-primary-foreground">
+                    <RefreshCw className={cn("h-3.5 w-3.5 mr-1", syncBusy === "both" && "animate-spin")} /> Sync
+                  </Button>
+                </div>
+              )}
+
+              {lastSyncAt && (
+                <p className="text-[11px] text-muted-foreground">
+                  Dernière synchronisation : {new Date(lastSyncAt).toLocaleString()}
+                </p>
+              )}
+            </section>
+
+
+
 
 
             <section className="space-y-3">
