@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { Activity, Check, Fingerprint, Folder, Home, Key, Languages, Lock, LogOut, Moon, Palette, Settings as SettingsIcon, ShieldCheck, Sun, Timer, Users } from "lucide-react";
+import { Activity, Check, Cloud, CloudOff, Download, Fingerprint, Folder, Home, Key, Languages, Lock, LogOut, Moon, Palette, RefreshCw, Settings as SettingsIcon, ShieldCheck, Sun, Timer, Upload, Users } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,11 @@ import {
   enrollPasskey, hasPasskey, isPasskeySupported, removePasskey,
   getAutoLockMinutes, setAutoLockMinutes, changePin,
 } from "@/lib/deviceAuth";
+import {
+  getPublicConfig, setPublicConfig, getSecretConfig, setSecretConfig,
+  getSyncState, type SyncProvider,
+} from "@/lib/sync/config";
+import { syncPushNow, syncPullNow, syncBothNow } from "@/lib/sync/manager";
 import { cn } from "@/lib/utils";
 
 const navItems = [
