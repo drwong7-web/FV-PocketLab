@@ -41,6 +41,15 @@ export default function AppLayout() {
   const [autoLock, setAutoLockState] = useState<number>(15);
   const [pinCurrent, setPinCurrent] = useState("");
   const [pinNew, setPinNew] = useState("");
+  const [syncProvider, setSyncProviderState] = useState<SyncProvider>("none");
+  const [webdavUrl, setWebdavUrl] = useState("");
+  const [webdavUser, setWebdavUser] = useState("");
+  const [webdavPass, setWebdavPass] = useState("");
+  const [webdavPath, setWebdavPath] = useState("/SprintLab/snapshot.slfv");
+  const [gdriveClientId, setGdriveClientId] = useState("");
+  const [gdriveFileName, setGdriveFileName] = useState("sprintlab.slfv");
+  const [syncBusy, setSyncBusy] = useState<null | "push" | "pull" | "both">(null);
+  const [lastSyncAt, setLastSyncAt] = useState<number | undefined>(undefined);
   const pickerSupported = isDirectoryPickerSupported();
   const inIframe = isInIframe();
 
@@ -54,8 +63,52 @@ export default function AppLayout() {
       setAutoLockState(getAutoLockMinutes());
       setPinCurrent(""); setPinNew("");
       isPasskeySupported().then(setBioAvailable);
+      const cfg = getPublicConfig();
+      setSyncProviderState(cfg.provider);
+      setWebdavUrl(cfg.webdavUrl || "");
+      setWebdavUser(cfg.webdavUser || "");
+      setWebdavPath(cfg.webdavPath || "/SprintLab/snapshot.slfv");
+      setGdriveClientId(cfg.gdriveClientId || "");
+      setGdriveFileName(cfg.gdriveFileName || "sprintlab.slfv");
+      setLastSyncAt(getSyncState().lastSyncAt);
+      getSecretConfig().then((s) => setWebdavPass(s.webdavPassword || ""));
     }
   }, [settingsOpen]);
+
+  const saveSyncSettings = async () => {
+    try {
+      setPublicConfig({
+        provider: syncProvider,
+        webdavUrl: webdavUrl.trim() || undefined,
+        webdavUser: webdavUser.trim() || undefined,
+        webdavPath: webdavPath.trim() || undefined,
+        gdriveClientId: gdriveClientId.trim() || undefined,
+        gdriveFileName: gdriveFileName.trim() || undefined,
+      });
+      const prev = await getSecretConfig();
+      await setSecretConfig({ ...prev, webdavPassword: webdavPass || undefined });
+      toast.success("Configuration sync enregistrée");
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
+  };
+
+  const runSync = async (kind: "push" | "pull" | "both") => {
+    setSyncBusy(kind);
+    try {
+      const fn = kind === "push" ? syncPushNow : kind === "pull" ? () => syncPullNow("merge") : syncBothNow;
+      const res = await fn();
+      if (!res.ok) { toast.error(res.error || "Erreur de synchronisation"); return; }
+      setLastSyncAt(getSyncState().lastSyncAt);
+      if (kind === "pull" && res.pulled) {
+        toast.success(`Pull OK — ${res.pulled.totalKeys} clés (${res.pulled.added} ajoutées)`);
+      } else if (kind === "push") {
+        toast.success("Push OK");
+      } else {
+        toast.success("Sync OK");
+      }
+    } finally { setSyncBusy(null); }
+  };
 
   const saveAISettings = async () => {
     try {
