@@ -1,11 +1,6 @@
 /**
- * Persistance de la configuration de sync BYOC.
- * - Provider sélectionné
- * - Paramètres non-secrets en clair (URL WebDAV, client_id Google, etc.)
- * - Secrets (mot de passe WebDAV, token OAuth) chiffrés via master key
+ * Persistance de la configuration de sync BYOC (stockage en clair local).
  */
-import { aesDecrypt, aesEncrypt, getMasterKey } from "@/lib/deviceAuth";
-
 export type SyncProvider = "none" | "file" | "webdav" | "gdrive";
 
 const CFG_KEY = "fv:sync:cfg-v1";
@@ -16,9 +11,9 @@ export interface PublicConfig {
   provider: SyncProvider;
   webdavUrl?: string;
   webdavUser?: string;
-  webdavPath?: string; // ex: /SprintLab/snapshot.slfv
+  webdavPath?: string;
   gdriveClientId?: string;
-  gdriveFileName?: string; // ex: sprintlab.slfv
+  gdriveFileName?: string;
 }
 export interface SecretConfig {
   webdavPassword?: string;
@@ -43,17 +38,13 @@ export function setPublicConfig(cfg: PublicConfig) {
 }
 
 export async function getSecretConfig(): Promise<SecretConfig> {
-  const mk = getMasterKey();
-  const blob = (() => { try { return localStorage.getItem(SECRETS_KEY); } catch { return null; } })();
-  if (!mk || !blob) return {};
-  try { return JSON.parse(await aesDecrypt(mk, blob)) as SecretConfig; }
-  catch { return {}; }
+  try {
+    const raw = localStorage.getItem(SECRETS_KEY);
+    return raw ? (JSON.parse(raw) as SecretConfig) : {};
+  } catch { return {}; }
 }
 export async function setSecretConfig(s: SecretConfig): Promise<void> {
-  const mk = getMasterKey();
-  if (!mk) throw new Error("Application verrouillée.");
-  const blob = await aesEncrypt(mk, JSON.stringify(s));
-  try { localStorage.setItem(SECRETS_KEY, blob); } catch { /* */ }
+  try { localStorage.setItem(SECRETS_KEY, JSON.stringify(s)); } catch { /* */ }
 }
 
 export function getSyncState(): SyncState {

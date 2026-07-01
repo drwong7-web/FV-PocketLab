@@ -3,10 +3,10 @@ import { useAuth } from "@/lib/auth";
 import type { ReactNode } from "react";
 
 export function ProtectedRoute({ children }: { children: ReactNode }) {
-  const { loading, locked, enrolled } = useAuth();
+  const { loading, enrolled } = useAuth();
   const location = useLocation();
   if (loading) return <div className="min-h-svh bg-background" aria-hidden />;
-  if (!enrolled || locked) {
+  if (!enrolled) {
     return <Navigate to="/auth" replace state={{ from: location }} />;
   }
   return <>{children}</>;

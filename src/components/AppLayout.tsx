@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { Activity, Check, Cloud, CloudOff, Download, Fingerprint, Folder, Home, Key, Languages, Lock, LogOut, Moon, Palette, RefreshCw, Settings as SettingsIcon, ShieldCheck, Sun, Timer, Upload, Users } from "lucide-react";
+import { Link, NavLink, Outlet } from "react-router-dom";
+import { Activity, Check, Cloud, CloudOff, Download, Folder, Home, Key, Languages, Moon, Palette, RefreshCw, Settings as SettingsIcon, Sun, Upload, Users } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -9,10 +9,6 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { useSettings, type Lang, type Theme } from "@/lib/settings";
 import { clearExportDirectory, getExportDirectoryLabel, isDirectoryPickerSupported, isInIframe, pickExportDirectory } from "@/lib/exportTarget";
 import { getAIKey, setAIKey, getAIModel, setAIModel } from "@/lib/ai/client";
-import {
-  enrollPasskey, hasPasskey, isPasskeySupported, removePasskey,
-  getAutoLockMinutes, setAutoLockMinutes, changePin,
-} from "@/lib/deviceAuth";
 import {
   getPublicConfig, setPublicConfig, getSecretConfig, setSecretConfig,
   getSyncState, type SyncProvider,
@@ -27,20 +23,13 @@ const navItems = [
 ];
 
 export default function AppLayout() {
-  const { user, lock, signOut } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
+  const { user } = useAuth();
   const { lang, theme, accent, setLang, setTheme, setAccent, t } = useSettings();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [exportDir, setExportDir] = useState<string | null>(null);
   const [aiKey, setAIKeyState] = useState("");
   const [aiModel, setAIModelState] = useState("gemini-2.5-pro");
   const [showKey, setShowKey] = useState(false);
-  const [bioAvailable, setBioAvailable] = useState(false);
-  const [bioEnrolled, setBioEnrolled] = useState(false);
-  const [autoLock, setAutoLockState] = useState<number>(15);
-  const [pinCurrent, setPinCurrent] = useState("");
-  const [pinNew, setPinNew] = useState("");
   const [syncProvider, setSyncProviderState] = useState<SyncProvider>("none");
   const [webdavUrl, setWebdavUrl] = useState("");
   const [webdavUser, setWebdavUser] = useState("");
@@ -59,10 +48,6 @@ export default function AppLayout() {
       setAIKeyState(getAIKey());
       setAIModelState(getAIModel());
       setShowKey(false);
-      setBioEnrolled(hasPasskey());
-      setAutoLockState(getAutoLockMinutes());
-      setPinCurrent(""); setPinNew("");
-      isPasskeySupported().then(setBioAvailable);
       const cfg = getPublicConfig();
       setSyncProviderState(cfg.provider);
       setWebdavUrl(cfg.webdavUrl || "");
@@ -114,40 +99,7 @@ export default function AppLayout() {
     try {
       await setAIKey(aiKey.trim());
       setAIModel(aiModel.trim() || "gemini-2.5-pro");
-      toast.success(aiKey.trim() ? "Clé IA enregistrée (chiffrée)" : "Clé IA supprimée");
-    } catch (e) {
-      toast.error((e as Error).message);
-    }
-  };
-
-  const onEnableBio = async () => {
-    if (!pinCurrent) { toast.error("Saisissez votre PIN actuel pour activer la biométrie."); return; }
-    try {
-      await enrollPasskey(pinCurrent);
-      setBioEnrolled(true);
-      setPinCurrent("");
-      toast.success("Biométrie activée.");
-    } catch (e) {
-      toast.error((e as Error).message);
-    }
-  };
-  const onDisableBio = () => {
-    removePasskey();
-    setBioEnrolled(false);
-    toast.success("Biométrie désactivée.");
-  };
-  const onChangeAutoLock = (m: number) => {
-    setAutoLockMinutes(m);
-    setAutoLockState(m);
-    toast.success(`Auto-verrouillage : ${m} min`);
-  };
-  const onChangePin = async () => {
-    if (!/^\d{4,8}$/.test(pinNew)) { toast.error("Nouveau PIN : 4 à 8 chiffres."); return; }
-    try {
-      await changePin(pinCurrent, pinNew);
-      setBioEnrolled(false);
-      setPinCurrent(""); setPinNew("");
-      toast.success("PIN modifié. Réactivez la biométrie si besoin.");
+      toast.success(aiKey.trim() ? "Clé IA enregistrée" : "Clé IA supprimée");
     } catch (e) {
       toast.error((e as Error).message);
     }
@@ -218,15 +170,6 @@ export default function AppLayout() {
               aria-label={t("settings")}
             >
               <SettingsIcon className="w-4 h-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => { lock(); navigate("/auth"); }}
-              aria-label="Verrouiller"
-              title="Verrouiller"
-            >
-              <Lock className="w-4 h-4" />
             </Button>
           </div>
         </div>
@@ -374,92 +317,6 @@ export default function AppLayout() {
               )}
             </section>
 
-            <section className="space-y-3">
-              <div className="flex items-center gap-2 text-sm font-semibold">
-                <ShieldCheck className="h-4 w-4 text-primary" />
-                <h3>Sécurité de l'appareil</h3>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Timer className="h-3.5 w-3.5" /> Verrouillage auto après inactivité
-                </div>
-                <div className="grid grid-cols-4 gap-2">
-                  {[5, 15, 60, 240].map((m) => (
-                    <button
-                      key={m}
-                      onClick={() => onChangeAutoLock(m)}
-                      className={cn(
-                        "rounded-lg border px-2 py-1.5 text-xs font-medium transition-all",
-                        autoLock === m
-                          ? "border-primary bg-primary/10 text-primary"
-                          : "border-border bg-card hover:border-primary/40",
-                      )}
-                    >
-                      {m < 60 ? `${m} min` : `${m / 60} h`}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="space-y-2 pt-1">
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Fingerprint className="h-3.5 w-3.5" /> Biométrie (Face ID / Touch ID / Windows Hello)
-                </div>
-                {!bioAvailable ? (
-                  <p className="text-xs text-muted-foreground">Non disponible sur cet appareil/navigateur.</p>
-                ) : bioEnrolled ? (
-                  <Button variant="outline" size="sm" onClick={onDisableBio} className="w-full">
-                    Désactiver la biométrie
-                  </Button>
-                ) : (
-                  <div className="flex gap-2">
-                    <Input
-                      type="password"
-                      inputMode="numeric"
-                      placeholder="PIN actuel"
-                      value={pinCurrent}
-                      onChange={(e) => setPinCurrent(e.target.value.replace(/\D/g, "").slice(0, 8))}
-                      className="h-9"
-                    />
-                    <Button variant="outline" size="sm" onClick={onEnableBio}>Activer</Button>
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-2 pt-1">
-                <div className="text-xs text-muted-foreground">Changer le PIN</div>
-                <Input
-                  type="password" inputMode="numeric" placeholder="PIN actuel"
-                  value={pinCurrent}
-                  onChange={(e) => setPinCurrent(e.target.value.replace(/\D/g, "").slice(0, 8))}
-                  className="h-9"
-                />
-                <Input
-                  type="password" inputMode="numeric" placeholder="Nouveau PIN (4-8 chiffres)"
-                  value={pinNew}
-                  onChange={(e) => setPinNew(e.target.value.replace(/\D/g, "").slice(0, 8))}
-                  className="h-9"
-                />
-                <Button variant="outline" size="sm" onClick={onChangePin} className="w-full">
-                  Mettre à jour le PIN
-                </Button>
-              </div>
-
-              <Button
-                variant="ghost" size="sm"
-                onClick={() => {
-                  if (confirm("Effacer profil, PIN, biométrie et clé IA ?")) {
-                    signOut();
-                    setSettingsOpen(false);
-                    navigate("/auth");
-                  }
-                }}
-                className="w-full text-destructive hover:text-destructive"
-              >
-                <LogOut className="h-4 w-4 mr-1" /> Réinitialiser tout (effacer profil et secrets)
-              </Button>
-            </section>
 
             <section className="space-y-3">
               <div className="flex items-center gap-2 text-sm font-semibold">
@@ -467,7 +324,7 @@ export default function AppLayout() {
                 <h3>Sync (BYOC — Bring Your Own Cloud)</h3>
               </div>
               <p className="text-xs text-muted-foreground">
-                Vos données restent sur l'appareil. Choisissez où exporter une copie chiffrée (clé dérivée de votre PIN, ne quitte jamais l'appareil).
+                Vos données restent sur l'appareil. Choisissez où exporter une copie de sauvegarde.
               </p>
 
               <div className="grid grid-cols-4 gap-2">

@@ -1,138 +1,67 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, ReactNode } from "react";
 import { createUserAndOrg, currentUser, listUsers } from "@/lib/storage";
-import {
-  clearMasterKey, enrollPin, enrollPasskey, getAutoLockMinutes,
-  hasPasskey, isEnrolled, isUnlocked, resetAuth,
-  unlockWithPasskey, unlockWithPin,
-} from "@/lib/deviceAuth";
-import { clearAIKeyFromMemory, loadAIKey } from "@/lib/ai/client";
 import type { User } from "@/lib/types";
+
+const PROFILE_FLAG = "slfv:profile-ready";
 
 interface AuthContextValue {
   user: User | null;
   loading: boolean;
-  locked: boolean;
+  /** True quand un profil local existe déjà. */
   enrolled: boolean;
-  /** Onboarding : crée profil local + PIN, optionnel passkey. */
-  enroll: (opts: { name: string; org: string; pin: string; enablePasskey?: boolean }) => Promise<void>;
-  /** Déverrouillage par PIN. */
-  unlockPin: (pin: string) => Promise<void>;
-  /** Déverrouillage par biométrie. */
-  unlockBiometric: () => Promise<void>;
-  /** Verrouille la session (clé IA et master key purgées de la mémoire). */
-  lock: () => void;
-  /** Reset complet : efface profil, PIN, passkey, clé IA. */
+  /** Onboarding local (nom + team). */
+  enroll: (opts: { name: string; org: string }) => Promise<void>;
+  /** Efface le profil local. */
   signOut: () => void;
-  /** Notifie l'activité utilisateur (reset du timer d'auto-lock). */
-  bumpActivity: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+function hasProfile(): boolean {
+  try {
+    if (localStorage.getItem(PROFILE_FLAG) === "1") return true;
+    const users = JSON.parse(localStorage.getItem("slfv:users") || "[]");
+    return Array.isArray(users) && users.length > 0;
+  } catch { return false; }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [locked, setLocked] = useState(true);
-  const [enrolled, setEnrolled] = useState(isEnrolled());
-  const lockTimerRef = useRef<number | null>(null);
+  const [enrolled, setEnrolled] = useState(false);
 
   const refreshProfile = useCallback(() => {
     setUser(currentUser() ?? listUsers()[0] ?? null);
-    setEnrolled(isEnrolled());
+    setEnrolled(hasProfile());
   }, []);
 
-  const lock = useCallback(() => {
-    clearMasterKey();
-    clearAIKeyFromMemory();
-    setLocked(true);
-  }, []);
-
-  const armAutoLock = useCallback(() => {
-    if (lockTimerRef.current !== null) window.clearTimeout(lockTimerRef.current);
-    const min = getAutoLockMinutes();
-    lockTimerRef.current = window.setTimeout(() => lock(), min * 60_000);
-  }, [lock]);
-
-  const bumpActivity = useCallback(() => {
-    if (!isUnlocked()) return;
-    armAutoLock();
-  }, [armAutoLock]);
-
-  const afterUnlock = useCallback(async () => {
-    await loadAIKey();
-    setLocked(false);
-    armAutoLock();
-  }, [armAutoLock]);
-
-  // Initial load
   useEffect(() => {
     refreshProfile();
-    setLocked(!isUnlocked());
     setLoading(false);
   }, [refreshProfile]);
 
-  // Listen for activity + visibility to manage auto-lock
-  useEffect(() => {
-    const onActivity = () => bumpActivity();
-    const onVisibility = () => {
-      if (document.visibilityState === "hidden") {
-        // Optional: lock immediately on hide could be too aggressive — keep timer-based.
-      } else {
-        bumpActivity();
-      }
-    };
-    window.addEventListener("pointerdown", onActivity, { passive: true });
-    window.addEventListener("keydown", onActivity);
-    document.addEventListener("visibilitychange", onVisibility);
-    return () => {
-      window.removeEventListener("pointerdown", onActivity);
-      window.removeEventListener("keydown", onActivity);
-      document.removeEventListener("visibilitychange", onVisibility);
-      if (lockTimerRef.current !== null) window.clearTimeout(lockTimerRef.current);
-    };
-  }, [bumpActivity]);
-
   const value = useMemo<AuthContextValue>(() => ({
-    user, loading, locked, enrolled,
-    enroll: async ({ name, org, pin, enablePasskey }) => {
-      // Crée le profil local s'il n'existe pas déjà
+    user, loading, enrolled,
+    enroll: async ({ name, org }) => {
       let u = currentUser() ?? listUsers()[0] ?? null;
       if (!u) {
         u = createUserAndOrg(`local-${Date.now()}@device`, "n/a", name.trim(), org.trim());
       }
-      await enrollPin(pin);
-      if (enablePasskey) {
-        try { await enrollPasskey(pin); } catch (e) {
-          // Non bloquant : on garde le PIN seul
-          console.warn("Passkey enrollment failed:", e);
-        }
-      }
+      try { localStorage.setItem(PROFILE_FLAG, "1"); } catch { /* */ }
       setUser(u);
       setEnrolled(true);
-      await afterUnlock();
     },
-    unlockPin: async (pin) => {
-      await unlockWithPin(pin);
-      refreshProfile();
-      await afterUnlock();
-    },
-    unlockBiometric: async () => {
-      await unlockWithPasskey();
-      refreshProfile();
-      await afterUnlock();
-    },
-    lock,
     signOut: () => {
-      resetAuth();
-      clearAIKeyFromMemory();
       try {
-        localStorage.removeItem("fv:ai-key:v2");
+        localStorage.removeItem(PROFILE_FLAG);
+        localStorage.removeItem("slfv:users");
+        localStorage.removeItem("slfv:orgs");
+        localStorage.removeItem("slfv:session");
       } catch { /* */ }
-      setLocked(true);
+      setUser(null);
       setEnrolled(false);
     },
-    bumpActivity,
-  }), [user, loading, locked, enrolled, lock, afterUnlock, refreshProfile, bumpActivity]);
+  }), [user, loading, enrolled]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
@@ -142,6 +71,3 @@ export function useAuth() {
   if (!ctx) throw new Error("useAuth must be used inside AuthProvider");
   return ctx;
 }
-
-// Helper for components: alias kept for compatibility — `hasPasskey` re-export
-export { hasPasskey };

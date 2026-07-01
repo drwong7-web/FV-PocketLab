@@ -1,16 +1,12 @@
 /**
  * Client IA local — Google Gemini. La clé API utilisateur est stockée
- * chiffrée (AES-GCM via la master key device) et déchiffrée en mémoire
- * uniquement quand l'app est déverrouillée.
+ * en clair dans le localStorage de l'appareil.
  */
 import JSZip from "jszip";
-import { aesDecrypt, aesEncrypt, b64, getMasterKey, unb64 } from "@/lib/deviceAuth";
 
 const KEY_STORAGE = "fv:ai-key:v2";
 const MODEL_STORAGE = "fv:ai-model:v1";
 const DEFAULT_MODEL = "gemini-2.5-pro";
-
-let _decryptedAIKey: string | null = null;
 
 export function getAIModel(): string {
   try { return localStorage.getItem(MODEL_STORAGE) || DEFAULT_MODEL; } catch { return DEFAULT_MODEL; }
@@ -20,45 +16,31 @@ export function setAIModel(model: string) {
 }
 
 export function getAIKey(): string {
-  return _decryptedAIKey ?? "";
+  try { return localStorage.getItem(KEY_STORAGE) || ""; } catch { return ""; }
 }
 export function hasAIKey(): boolean {
-  return !!_decryptedAIKey;
-}
-export function clearAIKeyFromMemory(): void {
-  _decryptedAIKey = null;
+  return !!getAIKey();
 }
 
-/** Charge et déchiffre la clé IA depuis le stockage local (après unlock). */
-export async function loadAIKey(): Promise<void> {
-  _decryptedAIKey = null;
-  const mk = getMasterKey();
-  const blob = (() => { try { return localStorage.getItem(KEY_STORAGE); } catch { return null; } })();
-  if (!mk || !blob) return;
-  try {
-    _decryptedAIKey = await aesDecrypt(mk, blob);
-  } catch {
-    _decryptedAIKey = null;
-  }
-}
-
-/** Chiffre + persiste la clé IA. Nécessite que l'app soit déverrouillée. */
+/** Persiste la clé IA en clair. Signature async pour compat avec les appels existants. */
 export async function setAIKey(key: string): Promise<void> {
   const trimmed = key.trim();
-  const mk = getMasterKey();
-  if (!mk) throw new Error("Application verrouillée — déverrouillez avant d'enregistrer la clé.");
-  if (!trimmed) {
-    try { localStorage.removeItem(KEY_STORAGE); } catch { /* */ }
-    _decryptedAIKey = null;
-    return;
-  }
-  const blob = await aesEncrypt(mk, trimmed);
-  try { localStorage.setItem(KEY_STORAGE, blob); } catch { /* */ }
-  _decryptedAIKey = trimmed;
+  try {
+    if (!trimmed) localStorage.removeItem(KEY_STORAGE);
+    else localStorage.setItem(KEY_STORAGE, trimmed);
+  } catch { /* */ }
 }
 
 export class AIKeyMissingError extends Error {
   constructor() { super("Clé IA manquante — configurez-la dans Paramètres."); this.name = "AIKeyMissingError"; }
+}
+
+// ---------- Base64 helper (used by DOCX extractor) ----------
+function unb64(s: string): Uint8Array {
+  const bin = atob(s);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
 }
 
 // ---------- Gemini call ----------
@@ -252,6 +234,3 @@ export async function parseAthletesFile(file: File): Promise<ParsedAthlete[]> {
   }
   return athletes;
 }
-
-// silence unused-export warning for b64 if needed by future modules
-export { b64 };
