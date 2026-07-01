@@ -103,11 +103,10 @@ export default function Auth() {
             <>
               <div className="flex items-center gap-2 mb-4 text-sm font-semibold">
                 <ShieldCheck className="w-4 h-4 text-primary" />
-                <span>Créer votre profil local</span>
+                <span>Créer votre profil&nbsp;</span>
               </div>
               <p className="text-xs text-muted-foreground mb-4">
-                Vos données restent sur cet appareil. Aucun compte distant. Choisissez un PIN —
-                il chiffre votre clé API IA et tout secret futur.
+                {"\n"}
               </p>
               <form onSubmit={onEnroll} className="space-y-3">
                 <div>
@@ -115,7 +114,7 @@ export default function Auth() {
                   <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Coach Smith" required />
                 </div>
                 <div>
-                  <Label htmlFor="org">Organisation</Label>
+                  <Label htmlFor="org">Team</Label>
                   <Input id="org" value={org} onChange={(e) => setOrg(e.target.value)} placeholder="FFA — Pôle Sprint" required />
                 </div>
                 <div>
