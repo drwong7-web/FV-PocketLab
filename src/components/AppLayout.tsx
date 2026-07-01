@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Link, NavLink, Outlet } from "react-router-dom";
 import { Activity, Check, Cloud, CloudOff, Download, Folder, Home, Key, Languages, Moon, Palette, RefreshCw, Settings as SettingsIcon, Sun, Upload, Users } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
@@ -24,8 +24,6 @@ const navItems = [
 
 export default function AppLayout() {
   const { user } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
   const { lang, theme, accent, setLang, setTheme, setAccent, t } = useSettings();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [exportDir, setExportDir] = useState<string | null>(null);
@@ -326,7 +324,7 @@ export default function AppLayout() {
                 <h3>Sync (BYOC — Bring Your Own Cloud)</h3>
               </div>
               <p className="text-xs text-muted-foreground">
-                Vos données restent sur l'appareil. Choisissez où exporter une copie chiffrée (clé dérivée de votre PIN, ne quitte jamais l'appareil).
+                Vos données restent sur l'appareil. Choisissez où exporter une copie de sauvegarde.
               </p>
 
               <div className="grid grid-cols-4 gap-2">
