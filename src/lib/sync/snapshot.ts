@@ -1,23 +1,19 @@
 /**
  * Sync snapshot — collecte/restaure les données utilisateur (localStorage
- * namespacé) sous forme d'un blob JSON chiffré (AES-GCM via master key).
+ * namespacé) sous forme d'un blob JSON en clair.
  *
  * Politique de merge : LWW (Last-Write-Wins) par entité quand un `createdAt`
  * existe, sinon le snapshot le plus récent (au niveau du fichier) gagne.
  */
-import { aesDecrypt, aesEncrypt, getMasterKey } from "@/lib/deviceAuth";
 
 const DATA_PREFIXES = ["slfv:", "fv:"];
-// Clés à NE PAS exporter (secrets/device-local)
+// Clés à NE PAS exporter (device-local uniquement)
 const EXCLUDED_KEYS = new Set([
-  "fv:auth:salt",
-  "fv:auth:verifier",
-  "fv:auth:passkey-cred",
-  "fv:auth:passkey-wrap",
-  "fv:auth:passkey-blob",
-  "fv:auth:autolock-min",
   "fv:ai-key:v2",
+  "fv:sync:secrets-v1",
+  "fv:sync:state-v1",
   "slfv:session",
+  "slfv:profile-ready",
 ]);
 
 const MERGEABLE_COLLECTIONS: Record<string, "id" | "createdAt"> = {
@@ -59,9 +55,11 @@ export function buildSnapshot(): SnapshotV1 {
   };
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mergeArrays(local: any[], remote: any[]): any[] {
   if (!Array.isArray(local)) return remote;
   if (!Array.isArray(remote)) return local;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const byId = new Map<string, any>();
   for (const it of local) if (it?.id) byId.set(it.id, it);
   for (const r of remote) {
@@ -95,7 +93,7 @@ export function applySnapshot(snap: SnapshotV1, mode: "merge" | "replace" = "mer
       added++;
       continue;
     }
-    // merge by id with LWW
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let local: any[] = [];
     try { local = JSON.parse(localStorage.getItem(k) || "[]"); } catch { local = []; }
     const remote = Array.isArray(incoming) ? incoming : [];
@@ -108,37 +106,27 @@ export function applySnapshot(snap: SnapshotV1, mode: "merge" | "replace" = "mer
   return { added, updated, totalKeys: keys.length };
 }
 
-// ---------- Encryption envelope ----------
-const HEADER = "SLFV1"; // magic
-const HEADER_BYTES = new TextEncoder().encode(HEADER);
+// ---------- Snapshot envelope (JSON plain) ----------
+const LEGACY_HEADER = "SLFV1";
 
-export async function encryptSnapshotJson(snap: SnapshotV1): Promise<Blob> {
-  const mk = getMasterKey();
-  if (!mk) throw new Error("Application verrouillée.");
+export async function snapshotToBlob(snap: SnapshotV1): Promise<Blob> {
   const json = JSON.stringify(snap);
-  const payload = await aesEncrypt(mk, json); // "iv:ct" base64
-  const body = new TextEncoder().encode(payload);
-  return new Blob([HEADER_BYTES, body], { type: "application/octet-stream" });
+  return new Blob([json], { type: "application/json" });
 }
 
-export async function decryptSnapshotBlob(blob: Blob): Promise<SnapshotV1> {
-  const mk = getMasterKey();
-  if (!mk) throw new Error("Application verrouillée.");
+export async function blobToSnapshot(blob: Blob): Promise<SnapshotV1> {
   const buf = new Uint8Array(await blob.arrayBuffer());
-  // Cas chiffré
-  if (buf.length > HEADER_BYTES.length) {
-    const head = new TextDecoder().decode(buf.slice(0, HEADER_BYTES.length));
-    if (head === HEADER) {
-      const payload = new TextDecoder().decode(buf.slice(HEADER_BYTES.length));
-      const json = await aesDecrypt(mk, payload);
-      return JSON.parse(json) as SnapshotV1;
+  // Reject legacy encrypted files gracefully
+  if (buf.length > LEGACY_HEADER.length) {
+    const head = new TextDecoder().decode(buf.slice(0, LEGACY_HEADER.length));
+    if (head === LEGACY_HEADER) {
+      throw new Error("Snapshot chiffré legacy non supporté (chiffrement retiré).");
     }
   }
-  // Cas JSON brut (import manuel)
   try {
     const json = new TextDecoder().decode(buf);
     return JSON.parse(json) as SnapshotV1;
   } catch {
-    throw new Error("Fichier illisible ou clé incorrecte.");
+    throw new Error("Fichier snapshot illisible.");
   }
 }

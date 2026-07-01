@@ -2,7 +2,7 @@
  * Sync manager — orchestre push / pull / sync (les deux) selon le provider
  * configuré et met à jour l'état de sync persistant.
  */
-import { buildSnapshot, decryptSnapshotBlob, encryptSnapshotJson, applySnapshot, type MergeReport } from "./snapshot";
+import { buildSnapshot, blobToSnapshot, snapshotToBlob, applySnapshot, type MergeReport } from "./snapshot";
 import { getPublicConfig, getSyncState, setSyncState } from "./config";
 import { getAdapter } from "./adapters";
 
@@ -25,7 +25,7 @@ async function adapterOrThrow() {
 export async function syncPushNow(): Promise<SyncResult> {
   try {
     const adapter = await adapterOrThrow();
-    const blob = await encryptSnapshotJson(buildSnapshot());
+    const blob = await snapshotToBlob(buildSnapshot());
     await adapter.push(blob);
     setSyncState({ ...getSyncState(), lastSyncAt: Date.now(), lastDirection: "push", lastError: undefined });
     return { ok: true, direction: "push", pushed: true };
@@ -41,7 +41,7 @@ export async function syncPullNow(mode: "merge" | "replace" = "merge"): Promise<
     const adapter = await adapterOrThrow();
     const blob = await adapter.pull();
     if (!blob) return { ok: true, direction: "pull", pulled: { added: 0, updated: 0, totalKeys: 0 } };
-    const snap = await decryptSnapshotBlob(blob);
+    const snap = await blobToSnapshot(blob);
     const report = applySnapshot(snap, mode);
     setSyncState({ ...getSyncState(), lastSyncAt: Date.now(), lastDirection: "pull", lastError: undefined });
     return { ok: true, direction: "pull", pulled: report };
