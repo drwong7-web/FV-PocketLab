@@ -173,15 +173,6 @@ export default function AppLayout() {
             >
               <SettingsIcon className="w-4 h-4" />
             </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => { lock(); navigate("/auth"); }}
-              aria-label="Verrouiller"
-              title="Verrouiller"
-            >
-              <Lock className="w-4 h-4" />
-            </Button>
           </div>
         </div>
       </header>
