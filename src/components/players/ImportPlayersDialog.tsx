@@ -1,7 +1,7 @@
 import { useState, ChangeEvent } from "react";
 import { Upload, Loader2, Trash2 } from "lucide-react";
 import { createPlayer } from "@/lib/storage";
-import { parseAthletesFile, hasAIKey, AIKeyMissingError } from "@/lib/ai/client";
+import { parseAthletesFile } from "@/lib/import/athletes";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
