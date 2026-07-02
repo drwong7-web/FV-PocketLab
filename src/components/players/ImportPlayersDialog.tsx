@@ -58,8 +58,7 @@ export default function ImportPlayersDialog({ teamId, organizationId, onImported
       setRows(athletes.map((a) => ({ ...a, selected: true })));
       toast.success(`${athletes.length} athlète(s) détecté(s)`);
     } catch (err) {
-      if (err instanceof AIKeyMissingError) toast.error(err.message);
-      else toast.error("Échec de l'analyse : " + ((err as Error)?.message ?? "Erreur"));
+      toast.error("Échec de l'analyse : " + ((err as Error)?.message ?? "Erreur"));
     } finally {
       setLoading(false);
     }
