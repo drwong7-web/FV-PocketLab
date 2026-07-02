@@ -751,15 +751,19 @@ export function SprintVideoAnalyzer({ distances, testDistance, onClose, onConfir
                     size="sm"
                     variant="outline"
                     className="w-full"
-                    disabled={aiMarkersBusy}
-                    onClick={detectMarkersAI}
+                    disabled={calib.x0 === undefined || calib.xRef === undefined}
+                    onClick={interpolateMarkers}
+                    title="Répartit linéairement les repères intermédiaires entre 0 m et la distance de référence."
                   >
                     <Wand2 className="mr-1.5 h-3.5 w-3.5" />
-                    {aiMarkersBusy ? "Détection des repères…" : "Détecter les repères (IA)"}
+                    Interpoler les repères
                   </Button>
+                  <p className="text-[10px] text-muted-foreground">
+                    Placez d'abord les repères 0 m et {calib.refMeters} m sur la vidéo, puis interpolez pour obtenir les distances intermédiaires. Chaque repère reste déplaçable manuellement.
+                  </p>
                   {Object.keys(extraMarkers).length > 0 && (
                     <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-                      <span>{Object.keys(extraMarkers).length} repères détectés (interpolation activée)</span>
+                      <span>{Object.keys(extraMarkers).length} repères placés</span>
                       <button
                         type="button"
                         className="rounded border px-1.5 py-0.5 hover:bg-muted"
@@ -767,8 +771,6 @@ export function SprintVideoAnalyzer({ distances, testDistance, onClose, onConfir
                       >Effacer</button>
                     </div>
                   )}
-                  {aiMarkersNotes && <p className="text-[10px] text-muted-foreground italic">{aiMarkersNotes}</p>}
-                  {aiMarkersError && <p className="text-[10px] text-destructive">{aiMarkersError}</p>}
                   <Button
                     size="sm"
                     className="w-full gradient-primary text-primary-foreground"
