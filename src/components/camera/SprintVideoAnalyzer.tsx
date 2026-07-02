@@ -77,9 +77,7 @@ export function SprintVideoAnalyzer({ distances, testDistance, onClose, onConfir
   const [draggingCrop, setDraggingCrop] = useState<"start" | "end" | null>(null);
   const cropTrackRef = useRef<HTMLDivElement | null>(null);
   const [extraMarkers, setExtraMarkers] = useState<Record<number, number>>({}); // meters -> xNorm
-  const [aiMarkersBusy, setAiMarkersBusy] = useState(false);
-  const [aiMarkersError, setAiMarkersError] = useState("");
-  const [aiMarkersNotes, setAiMarkersNotes] = useState("");
+
 
   useEffect(() => {
     if (Number.isFinite(duration) && duration > 0) {
