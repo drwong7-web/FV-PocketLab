@@ -27,9 +27,6 @@ export default function AppLayout() {
   const { lang, theme, accent, setLang, setTheme, setAccent, t } = useSettings();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [exportDir, setExportDir] = useState<string | null>(null);
-  const [aiKey, setAIKeyState] = useState("");
-  const [aiModel, setAIModelState] = useState("gemini-2.5-pro");
-  const [showKey, setShowKey] = useState(false);
   const [syncProvider, setSyncProviderState] = useState<SyncProvider>("none");
   const [webdavUrl, setWebdavUrl] = useState("");
   const [webdavUser, setWebdavUser] = useState("");
