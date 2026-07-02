@@ -18,8 +18,8 @@ export interface ParsedAthlete {
 async function extractPdfText(file: File): Promise<string> {
   const pdfjs = await import("pdfjs-dist");
   // Worker via CDN (compatible Vite, pas besoin de bundler le worker).
-  // @ts-expect-error - GlobalWorkerOptions typing
-  pdfjs.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+  (pdfjs as unknown as { GlobalWorkerOptions: { workerSrc: string } }).GlobalWorkerOptions.workerSrc =
+    `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
   const buf = await file.arrayBuffer();
   const doc = await pdfjs.getDocument({ data: buf }).promise;
   const out: string[] = [];
