@@ -46,10 +46,6 @@ export default function ImportPlayersDialog({ teamId, organizationId, onImported
       toast.error("Fichier trop volumineux (max 10 MB).");
       return;
     }
-    if (!hasAIKey()) {
-      toast.error("Configurez votre clé IA dans Paramètres pour utiliser l'import.");
-      return;
-    }
     setLoading(true);
     setRows([]);
     try {
