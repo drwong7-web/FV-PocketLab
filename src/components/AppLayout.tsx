@@ -42,9 +42,6 @@ export default function AppLayout() {
   useEffect(() => {
     if (settingsOpen) {
       setExportDir(getExportDirectoryLabel());
-      setAIKeyState(getAIKey());
-      setAIModelState(getAIModel());
-      setShowKey(false);
       const cfg = getPublicConfig();
       setSyncProviderState(cfg.provider);
       setWebdavUrl(cfg.webdavUrl || "");
