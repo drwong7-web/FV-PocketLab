@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useSettings, type Lang, type Theme } from "@/lib/settings";
 import { clearExportDirectory, getExportDirectoryLabel, isDirectoryPickerSupported, isInIframe, pickExportDirectory } from "@/lib/exportTarget";
-import { getAIKey, setAIKey, getAIModel, setAIModel } from "@/lib/ai/client";
+
 import {
   getPublicConfig, setPublicConfig, getSecretConfig, setSecretConfig,
   getSyncState, type SyncProvider,
