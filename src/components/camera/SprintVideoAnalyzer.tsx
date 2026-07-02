@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ChevronLeft, ChevronRight, Circle, Crosshair, Flag, Pause, Play, Sparkles, Square, Upload, Video, Wand2, X } from "lucide-react";
 import { trackPelvisX, computeSplitTimesFromSamples, type PoseSample } from "@/lib/poseDetection";
-import { detectSprintMarkers, hasAIKey, AIKeyMissingError } from "@/lib/ai/client";
 
 export interface AnalyzerSplitResult {
   distance: number;
