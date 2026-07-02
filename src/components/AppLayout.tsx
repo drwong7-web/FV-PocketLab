@@ -89,15 +89,6 @@ export default function AppLayout() {
     } finally { setSyncBusy(null); }
   };
 
-  const saveAISettings = async () => {
-    try {
-      await setAIKey(aiKey.trim());
-      setAIModel(aiModel.trim() || "gemini-2.5-pro");
-      toast.success(aiKey.trim() ? "Clé IA enregistrée" : "Clé IA supprimée");
-    } catch (e) {
-      toast.error((e as Error).message);
-    }
-  };
 
 
 
