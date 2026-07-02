@@ -1,67 +1,58 @@
-## Objectif
+# Suppression de la clé IA — passage en local
 
-Supprimer intégralement la section **Sécurité de l'appareil** (Paramètres) et TOUT le système d'authentification device-native qui l'alimente (PIN, biométrie/passkey, verrouillage automatique, master-key, chiffrement AES des secrets).
+Objectif : remplacer les deux seuls usages de Google Gemini par des solutions locales/gratuites (comme MediaPipe pour la pose), puis retirer complètement la section « Clé IA » de l'écran Paramètres.
 
-L'app devient **local-first sans verrouillage** : un simple profil local (nom + team) enregistré sur l'appareil, plus aucun écran de déverrouillage, plus aucun chiffrement des clés/secrets stockés.
+## 1. Détection des repères de sprint (SprintVideoAnalyzer)
 
-## Ce qui est supprimé
+Actuellement, un appel Gemini analyse une frame et devine la position x normalisée de chaque cône/marque au sol.
 
-### Fichiers entiers
-- `src/lib/deviceAuth.ts` — PBKDF2, AES-GCM, WebAuthn, auto-lock, master key.
+**Remplacement : placement manuel assisté par clic sur la frame.**
 
-### Section UI (dans `src/components/AppLayout.tsx`)
-- Toute la `<section>` "Sécurité de l'appareil" (auto-lock 5/15/60/240, Biométrie Face/Touch/Windows Hello, Changer le PIN, "Réinitialiser tout").
-- Le bouton `Lock` de la barre supérieure (icône cadenas à droite).
-- Les états React associés : `bioAvailable`, `bioEnrolled`, `autoLock`, `pinCurrent`, `pinNew`.
-- Les handlers : `onEnableBio`, `onDisableBio`, `onChangeAutoLock`, `onChangePin`.
-- Les imports Lucide devenus inutiles (`Fingerprint`, `Lock`, `ShieldCheck`, `Timer`) et les imports depuis `deviceAuth`.
+- Retirer le bouton « Détection IA » et l'état `aiMarkersBusy` / `aiMarkersError` / `aiMarkersNotes`.
+- Ajouter un mini-panneau « Placer les repères » qui liste les distances attendues (0 m, distances intermédiaires, distance de référence).
+- L'utilisateur sélectionne une distance dans la liste, clique sur la vidéo/frame courante, et le point est stocké dans `extraMarkers[distance] = xNorm` (même state qu'aujourd'hui, mêmes downstream `calib.x0` / `calib.xRef`).
+- Aide automatique : après avoir placé 0 m et la distance de référence, proposer un bouton « Interpoler linéairement » qui remplit les distances restantes par interpolation entre `x0` et `xRef` (rapide, sans modèle).
 
-### Écran d'authentification (`src/pages/Auth.tsx`)
-- Suppression du flux PIN (création + confirmation), du bouton biométrie et du déverrouillage.
-- Remplacé par un onboarding minimal : **Nom + Team → Enregistrer** (une seule fois). Ensuite `/auth` redirige vers `/app`.
+Pourquoi pas un modèle embarqué (YOLO ONNX / TF.js) : détecter des cônes génériques dans une vidéo terrain sans entraînement dédié est peu fiable et pèse 10–40 Mo. Le clic manuel est instantané, précis, gratuit, et cohérent avec les autres calibrations manuelles déjà présentes.
 
-### Route de protection (`src/components/ProtectedRoute.tsx`)
-- Plus de notion de `locked`. Redirige vers `/auth` uniquement si aucun profil local n'existe (`enrolled === false`).
+## 2. Import de la liste d'athlètes (ImportPlayersDialog)
 
-### Contexte Auth (`src/lib/auth.tsx`)
-- Suppression de `locked`, `lock()`, `bumpActivity`, `unlockPin`, `unlockBiometric`, auto-lock timer, écouteurs pointerdown/keydown/visibility.
-- `enroll({ name, org })` crée simplement le profil local.
-- `signOut()` = efface le profil local et redirige. Plus de purge master-key/passkey.
+Actuellement, Gemini reçoit le PDF/DOCX/image et renvoie du JSON.
 
-### Client IA (`src/lib/ai/client.ts`)
-- Suppression de tout le chiffrement AES-GCM.
-- Clé Gemini stockée **en clair** dans `localStorage` (`fv:ai-key:v2`) — chargée synchroniquement, sans `loadAIKey()`.
-- `setAIKey` devient synchrone, sans exigence de master key.
-- Suppression de `clearAIKeyFromMemory` et de tous ses appels.
-- Retire l'import `JSZip` — non, il reste utilisé par `parseAthletesFile` (extraction DOCX) → conservé.
+**Remplacement : extraction locale du texte + parseur heuristique local.**
 
-### Sync BYOC (`src/lib/sync/config.ts` + `snapshot.ts` + `adapters.ts`/`manager.ts`)
-- `SecretConfig` (mdp WebDAV, token Google) : stocké **en clair** dans `localStorage` au lieu d'être chiffré AES.
-- `encryptSnapshotJson` / `decryptSnapshotBlob` : les snapshots deviennent du **JSON brut** (non chiffrés). Le header magic `SLFV1` reste toléré en lecture pour compat descendante minimale mais l'écriture produit du JSON simple.
-- Retrait complet des références à `getMasterKey`, `aesEncrypt`, `aesDecrypt` dans tout `src/lib/sync/*`.
-- Les clés `fv:auth:*` sortent de la liste d'exclusion (n'existent plus).
+- **DOCX** : réutiliser le code JSZip déjà présent dans `ai/client.ts` (aucune dépendance externe supplémentaire).
+- **PDF** : ajouter `pdfjs-dist` (ESM, moteur PDF de Mozilla, gratuit) → extraction du texte page par page côté navigateur.
+- **Image (PNG/JPG)** : ajouter `tesseract.js` (OCR WASM, gratuit, chargé à la demande depuis CDN comme MediaPipe) → texte brut.
+- Puis un **parseur local** `parseAthleteText(text)` :
+  - Split par lignes, ignore les en-têtes courants (`Nom`, `Prénom`, `Poids`, `Taille`, `Position`, `Date`, totaux, moyennes).
+  - Sur chaque ligne, regex pour extraire :
+    - `firstName` / `lastName` : tokens alphabétiques (support tirets, apostrophes, accents), les tokens en MAJUSCULES traités comme nom de famille.
+    - `mass` : nombre suivi de `kg` ou colonne numérique 40–160.
+    - `height` : nombre suivi de `cm` (ou `m` converti), plage 100–230.
+    - `birthDate` : formats `DD/MM/YYYY`, `YYYY-MM-DD`, `DD.MM.YYYY`.
+    - `position` : mot restant non numérique de la ligne (optionnel).
+  - Retour au même type `ParsedAthlete[]` → l'UI de vérification/édition existante (`ImportPlayersDialog`) reste inchangée.
 
-### Nettoyage secondaire
-- `src/pages/Landing.tsx` : le CTA "Sign in" reste — il pointe vers `/auth` pour l'onboarding profil.
-- Recherche globale `deviceAuth`, `masterKey`, `passkey`, `enrollPin`, `unlockWith`, `autoLock`, `PBKDF2`, `AES-GCM` → tout ce qui reste après les changements ci-dessus est supprimé.
+L'utilisateur peut toujours corriger chaque ligne avant validation, ce qui compense les erreurs OCR / parsing.
 
-## Détails techniques
+## 3. Nettoyage du code IA
 
-```text
-Avant :
-  Auth → PIN → master key en mémoire → déchiffre AI key + secrets sync
-  Header : [Settings] [Lock]
-  Settings : Langue · Thème · Accent · Dossier · IA · Sécurité (PIN/Bio/Auto-lock) · Sync
-
-Après :
-  Auth → Nom + Team → profil créé, plus jamais demandé
-  Header : [Settings]              (plus de cadenas)
-  Settings : Langue · Thème · Accent · Dossier · IA · Sync
-```
-
-Le stockage local reste identique côté données (`slfv:*`), seule la couche crypto est retirée. **Impact confidentialité assumé** : la clé Gemini et les mots de passe WebDAV sont désormais en clair dans `localStorage`.
+- Supprimer `src/lib/ai/client.ts` (Gemini, clé, modèle).
+- Créer deux petits modules à la place :
+  - `src/lib/import/athletes.ts` — `parseAthletesFile(file)` local (pdfjs + tesseract + docx + parseur).
+  - Le placement de repères sprint reste géré dans le composant, pas de module dédié.
+- Retirer de `AppLayout.tsx` :
+  - Imports `getAIKey / setAIKey / getAIModel / setAIModel` et l'icône `Key`.
+  - États `aiKey`, `aiModel`, `showKey`, handler `saveAISettings`.
+  - Toute la `<section>` « Clé IA (Google Gemini) ».
+- Retirer de `SprintVideoAnalyzer.tsx` : import `detectSprintMarkers / hasAIKey / AIKeyMissingError`, fonction `detectMarkersAI`, bouton associé.
+- Retirer de `ImportPlayersDialog.tsx` : import `hasAIKey / AIKeyMissingError`, garde `if (!hasAIKey())`. Appel à `parseAthletesFile` désormais résolu par le module local.
+- `package.json` : ajouter `pdfjs-dist` et `tesseract.js`. `jszip` reste (déjà utilisé pour l'export snapshot et DOCX).
 
 ## Vérification
 
-- `tsgo` doit passer (aucun import cassé vers `deviceAuth`).
-- Preview : `/auth` demande uniquement Nom + Team, `/app` s'ouvre directement au retour, Paramètres n'affiche plus la section Sécurité, plus d'icône cadenas dans la barre du haut.
+- `tsgo` doit passer (plus aucune référence à `ai/client`).
+- Paramètres : plus de section « Clé IA », plus d'icône clé.
+- Sprint : le bouton « Détection IA » disparaît, remplacé par la liste de placement manuel + « Interpoler ».
+- Import athlètes : un PDF simple / DOCX / image de test doit produire au moins une ligne pré-remplie éditable, sans jamais demander de clé.

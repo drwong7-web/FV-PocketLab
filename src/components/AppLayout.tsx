@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet } from "react-router-dom";
-import { Activity, Check, Cloud, CloudOff, Download, Folder, Home, Key, Languages, Moon, Palette, RefreshCw, Settings as SettingsIcon, Sun, Upload, Users } from "lucide-react";
+import { Activity, Check, Cloud, CloudOff, Download, Folder, Home, Languages, Moon, Palette, RefreshCw, Settings as SettingsIcon, Sun, Upload, Users } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useSettings, type Lang, type Theme } from "@/lib/settings";
 import { clearExportDirectory, getExportDirectoryLabel, isDirectoryPickerSupported, isInIframe, pickExportDirectory } from "@/lib/exportTarget";
-import { getAIKey, setAIKey, getAIModel, setAIModel } from "@/lib/ai/client";
+
 import {
   getPublicConfig, setPublicConfig, getSecretConfig, setSecretConfig,
   getSyncState, type SyncProvider,
@@ -27,9 +27,6 @@ export default function AppLayout() {
   const { lang, theme, accent, setLang, setTheme, setAccent, t } = useSettings();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [exportDir, setExportDir] = useState<string | null>(null);
-  const [aiKey, setAIKeyState] = useState("");
-  const [aiModel, setAIModelState] = useState("gemini-2.5-pro");
-  const [showKey, setShowKey] = useState(false);
   const [syncProvider, setSyncProviderState] = useState<SyncProvider>("none");
   const [webdavUrl, setWebdavUrl] = useState("");
   const [webdavUser, setWebdavUser] = useState("");
@@ -45,9 +42,6 @@ export default function AppLayout() {
   useEffect(() => {
     if (settingsOpen) {
       setExportDir(getExportDirectoryLabel());
-      setAIKeyState(getAIKey());
-      setAIModelState(getAIModel());
-      setShowKey(false);
       const cfg = getPublicConfig();
       setSyncProviderState(cfg.provider);
       setWebdavUrl(cfg.webdavUrl || "");
@@ -95,15 +89,6 @@ export default function AppLayout() {
     } finally { setSyncBusy(null); }
   };
 
-  const saveAISettings = async () => {
-    try {
-      await setAIKey(aiKey.trim());
-      setAIModel(aiModel.trim() || "gemini-2.5-pro");
-      toast.success(aiKey.trim() ? "Clé IA enregistrée" : "Clé IA supprimée");
-    } catch (e) {
-      toast.error((e as Error).message);
-    }
-  };
 
 
 
@@ -397,43 +382,6 @@ export default function AppLayout() {
                   Dernière synchronisation : {new Date(lastSyncAt).toLocaleString()}
                 </p>
               )}
-            </section>
-
-
-
-
-
-            <section className="space-y-3">
-              <div className="flex items-center gap-2 text-sm font-semibold">
-                <Key className="h-4 w-4 text-primary" />
-                <h3>Clé IA (Google Gemini)</h3>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Vos clés et données restent sur votre appareil. Obtenez une clé gratuite sur{" "}
-                <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer" className="text-primary underline">aistudio.google.com/apikey</a>.
-              </p>
-              <div className="flex gap-2">
-                <Input
-                  type={showKey ? "text" : "password"}
-                  value={aiKey}
-                  onChange={(e) => setAIKeyState(e.target.value)}
-                  placeholder="AIza…"
-                  className="font-mono text-xs"
-                  autoComplete="off"
-                />
-                <Button variant="outline" size="sm" onClick={() => setShowKey((s) => !s)}>
-                  {showKey ? "Masquer" : "Voir"}
-                </Button>
-              </div>
-              <Input
-                value={aiModel}
-                onChange={(e) => setAIModelState(e.target.value)}
-                placeholder="gemini-2.5-pro"
-                className="font-mono text-xs"
-              />
-              <Button variant="outline" size="sm" onClick={saveAISettings} className="w-full">
-                Enregistrer la clé IA
-              </Button>
             </section>
           </div>
 

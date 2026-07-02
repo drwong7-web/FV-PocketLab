@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ChevronLeft, ChevronRight, Circle, Crosshair, Flag, Pause, Play, Sparkles, Square, Upload, Video, Wand2, X } from "lucide-react";
 import { trackPelvisX, computeSplitTimesFromSamples, type PoseSample } from "@/lib/poseDetection";
-import { detectSprintMarkers, hasAIKey, AIKeyMissingError } from "@/lib/ai/client";
 
 export interface AnalyzerSplitResult {
   distance: number;
@@ -78,9 +77,7 @@ export function SprintVideoAnalyzer({ distances, testDistance, onClose, onConfir
   const [draggingCrop, setDraggingCrop] = useState<"start" | "end" | null>(null);
   const cropTrackRef = useRef<HTMLDivElement | null>(null);
   const [extraMarkers, setExtraMarkers] = useState<Record<number, number>>({}); // meters -> xNorm
-  const [aiMarkersBusy, setAiMarkersBusy] = useState(false);
-  const [aiMarkersError, setAiMarkersError] = useState("");
-  const [aiMarkersNotes, setAiMarkersNotes] = useState("");
+
 
   useEffect(() => {
     if (Number.isFinite(duration) && duration > 0) {
@@ -382,72 +379,22 @@ export function SprintVideoAnalyzer({ distances, testDistance, onClose, onConfir
     const v = videoRef.current; if (v) safeSeek(v, t);
   };
 
-  const detectMarkersAI = async () => {
-    const v = videoRef.current; if (!v) return;
-    setAiMarkersError("");
-    setAiMarkersBusy(true);
-    setAiMarkersNotes("");
-    try {
-      // Seek to first frame of crop window
-      await new Promise<void>((resolve) => {
-        const onSeek = () => { v.removeEventListener("seeked", onSeek); resolve(); };
-        v.addEventListener("seeked", onSeek);
-        const target = Math.min(cropStart, Math.max(0, (v.duration || 0) - 0.05));
-        if (Math.abs(v.currentTime - target) < 0.01) { v.removeEventListener("seeked", onSeek); resolve(); }
-        else v.currentTime = target;
-      });
-      // Draw current frame to a canvas
-      const w = v.videoWidth || 1280;
-      const h = v.videoHeight || 720;
-      const canvas = document.createElement("canvas");
-      // Downscale for cost/latency, keep aspect
-      const maxW = 1280;
-      const scale = w > maxW ? maxW / w : 1;
-      canvas.width = Math.round(w * scale);
-      canvas.height = Math.round(h * scale);
-      const ctx = canvas.getContext("2d");
-      if (!ctx) throw new Error("Canvas indisponible");
-      ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
-      const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
-      const imageBase64 = dataUrl.substring(dataUrl.indexOf(",") + 1);
-
-      const distancesWithZero = Array.from(new Set([0, ...distances, calib.refMeters].filter((d) => Number.isFinite(d)))).sort((a, b) => a - b);
-
-      if (!hasAIKey()) {
-        setAiMarkersError("Configurez votre clé IA dans Paramètres pour activer la détection automatique.");
-        return;
-      }
-      let markers: Array<{ distance: number; xNorm: number; confidence: number }> = [];
-      let notes = "";
-      try {
-        const res = await detectSprintMarkers({ imageBase64, distances: distancesWithZero, mimeType: "image/jpeg" });
-        markers = res.markers;
-        notes = res.notes ?? "";
-      } catch (err) {
-        if (err instanceof AIKeyMissingError) throw err;
-        throw new Error((err as Error).message || "Erreur de détection IA");
-      }
-      if (markers.length === 0) {
-        setAiMarkersError("Aucun repère détecté — ajustez manuellement.");
-      } else {
-        const map: Record<number, number> = {};
-        for (const m of markers) map[m.distance] = m.xNorm;
-        setExtraMarkers(map);
-        // Auto-fill primary calib points if detected
-        const next: { x0?: number; xRef?: number } = {};
-        if (map[0] !== undefined) next.x0 = map[0];
-        if (map[calib.refMeters] !== undefined) next.xRef = map[calib.refMeters];
-        if (Object.keys(next).length > 0) {
-          setCalib((c) => ({ ...c, ...next }));
-        }
-      }
-      if (notes) setAiMarkersNotes(notes);
-    } catch (e) {
-      setAiMarkersError((e as Error).message || "Erreur de détection IA");
-    } finally {
-      setAiMarkersBusy(false);
+  /** Répartit linéairement les repères intermédiaires entre `x0` (0 m) et `xRef` (distance de référence). */
+  const interpolateMarkers = () => {
+    if (calib.x0 === undefined || calib.xRef === undefined) return;
+    const x0 = calib.x0;
+    const xRef = calib.xRef;
+    const ref = calib.refMeters;
+    if (!Number.isFinite(ref) || ref <= 0) return;
+    const map: Record<number, number> = {};
+    const all = Array.from(new Set([0, ...distances, ref].filter((d) => Number.isFinite(d)))).sort((a, b) => a - b);
+    for (const d of all) {
+      const x = x0 + (d / ref) * (xRef - x0);
+      map[d] = Math.min(1, Math.max(0, x));
     }
+    setExtraMarkers(map);
   };
+
 
   const runAI = async () => {
     const v = videoRef.current;
@@ -804,15 +751,19 @@ export function SprintVideoAnalyzer({ distances, testDistance, onClose, onConfir
                     size="sm"
                     variant="outline"
                     className="w-full"
-                    disabled={aiMarkersBusy}
-                    onClick={detectMarkersAI}
+                    disabled={calib.x0 === undefined || calib.xRef === undefined}
+                    onClick={interpolateMarkers}
+                    title="Répartit linéairement les repères intermédiaires entre 0 m et la distance de référence."
                   >
                     <Wand2 className="mr-1.5 h-3.5 w-3.5" />
-                    {aiMarkersBusy ? "Détection des repères…" : "Détecter les repères (IA)"}
+                    Interpoler les repères
                   </Button>
+                  <p className="text-[10px] text-muted-foreground">
+                    Placez d'abord les repères 0 m et {calib.refMeters} m sur la vidéo, puis interpolez pour obtenir les distances intermédiaires. Chaque repère reste déplaçable manuellement.
+                  </p>
                   {Object.keys(extraMarkers).length > 0 && (
                     <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-                      <span>{Object.keys(extraMarkers).length} repères détectés (interpolation activée)</span>
+                      <span>{Object.keys(extraMarkers).length} repères placés</span>
                       <button
                         type="button"
                         className="rounded border px-1.5 py-0.5 hover:bg-muted"
@@ -820,8 +771,6 @@ export function SprintVideoAnalyzer({ distances, testDistance, onClose, onConfir
                       >Effacer</button>
                     </div>
                   )}
-                  {aiMarkersNotes && <p className="text-[10px] text-muted-foreground italic">{aiMarkersNotes}</p>}
-                  {aiMarkersError && <p className="text-[10px] text-destructive">{aiMarkersError}</p>}
                   <Button
                     size="sm"
                     className="w-full gradient-primary text-primary-foreground"
