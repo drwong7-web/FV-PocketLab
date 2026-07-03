@@ -21,6 +21,56 @@ export interface ParsedAthlete {
 type Field = "lastName" | "firstName" | "mass" | "height" | "birthDate" | "bib" | "position";
 type Row = string[]; // cellules d'une ligne de tableau
 
+// ---------- Utilitaires géométriques ----------
+type XYItem = { x: number; y: number; s: string; h: number };
+
+/**
+ * Détecte les positions x de début de colonnes en construisant un histogramme
+ * des x et en regroupant les valeurs proches. Retourne les centres triés.
+ */
+function detectColumns(xs: number[], tol: number): number[] {
+  if (!xs.length) return [];
+  const sorted = [...xs].sort((a, b) => a - b);
+  const clusters: number[][] = [[sorted[0]]];
+  for (let i = 1; i < sorted.length; i++) {
+    const c = clusters[clusters.length - 1];
+    const mean = c.reduce((s, v) => s + v, 0) / c.length;
+    if (Math.abs(sorted[i] - mean) <= tol) c.push(sorted[i]);
+    else clusters.push([sorted[i]]);
+  }
+  // Ne garde que les colonnes qui apparaissent assez souvent (≥ 20% des lignes typiques)
+  const minSupport = Math.max(2, Math.floor(xs.length * 0.05));
+  return clusters
+    .filter((c) => c.length >= minSupport)
+    .map((c) => c.reduce((s, v) => s + v, 0) / c.length)
+    .sort((a, b) => a - b);
+}
+
+function snapItemsToColumns(band: XYItem[], cols: number[]): Row {
+  const cells: string[] = cols.map(() => "");
+  for (const it of band) {
+    let best = 0;
+    let bestDist = Infinity;
+    for (let k = 0; k < cols.length; k++) {
+      const d = Math.abs(it.x - cols[k]);
+      if (d < bestDist) { bestDist = d; best = k; }
+    }
+    cells[best] = cells[best] ? cells[best] + " " + it.s : it.s;
+  }
+  return cells.map((c) => c.trim());
+}
+
+async function rasterizePdfPage(page: unknown, scale = 2): Promise<HTMLCanvasElement> {
+  const p = page as { getViewport: (o: { scale: number }) => { width: number; height: number }; render: (o: { canvasContext: CanvasRenderingContext2D; viewport: unknown }) => { promise: Promise<void> } };
+  const viewport = p.getViewport({ scale });
+  const canvas = document.createElement("canvas");
+  canvas.width = viewport.width;
+  canvas.height = viewport.height;
+  const ctx = canvas.getContext("2d")!;
+  await p.render({ canvasContext: ctx, viewport }).promise;
+  return canvas;
+}
+
 // ---------- Extraction : PDF ----------
 async function extractPdfRows(file: File): Promise<Row[]> {
   const pdfjs = await import("pdfjs-dist");
@@ -32,42 +82,48 @@ async function extractPdfRows(file: File): Promise<Row[]> {
   for (let i = 1; i <= doc.numPages; i++) {
     const page = await doc.getPage(i);
     const content = await page.getTextContent();
-    type Item = { x: number; y: number; s: string; h: number };
-    const items: Item[] = [];
+    const items: XYItem[] = [];
     for (const it of content.items as Array<{ str: string; transform: number[]; height?: number }>) {
       const s = (it.str || "").trim();
       if (!s) continue;
       items.push({ x: it.transform[4], y: it.transform[5], s, h: it.height || 10 });
     }
-    if (!items.length) continue;
+
+    // PDF scanné : pas de couche texte → OCR sur le rendu de la page
+    if (items.length < 5) {
+      try {
+        const canvas = await rasterizePdfPage(page, 2);
+        const ocrRows = await extractCanvasRows(canvas);
+        rows.push(...ocrRows);
+      } catch { /* ignore */ }
+      continue;
+    }
+
     items.sort((a, b) => b.y - a.y || a.x - b.x);
-    // Regroupe par bande y (tolérance ~ demi-hauteur ligne)
-    const bands: Item[][] = [];
-    const tol = 4;
+    // Bandes y (une bande = une ligne visuelle)
+    const medH = items.map((it) => it.h).sort((a, b) => a - b)[Math.floor(items.length / 2)] || 10;
+    const yTol = Math.max(2, medH * 0.5);
+    const bands: XYItem[][] = [];
     for (const it of items) {
       const b = bands[bands.length - 1];
-      if (b && Math.abs(b[0].y - it.y) <= tol) b.push(it);
+      if (b && Math.abs(b[0].y - it.y) <= yTol) b.push(it);
       else bands.push([it]);
+    }
+    // Détection de colonnes globale à la page (histogramme des x)
+    const allX = items.map((it) => it.x);
+    const xTol = Math.max(6, medH * 1.2);
+    const cols = detectColumns(allX, xTol);
+    if (cols.length < 2) {
+      // Fallback : chaque bande = une ligne mono-cellule
+      for (const band of bands) {
+        band.sort((a, b) => a.x - b.x);
+        rows.push([band.map((it) => it.s).join(" ").trim()]);
+      }
+      continue;
     }
     for (const band of bands) {
       band.sort((a, b) => a.x - b.x);
-      // Regroupe en cellules quand l'écart x est important
-      const cells: string[] = [];
-      let cur = band[0].s;
-      let prev = band[0];
-      for (let k = 1; k < band.length; k++) {
-        const cur2 = band[k];
-        const gap = cur2.x - (prev.x + prev.s.length * (prev.h * 0.5));
-        if (gap > 12) {
-          cells.push(cur.trim());
-          cur = cur2.s;
-        } else {
-          cur += " " + cur2.s;
-        }
-        prev = cur2;
-      }
-      cells.push(cur.trim());
-      rows.push(cells.filter((c) => c.length));
+      rows.push(snapItemsToColumns(band, cols));
     }
   }
   return rows;
