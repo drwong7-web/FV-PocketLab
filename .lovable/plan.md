@@ -1,58 +1,49 @@
-# Suppression de la clé IA — passage en local
 
-Objectif : remplacer les deux seuls usages de Google Gemini par des solutions locales/gratuites (comme MediaPipe pour la pose), puis retirer complètement la section « Clé IA » de l'écran Paramètres.
+# Fiabiliser l'import de la liste des athlètes
 
-## 1. Détection des repères de sprint (SprintVideoAnalyzer)
+Le parseur actuel traite chaque ligne indépendamment sans tenir compte de la structure en tableau. Sur l'exemple fourni (colonnes `N° | Nom | Prénom | Date de Naissance | Taille | Poids`, cellules multi-lignes, numéros type `.1.`), cela produit :
+- Taille (ex. 154) capturée comme masse (car 154 ≤ 160), puis Poids (50) rejeté → mauvaise masse, taille manquante.
+- Noms multi-lignes (`FATIMA ZAHRA`, `PAULMICHE MICHOU`, `MABOUHA NGOMA / FLORE JAURESINE`) coupés en deux athlètes ou fusionnés au suivant.
+- L'en-tête `Date de Naissance` (sur 2 lignes) et le titre `Liste nominative…` parfois ingérés comme athlète.
 
-Actuellement, un appel Gemini analyse une frame et devine la position x normalisée de chaque cône/marque au sol.
+## Ce que je vais changer (fichier `src/lib/import/athletes.ts`)
 
-**Remplacement : placement manuel assisté par clic sur la frame.**
+1. **Extraction en lignes de tableau (pas en lignes de texte)**
+   - **PDF** : au lieu de concaténer par `y`, regrouper les items par bandes horizontales et exposer chaque item avec sa position `x` → on obtient des cellules (colonnes) ordonnées.
+   - **DOCX** : parser directement `<w:tbl><w:tr><w:tc>` avec JSZip pour produire des lignes = `string[]` (une entrée par cellule), en concaténant les `<w:p>` internes (gère les cellules multi-lignes type `FATIMA ZAHRA`).
+   - **Image (OCR)** : utiliser les `words` + `bbox` de tesseract pour clusteriser en lignes (par `y`) puis en colonnes (par `x` moyen), au lieu de `data.text` brut.
 
-- Retirer le bouton « Détection IA » et l'état `aiMarkersBusy` / `aiMarkersError` / `aiMarkersNotes`.
-- Ajouter un mini-panneau « Placer les repères » qui liste les distances attendues (0 m, distances intermédiaires, distance de référence).
-- L'utilisateur sélectionne une distance dans la liste, clique sur la vidéo/frame courante, et le point est stocké dans `extraMarkers[distance] = xNorm` (même state qu'aujourd'hui, mêmes downstream `calib.x0` / `calib.xRef`).
-- Aide automatique : après avoir placé 0 m et la distance de référence, proposer un bouton « Interpoler linéairement » qui remplit les distances restantes par interpolation entre `x0` et `xRef` (rapide, sans modèle).
+2. **Détection d'en-tête et mapping de colonnes**
+   - Repérer la ligne dont ≥ 2 cellules matchent `HEADER_WORDS` (`Nom`, `Prénom`, `Taille`, `Poids`, `Date…`, `N°`, `Poste`…).
+   - Fusionner les en-têtes multi-lignes (`Date de` + `Naissance`).
+   - Construire un mapping `columnIndex → field` (`lastName`, `firstName`, `mass`, `height`, `birthDate`, `bib`, `position`).
+   - Fallback heuristique si aucun en-tête détecté (comportement actuel).
 
-Pourquoi pas un modèle embarqué (YOLO ONNX / TF.js) : détecter des cônes génériques dans une vidéo terrain sans entraînement dédié est peu fiable et pèse 10–40 Mo. Le clic manuel est instantané, précis, gratuit, et cohérent avec les autres calibrations manuelles déjà présentes.
+3. **Assemblage des lignes de données**
+   - Ignorer toute ligne dont toutes les cellules sont des mots d'en-tête, ou qui contient le titre (`Liste nominative`, `pour la saison`, `équipe`, `club`).
+   - Détecter les lignes-suite (cellule N° vide **ou** ligne sans dossard/date mais avec des tokens en MAJUSCULES) et les rattacher à la ligne précédente (colle `FATIMA` + `ZAHRA`, `FLORE` + `JAURESINE`).
+   - Nettoyer le N° (`.1.` → `1`) et l'utiliser comme dossard/`bib`.
 
-## 2. Import de la liste d'athlètes (ImportPlayersDialog)
+4. **Extraction champ par champ (mapping-aware)**
+   - Quand le mapping est connu : lire directement la bonne colonne au lieu de deviner (fini l'inversion Taille/Poids).
+   - `Taille` : accepter `1.79 m`, `179`, `179 cm` → normaliser en cm.
+   - `Poids` : accepter `66`, `66 kg`, `66,5` → kg.
+   - `Date de Naissance` : garder la normalisation actuelle mais forcer JJ/MM/AAAA en priorité (contexte FR).
+   - Noms : ne plus rejeter les particules (`AIT`, `EL`, `HAJ`, `NGOMA`) ; conserver l'ordre `Nom` puis `Prénom` du tableau (l'inversion actuelle basée sur MAJUSCULES saute quand tout est en capitales).
 
-Actuellement, Gemini reçoit le PDF/DOCX/image et renvoie du JSON.
+5. **Déduplication plus stricte**
+   - Clé = `lastName|firstName|birthDate` (au lieu de `firstName|lastName`) pour ne pas fusionner deux `BOUKHAMI` différents (Siham vs Ouahiba).
 
-**Remplacement : extraction locale du texte + parseur heuristique local.**
+## Ce que je ne change pas
 
-- **DOCX** : réutiliser le code JSZip déjà présent dans `ai/client.ts` (aucune dépendance externe supplémentaire).
-- **PDF** : ajouter `pdfjs-dist` (ESM, moteur PDF de Mozilla, gratuit) → extraction du texte page par page côté navigateur.
-- **Image (PNG/JPG)** : ajouter `tesseract.js` (OCR WASM, gratuit, chargé à la demande depuis CDN comme MediaPipe) → texte brut.
-- Puis un **parseur local** `parseAthleteText(text)` :
-  - Split par lignes, ignore les en-têtes courants (`Nom`, `Prénom`, `Poids`, `Taille`, `Position`, `Date`, totaux, moyennes).
-  - Sur chaque ligne, regex pour extraire :
-    - `firstName` / `lastName` : tokens alphabétiques (support tirets, apostrophes, accents), les tokens en MAJUSCULES traités comme nom de famille.
-    - `mass` : nombre suivi de `kg` ou colonne numérique 40–160.
-    - `height` : nombre suivi de `cm` (ou `m` converti), plage 100–230.
-    - `birthDate` : formats `DD/MM/YYYY`, `YYYY-MM-DD`, `DD.MM.YYYY`.
-    - `position` : mot restant non numérique de la ligne (optionnel).
-  - Retour au même type `ParsedAthlete[]` → l'UI de vérification/édition existante (`ImportPlayersDialog`) reste inchangée.
-
-L'utilisateur peut toujours corriger chaque ligne avant validation, ce qui compense les erreurs OCR / parsing.
-
-## 3. Nettoyage du code IA
-
-- Supprimer `src/lib/ai/client.ts` (Gemini, clé, modèle).
-- Créer deux petits modules à la place :
-  - `src/lib/import/athletes.ts` — `parseAthletesFile(file)` local (pdfjs + tesseract + docx + parseur).
-  - Le placement de repères sprint reste géré dans le composant, pas de module dédié.
-- Retirer de `AppLayout.tsx` :
-  - Imports `getAIKey / setAIKey / getAIModel / setAIModel` et l'icône `Key`.
-  - États `aiKey`, `aiModel`, `showKey`, handler `saveAISettings`.
-  - Toute la `<section>` « Clé IA (Google Gemini) ».
-- Retirer de `SprintVideoAnalyzer.tsx` : import `detectSprintMarkers / hasAIKey / AIKeyMissingError`, fonction `detectMarkersAI`, bouton associé.
-- Retirer de `ImportPlayersDialog.tsx` : import `hasAIKey / AIKeyMissingError`, garde `if (!hasAIKey())`. Appel à `parseAthletesFile` désormais résolu par le module local.
-- `package.json` : ajouter `pdfjs-dist` et `tesseract.js`. `jszip` reste (déjà utilisé pour l'export snapshot et DOCX).
+- L'UI (`ImportPlayersDialog.tsx`) et les autres écrans : le contrat `ParsedAthlete[]` reste identique.
+- Les dépendances : toujours `pdfjs-dist`, `jszip`, `tesseract.js`, 100 % local.
+- Le reste de l'app.
 
 ## Vérification
 
-- `tsgo` doit passer (plus aucune référence à `ai/client`).
-- Paramètres : plus de section « Clé IA », plus d'icône clé.
-- Sprint : le bouton « Détection IA » disparaît, remplacé par la liste de placement manuel + « Interpoler ».
-- Import athlètes : un PDF simple / DOCX / image de test doit produire au moins une ligne pré-remplie éditable, sans jamais demander de clé.
+- Rejouer mentalement le parseur sur les 23 lignes de l'exemple :
+  - `.5. DAHMOS / FATIMA ZAHRA / 05/08/1992 / 164 / 51` → nom `DAHMOS`, prénom `FATIMA ZAHRA`, taille 164, poids 51.
+  - `.20. MABOUHA NGOMA / FLORE JAURESINE / 15/12/1999 / 176 / 59` → nom `MABOUHA NGOMA`, prénom `FLORE JAURESINE`.
+  - Ligne titre + ligne d'en-tête → ignorées.
+- Après implémentation, je testerai avec l'image fournie (OCR) et je te demanderai un PDF/DOCX si tu en as un pour valider les 3 chemins.

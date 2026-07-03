@@ -2,6 +2,10 @@
  * Import local d'une liste d'athlètes depuis un PDF, un DOCX ou une image.
  * Aucune API distante : pdfjs-dist (PDF), JSZip (DOCX) et tesseract.js (OCR)
  * s'exécutent 100 % dans le navigateur.
+ *
+ * Stratégie : reconstruire les LIGNES de tableau (cellules) plutôt que du texte
+ * brut, détecter l'en-tête pour mapper chaque colonne à un champ, et gérer les
+ * cellules multi-lignes (ex. « FATIMA ZAHRA »).
  */
 import JSZip from "jszip";
 
@@ -14,67 +18,226 @@ export interface ParsedAthlete {
   birthDate?: string;
 }
 
-// ---------- Extraction texte ----------
-async function extractPdfText(file: File): Promise<string> {
+type Field = "lastName" | "firstName" | "mass" | "height" | "birthDate" | "bib" | "position";
+type Row = string[]; // cellules d'une ligne de tableau
+
+// ---------- Extraction : PDF ----------
+async function extractPdfRows(file: File): Promise<Row[]> {
   const pdfjs = await import("pdfjs-dist");
-  // Worker via CDN (compatible Vite, pas besoin de bundler le worker).
   (pdfjs as unknown as { GlobalWorkerOptions: { workerSrc: string } }).GlobalWorkerOptions.workerSrc =
     `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
   const buf = await file.arrayBuffer();
   const doc = await pdfjs.getDocument({ data: buf }).promise;
-  const out: string[] = [];
+  const rows: Row[] = [];
   for (let i = 1; i <= doc.numPages; i++) {
     const page = await doc.getPage(i);
     const content = await page.getTextContent();
-    // Regroupe par ligne via l'ordonnée transform[5]
-    const byY = new Map<number, { x: number; s: string }[]>();
-    for (const item of content.items as Array<{ str: string; transform: number[] }>) {
-      const y = Math.round(item.transform[5]);
-      const x = item.transform[4];
-      if (!byY.has(y)) byY.set(y, []);
-      byY.get(y)!.push({ x, s: item.str });
+    type Item = { x: number; y: number; s: string; h: number };
+    const items: Item[] = [];
+    for (const it of content.items as Array<{ str: string; transform: number[]; height?: number }>) {
+      const s = (it.str || "").trim();
+      if (!s) continue;
+      items.push({ x: it.transform[4], y: it.transform[5], s, h: it.height || 10 });
     }
-    const ys = [...byY.keys()].sort((a, b) => b - a);
-    for (const y of ys) {
-      const line = byY.get(y)!.sort((a, b) => a.x - b.x).map((t) => t.s).join(" ").replace(/\s+/g, " ").trim();
-      if (line) out.push(line);
+    if (!items.length) continue;
+    items.sort((a, b) => b.y - a.y || a.x - b.x);
+    // Regroupe par bande y (tolérance ~ demi-hauteur ligne)
+    const bands: Item[][] = [];
+    const tol = 4;
+    for (const it of items) {
+      const b = bands[bands.length - 1];
+      if (b && Math.abs(b[0].y - it.y) <= tol) b.push(it);
+      else bands.push([it]);
+    }
+    for (const band of bands) {
+      band.sort((a, b) => a.x - b.x);
+      // Regroupe en cellules quand l'écart x est important
+      const cells: string[] = [];
+      let cur = band[0].s;
+      let prev = band[0];
+      for (let k = 1; k < band.length; k++) {
+        const cur2 = band[k];
+        const gap = cur2.x - (prev.x + prev.s.length * (prev.h * 0.5));
+        if (gap > 12) {
+          cells.push(cur.trim());
+          cur = cur2.s;
+        } else {
+          cur += " " + cur2.s;
+        }
+        prev = cur2;
+      }
+      cells.push(cur.trim());
+      rows.push(cells.filter((c) => c.length));
     }
   }
-  return out.join("\n");
+  return rows;
 }
 
-async function extractDocxText(file: File): Promise<string> {
+// ---------- Extraction : DOCX ----------
+async function extractDocxRows(file: File): Promise<Row[]> {
   const buf = new Uint8Array(await file.arrayBuffer());
   const zip = await JSZip.loadAsync(buf);
   const docFile = zip.file("word/document.xml");
   if (!docFile) throw new Error("DOCX invalide : word/document.xml introuvable");
   const xml = await docFile.async("string");
-  return xml
-    .replace(/<w:tab[^>]*\/>/g, "\t")
-    .replace(/<\/w:p>/g, "\n")
-    .replace(/<\/w:tr>/g, "\n")
-    .replace(/<w:tc[^>]*>/g, "\t")
-    .replace(/<[^>]+>/g, "")
-    .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"').replace(/&apos;/g, "'")
-    .replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n")
-    .trim();
+  const rows: Row[] = [];
+
+  // 1) Tableaux : parser explicitement <w:tr>/<w:tc>
+  const trRe = /<w:tr\b[^>]*>([\s\S]*?)<\/w:tr>/g;
+  const tcRe = /<w:tc\b[^>]*>([\s\S]*?)<\/w:tc>/g;
+  const pRe = /<w:p\b[^>]*>([\s\S]*?)<\/w:p>/g;
+  const tRe = /<w:t\b[^>]*>([\s\S]*?)<\/w:t>/g;
+  const decode = (s: string) =>
+    s.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+     .replace(/&quot;/g, '"').replace(/&apos;/g, "'");
+  const cellText = (tcInner: string): string => {
+    const paras: string[] = [];
+    let mp: RegExpExecArray | null;
+    pRe.lastIndex = 0;
+    while ((mp = pRe.exec(tcInner)) !== null) {
+      let piece = "";
+      let mt: RegExpExecArray | null;
+      const inner = mp[1];
+      const localTRe = /<w:t\b[^>]*>([\s\S]*?)<\/w:t>/g;
+      while ((mt = localTRe.exec(inner)) !== null) piece += mt[1];
+      const line = decode(piece).replace(/\s+/g, " ").trim();
+      if (line) paras.push(line);
+    }
+    return paras.join(" ");
+  };
+
+  let mtr: RegExpExecArray | null;
+  const seenTables = new Set<number>();
+  while ((mtr = trRe.exec(xml)) !== null) {
+    seenTables.add(mtr.index);
+    const cells: string[] = [];
+    let mtc: RegExpExecArray | null;
+    tcRe.lastIndex = 0;
+    while ((mtc = tcRe.exec(mtr[1])) !== null) {
+      cells.push(cellText(mtc[1]));
+    }
+    if (cells.some((c) => c.length)) rows.push(cells);
+  }
+
+  // 2) Fallback : si aucun tableau détecté, chaque paragraphe = une ligne mono-cellule
+  if (rows.length === 0) {
+    let mp: RegExpExecArray | null;
+    pRe.lastIndex = 0;
+    while ((mp = pRe.exec(xml)) !== null) {
+      let piece = "";
+      let mt: RegExpExecArray | null;
+      const localTRe = /<w:t\b[^>]*>([\s\S]*?)<\/w:t>/g;
+      while ((mt = localTRe.exec(mp[1])) !== null) piece += mt[1];
+      const line = decode(piece).replace(/\s+/g, " ").trim();
+      if (line) rows.push([line]);
+    }
+  }
+  // Aussi: tRe utilisé pour éviter lint « unused »
+  void tRe;
+  return rows;
 }
 
-async function extractImageText(file: File): Promise<string> {
+// ---------- Extraction : Image (OCR) ----------
+async function extractImageRows(file: File): Promise<Row[]> {
   const { recognize } = await import("tesseract.js");
   const url = URL.createObjectURL(file);
   try {
     const res = await recognize(url, "fra+eng");
-    return res.data.text || "";
+    // Utilise les lignes détectées par Tesseract (data.lines) avec bbox des mots
+    type TWord = { text: string; bbox: { x0: number; x1: number; y0: number; y1: number } };
+    type TLine = { words: TWord[]; bbox: { y0: number; y1: number } };
+    const data = res.data as unknown as { lines?: TLine[]; text?: string };
+    const rows: Row[] = [];
+    if (data.lines && data.lines.length) {
+      // Estimer un seuil de gap sur toute la page
+      const allGaps: number[] = [];
+      for (const ln of data.lines) {
+        const ws = ln.words.filter((w) => w.text.trim());
+        for (let k = 1; k < ws.length; k++) {
+          allGaps.push(ws[k].bbox.x0 - ws[k - 1].bbox.x1);
+        }
+      }
+      const median = (arr: number[]) => {
+        if (!arr.length) return 0;
+        const a = [...arr].sort((x, y) => x - y);
+        return a[Math.floor(a.length / 2)];
+      };
+      const gapThreshold = Math.max(20, median(allGaps) * 3);
+      for (const ln of data.lines) {
+        const ws = ln.words.filter((w) => w.text.trim());
+        if (!ws.length) continue;
+        const cells: string[] = [];
+        let cur = ws[0].text;
+        for (let k = 1; k < ws.length; k++) {
+          const gap = ws[k].bbox.x0 - ws[k - 1].bbox.x1;
+          if (gap > gapThreshold) { cells.push(cur.trim()); cur = ws[k].text; }
+          else cur += " " + ws[k].text;
+        }
+        cells.push(cur.trim());
+        rows.push(cells.filter(Boolean));
+      }
+    } else if (data.text) {
+      for (const line of data.text.split(/\r?\n/)) {
+        const cells = line.split(/\s{2,}|\t+/).map((s) => s.trim()).filter(Boolean);
+        if (cells.length) rows.push(cells);
+      }
+    }
+    return rows;
   } finally {
     URL.revokeObjectURL(url);
   }
 }
 
-// ---------- Parseur heuristique ----------
-const HEADER_WORDS = /^(nom|prenom|prénom|name|first|last|poids|weight|masse|kg|taille|height|cm|position|poste|role|rôle|date|naissance|birth|dob|n[°º]|num[eé]ro|equipe|équipe|team|club|total|moyenne|average|liste|joueurs?|athlètes?)$/i;
+// ---------- Extraction : texte brut ----------
+function extractPlainRows(text: string): Row[] {
+  const rows: Row[] = [];
+  for (const line of text.split(/\r?\n/)) {
+    const parts = line.split(/\t+|\s{2,}|[;|]+|,\s*/).map((s) => s.trim()).filter(Boolean);
+    if (parts.length) rows.push(parts);
+  }
+  return rows;
+}
+
+// ---------- Détection & normalisation ----------
+const HEADER_MAP: Array<{ field: Field; re: RegExp }> = [
+  { field: "lastName",  re: /^(nom|last\s*name|surname|family)$/i },
+  { field: "firstName", re: /^(pr[eé]nom|first\s*name|given)$/i },
+  { field: "birthDate", re: /^(date(\s*de)?(\s*naissance)?|naissance|birth(\s*date)?|dob|ddn)$/i },
+  { field: "height",    re: /^(taille|height|stature|cm)$/i },
+  { field: "mass",      re: /^(poids|weight|masse|kg)$/i },
+  { field: "bib",       re: /^(n[°ºo\.]?|#|num[eé]ro|dossard)$/i },
+  { field: "position",  re: /^(poste|position|role|r[oô]le)$/i },
+];
+const TITLE_RE = /(liste\s+nominative|saison\s+sportive|équipe|equipe|club|effectif)/i;
 const DATE_RE = /\b(\d{4}-\d{2}-\d{2}|\d{1,2}[\/.\-]\d{1,2}[\/.\-]\d{2,4})\b/;
+const BIB_RE = /^\.?\s*\d{1,3}\s*\.?$/;
+
+function headerFieldFor(cell: string): Field | null {
+  const c = cell.replace(/\s+/g, " ").trim();
+  if (!c) return null;
+  for (const { field, re } of HEADER_MAP) if (re.test(c)) return field;
+  return null;
+}
+
+function detectHeader(rows: Row[]): { index: number; map: Record<number, Field> } | null {
+  for (let i = 0; i < Math.min(rows.length, 20); i++) {
+    const row = rows[i];
+    const map: Record<number, Field> = {};
+    let hits = 0;
+    for (let j = 0; j < row.length; j++) {
+      const f = headerFieldFor(row[j]);
+      if (f) { map[j] = f; hits++; }
+    }
+    if (hits >= 2) return { index: i, map };
+  }
+  return null;
+}
+
+function mergeMultilineHeader(rows: Row[]): Row[] {
+  // Ex : ["Date de", "Naissance"] sur 2 lignes consécutives dans la même colonne.
+  // Peu utile ici car nos extracteurs gèrent déjà les <w:p> internes, on garde une passe simple.
+  return rows;
+}
 
 function normalizeDate(raw: string): string | undefined {
   const m = raw.match(DATE_RE);
@@ -85,116 +248,176 @@ function normalizeDate(raw: string): string | undefined {
   if (parts.length !== 3 || parts.some((n) => Number.isNaN(n))) return undefined;
   let [d, mo, y] = parts;
   if (y < 100) y += y < 30 ? 2000 : 1900;
-  if (d > 31 && mo <= 31) { [d, mo] = [mo, d]; }
+  // Format FR par défaut (JJ/MM/AAAA) ; on inverse seulement si incohérent
+  if (mo > 12 && d <= 12) [d, mo] = [mo, d];
+  if (mo > 12 || d > 31) return undefined;
   return `${y.toString().padStart(4, "0")}-${mo.toString().padStart(2, "0")}-${d.toString().padStart(2, "0")}`;
 }
 
-function looksLikeName(tok: string): boolean {
-  if (tok.length < 2) return false;
-  if (!/[A-Za-zÀ-ÿ]/.test(tok)) return false;
-  if (HEADER_WORDS.test(tok)) return false;
-  return /^[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ'’\-]*$/.test(tok);
+function parseNumber(raw: string): number | undefined {
+  const m = raw.match(/([0-9]+(?:[.,][0-9]+)?)/);
+  if (!m) return undefined;
+  const v = parseFloat(m[1].replace(",", "."));
+  return Number.isFinite(v) ? v : undefined;
+}
+function parseHeight(raw: string): number | undefined {
+  const v = parseNumber(raw);
+  if (v === undefined) return undefined;
+  if (v >= 1.2 && v <= 2.4) return Math.round(v * 100);
+  if (v >= 100 && v <= 230) return Math.round(v);
+  return undefined;
+}
+function parseMass(raw: string): number | undefined {
+  const v = parseNumber(raw);
+  if (v === undefined) return undefined;
+  if (v >= 25 && v <= 200) return v;
+  return undefined;
 }
 
-function parseLine(line: string): ParsedAthlete | null {
-  const clean = line.replace(/[|;]+/g, "\t").replace(/\s{2,}/g, "\t").trim();
-  if (!clean) return null;
+function cleanName(s: string): string {
+  return s.replace(/[.,;|]+/g, " ").replace(/\s+/g, " ").trim();
+}
 
-  const birthDate = normalizeDate(clean);
-  const withoutDate = birthDate ? clean.replace(DATE_RE, " ").trim() : clean;
+function isContinuationRow(row: Row, headerMap: Record<number, Field> | null): boolean {
+  // Ligne « suite » d'une ligne précédente : pas de dossard/date, seulement des mots (majuscules probablement)
+  const joined = row.join(" ").trim();
+  if (!joined) return false;
+  if (DATE_RE.test(joined)) return false;
+  // Aucune colonne ne ressemble à un dossard clair (.5. ou 5)
+  const hasBib = row.some((c) => BIB_RE.test(c.trim()));
+  if (hasBib) return false;
+  // Aucune valeur numérique standalone plausible (taille/poids)
+  const numCells = row.filter((c) => /^\s*\d+([.,]\d+)?\s*(kg|cm|m)?\s*$/i.test(c));
+  if (numCells.length >= 2) return false;
+  // Que des lettres/espaces → probablement suite de nom/prénom
+  const alphaOnly = row.every((c) => /^[A-Za-zÀ-ÿ' \-]+$/.test(c));
+  void headerMap;
+  return alphaOnly;
+}
 
-  const tokens = withoutDate.split(/[\s\t,]+/).filter(Boolean);
-  if (tokens.length < 2) return null;
+function isHeaderOrTitle(row: Row): boolean {
+  const joined = row.join(" ").trim();
+  if (!joined) return true;
+  if (TITLE_RE.test(joined)) return true;
+  // Ligne entièrement composée de mots d'en-tête
+  const words = joined.split(/\s+/).filter(Boolean);
+  if (words.length === 0) return true;
+  const headerHits = words.filter((w) => headerFieldFor(w) !== null).length;
+  return headerHits >= Math.max(2, Math.ceil(words.length * 0.6));
+}
 
-  // Détection masse / taille (kg / cm ou colonnes numériques)
-  let mass: number | undefined;
-  let height: number | undefined;
-  const remaining: string[] = [];
-  for (const raw of tokens) {
-    const kg = raw.match(/^([0-9]+(?:[.,][0-9]+)?)\s*kg$/i);
-    const cm = raw.match(/^([0-9]+(?:[.,][0-9]+)?)\s*cm$/i);
-    const m = raw.match(/^([0-9]+(?:[.,][0-9]+)?)\s*m$/i);
-    const numOnly = raw.match(/^([0-9]+(?:[.,][0-9]+)?)$/);
-    if (kg) { mass = parseFloat(kg[1].replace(",", ".")); continue; }
-    if (cm) { height = parseFloat(cm[1].replace(",", ".")); continue; }
-    if (m) {
-      const v = parseFloat(m[1].replace(",", "."));
-      if (v > 1.2 && v < 2.4) { height = v * 100; continue; }
-    }
-    if (numOnly) {
-      const v = parseFloat(numOnly[1].replace(",", "."));
-      if (mass === undefined && v >= 30 && v <= 160) { mass = v; continue; }
-      if (height === undefined && v >= 100 && v <= 230) { height = v; continue; }
-      if (height === undefined && v >= 1.2 && v <= 2.4) { height = v * 100; continue; }
-      // sinon dossard/numéro : on jette
+// ---------- Assemblage ----------
+function buildAthletes(rows: Row[]): ParsedAthlete[] {
+  rows = mergeMultilineHeader(rows);
+  const header = detectHeader(rows);
+  const startIdx = header ? header.index + 1 : 0;
+  const map = header?.map ?? null;
+
+  const dataRows: Row[] = [];
+  for (let i = startIdx; i < rows.length; i++) {
+    const row = rows[i];
+    if (isHeaderOrTitle(row)) continue;
+    if (dataRows.length > 0 && isContinuationRow(row, map)) {
+      // Fusion cellule à cellule sur la ligne précédente
+      const prev = dataRows[dataRows.length - 1];
+      const merged: Row = [];
+      const len = Math.max(prev.length, row.length);
+      for (let j = 0; j < len; j++) {
+        const a = (prev[j] || "").trim();
+        const b = (row[j] || "").trim();
+        merged.push([a, b].filter(Boolean).join(" ").trim());
+      }
+      dataRows[dataRows.length - 1] = merged;
       continue;
     }
-    remaining.push(raw);
+    dataRows.push(row);
   }
 
-  const nameTokens = remaining.filter(looksLikeName);
-  if (nameTokens.length < 2) return null;
-
-  // Un token entièrement en MAJUSCULES est probablement le nom de famille
-  const upper = nameTokens.filter((t) => t === t.toUpperCase() && /[A-ZÀ-Ý]/.test(t));
-  let firstName = "", lastName = "";
-  if (upper.length >= 1 && upper.length < nameTokens.length) {
-    lastName = upper.join(" ");
-    firstName = nameTokens.filter((t) => !upper.includes(t)).join(" ");
-  } else {
-    firstName = nameTokens[0];
-    lastName = nameTokens.slice(1, 3).join(" ");
-  }
-  firstName = firstName.trim();
-  lastName = lastName.trim();
-  if (!firstName || !lastName) return null;
-
-  // Position : token restant hors nom, non numérique, non header
-  const positionTokens = remaining.filter(
-    (t) => !nameTokens.includes(t) && !HEADER_WORDS.test(t) && !/^\d/.test(t),
-  );
-  const position = positionTokens.length > 0 ? positionTokens.join(" ") : undefined;
-
-  return { firstName, lastName, mass, height, position, birthDate };
-}
-
-function parseAthleteText(text: string): ParsedAthlete[] {
-  const seen = new Set<string>();
   const out: ParsedAthlete[] = [];
-  for (const rawLine of text.split(/\r?\n/)) {
-    const line = rawLine.trim();
-    if (!line) continue;
-    // Ignore lignes ne contenant que des mots d'en-tête
-    const wordsOnly = line.split(/[\s\t,;|]+/).filter(Boolean);
-    if (wordsOnly.length > 0 && wordsOnly.every((w) => HEADER_WORDS.test(w))) continue;
-    const parsed = parseLine(line);
-    if (!parsed) continue;
-    const key = `${parsed.firstName.toLowerCase()}|${parsed.lastName.toLowerCase()}`;
+  const seen = new Set<string>();
+  for (const row of dataRows) {
+    const athlete = map ? parseWithMap(row, map) : parseHeuristic(row);
+    if (!athlete) continue;
+    const key = `${athlete.lastName.toLowerCase()}|${athlete.firstName.toLowerCase()}|${athlete.birthDate ?? ""}`;
     if (seen.has(key)) continue;
     seen.add(key);
-    out.push(parsed);
+    out.push(athlete);
   }
   return out;
+}
+
+function parseWithMap(row: Row, map: Record<number, Field>): ParsedAthlete | null {
+  const get = (field: Field): string => {
+    for (const [idxStr, f] of Object.entries(map)) {
+      if (f === field) {
+        const idx = parseInt(idxStr, 10);
+        return (row[idx] || "").trim();
+      }
+    }
+    return "";
+  };
+  const lastName = cleanName(get("lastName"));
+  const firstName = cleanName(get("firstName"));
+  if (!lastName || !firstName) return null;
+  const heightRaw = get("height");
+  const massRaw = get("mass");
+  const dateRaw = get("birthDate");
+  const posRaw = get("position");
+  return {
+    lastName,
+    firstName,
+    height: heightRaw ? parseHeight(heightRaw) : undefined,
+    mass: massRaw ? parseMass(massRaw) : undefined,
+    birthDate: dateRaw ? normalizeDate(dateRaw) : undefined,
+    position: posRaw || undefined,
+  };
+}
+
+function parseHeuristic(row: Row): ParsedAthlete | null {
+  // Fallback : reconstruire à partir des cellules brutes
+  const flat = row.join(" \t ");
+  const birthDate = normalizeDate(flat);
+  const cells = row.map((c) => c.trim()).filter((c) => c && !BIB_RE.test(c));
+  const nameCells: string[] = [];
+  let mass: number | undefined, height: number | undefined;
+  for (const c of cells) {
+    if (DATE_RE.test(c)) continue;
+    const asNumOnly = /^[0-9]+(?:[.,][0-9]+)?\s*(kg|cm|m)?$/i.test(c);
+    if (asNumOnly) {
+      // Décider taille vs masse selon la plage
+      const h = parseHeight(c);
+      if (h && height === undefined) { height = h; continue; }
+      const m = parseMass(c);
+      if (m && mass === undefined) { mass = m; continue; }
+      continue;
+    }
+    nameCells.push(c);
+  }
+  if (nameCells.length < 2) return null;
+  const lastName = cleanName(nameCells[0]);
+  const firstName = cleanName(nameCells.slice(1).join(" "));
+  if (!lastName || !firstName) return null;
+  return { lastName, firstName, mass, height, birthDate };
 }
 
 // ---------- Entrée publique ----------
 export async function parseAthletesFile(file: File): Promise<ParsedAthlete[]> {
   const mime = (file.type || "").toLowerCase();
   const name = file.name.toLowerCase();
-  let text = "";
+  let rows: Row[] = [];
   if (mime.startsWith("image/") || /\.(png|jpe?g|webp|bmp|gif)$/.test(name)) {
-    text = await extractImageText(file);
+    rows = await extractImageRows(file);
   } else if (mime === "application/pdf" || name.endsWith(".pdf")) {
-    text = await extractPdfText(file);
+    rows = await extractPdfRows(file);
   } else if (
     mime.includes("officedocument.wordprocessingml") ||
     name.endsWith(".docx") || name.endsWith(".doc")
   ) {
-    text = await extractDocxText(file);
+    rows = await extractDocxRows(file);
   } else if (mime.startsWith("text/") || name.endsWith(".txt") || name.endsWith(".csv")) {
-    text = await file.text();
+    rows = extractPlainRows(await file.text());
   } else {
     throw new Error(`Type de fichier non supporté : ${mime || name}`);
   }
-  return parseAthleteText(text);
+  return buildAthletes(rows);
 }
