@@ -193,52 +193,75 @@ async function extractDocxRows(file: File): Promise<Row[]> {
   return rows;
 }
 
-// ---------- Extraction : Image (OCR) ----------
-async function extractImageRows(file: File): Promise<Row[]> {
+// ---------- Extraction : Image / Canvas (OCR) ----------
+type TWord = { text: string; bbox: { x0: number; x1: number; y0: number; y1: number } };
+
+async function ocrWords(source: string | HTMLCanvasElement): Promise<TWord[]> {
   const { recognize } = await import("tesseract.js");
-  const url = URL.createObjectURL(file);
-  try {
-    const res = await recognize(url, "fra+eng");
-    // Utilise les lignes détectées par Tesseract (data.lines) avec bbox des mots
-    type TWord = { text: string; bbox: { x0: number; x1: number; y0: number; y1: number } };
-    type TLine = { words: TWord[]; bbox: { y0: number; y1: number } };
-    const data = res.data as unknown as { lines?: TLine[]; text?: string };
-    const rows: Row[] = [];
-    if (data.lines && data.lines.length) {
-      // Estimer un seuil de gap sur toute la page
-      const allGaps: number[] = [];
-      for (const ln of data.lines) {
-        const ws = ln.words.filter((w) => w.text.trim());
-        for (let k = 1; k < ws.length; k++) {
-          allGaps.push(ws[k].bbox.x0 - ws[k - 1].bbox.x1);
-        }
-      }
-      const median = (arr: number[]) => {
-        if (!arr.length) return 0;
-        const a = [...arr].sort((x, y) => x - y);
-        return a[Math.floor(a.length / 2)];
-      };
-      const gapThreshold = Math.max(20, median(allGaps) * 3);
-      for (const ln of data.lines) {
-        const ws = ln.words.filter((w) => w.text.trim());
-        if (!ws.length) continue;
-        const cells: string[] = [];
-        let cur = ws[0].text;
-        for (let k = 1; k < ws.length; k++) {
-          const gap = ws[k].bbox.x0 - ws[k - 1].bbox.x1;
-          if (gap > gapThreshold) { cells.push(cur.trim()); cur = ws[k].text; }
-          else cur += " " + ws[k].text;
-        }
-        cells.push(cur.trim());
-        rows.push(cells.filter(Boolean));
-      }
-    } else if (data.text) {
-      for (const line of data.text.split(/\r?\n/)) {
-        const cells = line.split(/\s{2,}|\t+/).map((s) => s.trim()).filter(Boolean);
-        if (cells.length) rows.push(cells);
-      }
+  const res = await recognize(source, "fra+eng");
+  const data = res.data as unknown as {
+    words?: TWord[];
+    lines?: Array<{ words: TWord[] }>;
+    text?: string;
+  };
+  if (data.words && data.words.length) return data.words.filter((w) => w.text?.trim());
+  if (data.lines) {
+    const out: TWord[] = [];
+    for (const ln of data.lines) for (const w of ln.words || []) if (w.text?.trim()) out.push(w);
+    return out;
+  }
+  return [];
+}
+
+function wordsToRows(words: TWord[]): Row[] {
+  if (!words.length) return [];
+  // Étape 1 : lignes par cluster y (centre)
+  const withCenter = words.map((w) => ({
+    ...w,
+    cx: (w.bbox.x0 + w.bbox.x1) / 2,
+    cy: (w.bbox.y0 + w.bbox.y1) / 2,
+    h: w.bbox.y1 - w.bbox.y0,
+  }));
+  const medH = [...withCenter].map((w) => w.h).sort((a, b) => a - b)[Math.floor(withCenter.length / 2)] || 12;
+  const yTol = Math.max(4, medH * 0.6);
+  const sorted = [...withCenter].sort((a, b) => a.cy - b.cy);
+  const lines: typeof sorted[] = [];
+  for (const w of sorted) {
+    const last = lines[lines.length - 1];
+    if (last) {
+      const mean = last.reduce((s, v) => s + v.cy, 0) / last.length;
+      if (Math.abs(w.cy - mean) <= yTol) { last.push(w); continue; }
+    }
+    lines.push([w]);
+  }
+  // Étape 2 : colonnes globales (x0)
+  const cols = detectColumns(withCenter.map((w) => w.bbox.x0), Math.max(12, medH * 1.5));
+  const rows: Row[] = [];
+  if (cols.length < 2) {
+    for (const ln of lines) {
+      ln.sort((a, b) => a.bbox.x0 - b.bbox.x0);
+      rows.push([ln.map((w) => w.text).join(" ").trim()]);
     }
     return rows;
+  }
+  for (const ln of lines) {
+    ln.sort((a, b) => a.bbox.x0 - b.bbox.x0);
+    const items: XYItem[] = ln.map((w) => ({ x: w.bbox.x0, y: w.cy, s: w.text, h: w.h }));
+    rows.push(snapItemsToColumns(items, cols));
+  }
+  return rows;
+}
+
+async function extractCanvasRows(canvas: HTMLCanvasElement): Promise<Row[]> {
+  const words = await ocrWords(canvas);
+  return wordsToRows(words);
+}
+
+async function extractImageRows(file: File): Promise<Row[]> {
+  const url = URL.createObjectURL(file);
+  try {
+    const words = await ocrWords(url);
+    return wordsToRows(words);
   } finally {
     URL.revokeObjectURL(url);
   }
