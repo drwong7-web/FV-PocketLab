@@ -1,49 +1,43 @@
+# Corriger l'import PDF et image (fichier `src/lib/import/athletes.ts`)
 
-# Fiabiliser l'import de la liste des athlètes
+Le parsing DOCX marche parce qu'on lit directement les `<w:tr>/<w:tc>` : on connaît les cellules. Pour le PDF et l'image, on reconstruit les cellules à partir de positions (x, y) et l'heuristique actuelle est trop fragile :
 
-Le parseur actuel traite chaque ligne indépendamment sans tenir compte de la structure en tableau. Sur l'exemple fourni (colonnes `N° | Nom | Prénom | Date de Naissance | Taille | Poids`, cellules multi-lignes, numéros type `.1.`), cela produit :
-- Taille (ex. 154) capturée comme masse (car 154 ≤ 160), puis Poids (50) rejeté → mauvaise masse, taille manquante.
-- Noms multi-lignes (`FATIMA ZAHRA`, `PAULMICHE MICHOU`, `MABOUHA NGOMA / FLORE JAURESINE`) coupés en deux athlètes ou fusionnés au suivant.
-- L'en-tête `Date de Naissance` (sur 2 lignes) et le titre `Liste nominative…` parfois ingérés comme athlète.
+- **PDF** : le seuil de gap (`> 12`) est en unités PDF, indépendant de la taille de police. Sur un tableau serré, deux colonnes fusionnent ; sur un tableau large, un prénom composé se coupe en deux colonnes. Résultat : `Taille` finit dans la colonne `Poids`, ou le prénom mange la date.
+- **PDF scanné** : `getTextContent()` renvoie zéro item, on ne tente jamais l'OCR → aucune ligne extraite.
+- **Image** : le seuil de gap est global à la page (médiane × 3). Une page avec beaucoup de mots collés (noms) écrase la médiane et la détection de colonnes s'effondre. Aucun alignement vertical n'est vérifié, donc `176` d'une ligne peut être classé avec le prénom d'une autre.
 
-## Ce que je vais changer (fichier `src/lib/import/athletes.ts`)
+## Ce que je vais changer
 
-1. **Extraction en lignes de tableau (pas en lignes de texte)**
-   - **PDF** : au lieu de concaténer par `y`, regrouper les items par bandes horizontales et exposer chaque item avec sa position `x` → on obtient des cellules (colonnes) ordonnées.
-   - **DOCX** : parser directement `<w:tbl><w:tr><w:tc>` avec JSZip pour produire des lignes = `string[]` (une entrée par cellule), en concaténant les `<w:p>` internes (gère les cellules multi-lignes type `FATIMA ZAHRA`).
-   - **Image (OCR)** : utiliser les `words` + `bbox` de tesseract pour clusteriser en lignes (par `y`) puis en colonnes (par `x` moyen), au lieu de `data.text` brut.
+### 1) PDF avec texte : détection de colonnes par histogramme, pas par gap local
+- Regrouper les items en bandes y (comme aujourd'hui).
+- Sur toutes les bandes, construire un **histogramme des positions x de début d'item**. Les pics = bords de colonnes du tableau.
+- Snap chaque item à sa colonne la plus proche → chaque ligne devient `Row = string[]` aligné (même longueur pour toutes les lignes).
+- Concaténer les items d'une même colonne avec un espace (gère "FATIMA ZAHRA" dans une seule cellule).
 
-2. **Détection d'en-tête et mapping de colonnes**
-   - Repérer la ligne dont ≥ 2 cellules matchent `HEADER_WORDS` (`Nom`, `Prénom`, `Taille`, `Poids`, `Date…`, `N°`, `Poste`…).
-   - Fusionner les en-têtes multi-lignes (`Date de` + `Naissance`).
-   - Construire un mapping `columnIndex → field` (`lastName`, `firstName`, `mass`, `height`, `birthDate`, `bib`, `position`).
-   - Fallback heuristique si aucun en-tête détecté (comportement actuel).
+Bénéfice : plus de dépendance à un seuil magique ; les colonnes `Nom / Prénom / Date / Taille / Poids` restent séparées même quand elles sont proches.
 
-3. **Assemblage des lignes de données**
-   - Ignorer toute ligne dont toutes les cellules sont des mots d'en-tête, ou qui contient le titre (`Liste nominative`, `pour la saison`, `équipe`, `club`).
-   - Détecter les lignes-suite (cellule N° vide **ou** ligne sans dossard/date mais avec des tokens en MAJUSCULES) et les rattacher à la ligne précédente (colle `FATIMA` + `ZAHRA`, `FLORE` + `JAURESINE`).
-   - Nettoyer le N° (`.1.` → `1`) et l'utiliser comme dossard/`bib`.
+### 2) PDF scanné : fallback OCR automatique
+- Si une page renvoie < 5 items texte, la rasteriser via `page.render()` sur un `<canvas>` (déjà dispo via pdfjs, aucune dépendance ajoutée) puis passer le canvas à **tesseract.js** avec la même logique que l'image (voir §3).
+- On garde 100 % local, aucune API.
 
-4. **Extraction champ par champ (mapping-aware)**
-   - Quand le mapping est connu : lire directement la bonne colonne au lieu de deviner (fini l'inversion Taille/Poids).
-   - `Taille` : accepter `1.79 m`, `179`, `179 cm` → normaliser en cm.
-   - `Poids` : accepter `66`, `66 kg`, `66,5` → kg.
-   - `Date de Naissance` : garder la normalisation actuelle mais forcer JJ/MM/AAAA en priorité (contexte FR).
-   - Noms : ne plus rejeter les particules (`AIT`, `EL`, `HAJ`, `NGOMA`) ; conserver l'ordre `Nom` puis `Prénom` du tableau (l'inversion actuelle basée sur MAJUSCULES saute quand tout est en capitales).
+### 3) Image (OCR) : clustering 2D au lieu d'un seuil de gap global
+- Extraire `words` + `bbox` de tesseract (déjà fait).
+- **Étape lignes** : clusteriser par centre y avec tolérance = 0.6 × hauteur médiane des mots (au lieu d'utiliser `data.lines` de tesseract, qui coupe mal les lignes serrées).
+- **Étape colonnes** : construire un histogramme des `bbox.x0` sur toute la page ; les pics = colonnes. Attribuer chaque mot à sa colonne la plus proche. Concaténer par colonne.
+- Résultat : chaque `Row` a la même longueur que l'en-tête, donc `parseWithMap` lit la bonne colonne.
 
-5. **Déduplication plus stricte**
-   - Clé = `lastName|firstName|birthDate` (au lieu de `firstName|lastName`) pour ne pas fusionner deux `BOUKHAMI` différents (Siham vs Ouahiba).
+### 4) Filtres partagés (déjà en place mais renforcés)
+- Ignorer les lignes où **toutes** les cellules non vides matchent des mots d'en-tête (évite d'ingérer `Nom Prénom Taille Poids` sur la 2ᵉ page d'un PDF paginé).
+- Ignorer les lignes titre (`Liste nominative…`, `Saison…`, `Équipe…`).
+- Ligne "suite" (nom multi-lignes) : détectée quand la cellule N°/dossard est vide et qu'il n'y a ni date ni ≥ 2 nombres → fusion avec la ligne précédente cellule par cellule.
 
-## Ce que je ne change pas
+## Ce que je ne touche pas
 
-- L'UI (`ImportPlayersDialog.tsx`) et les autres écrans : le contrat `ParsedAthlete[]` reste identique.
-- Les dépendances : toujours `pdfjs-dist`, `jszip`, `tesseract.js`, 100 % local.
-- Le reste de l'app.
+- L'UI `ImportPlayersDialog.tsx` et le contrat `ParsedAthlete[]` restent identiques.
+- Pas de nouvelle dépendance : `pdfjs-dist`, `jszip`, `tesseract.js` déjà présents.
+- Le chemin DOCX qui fonctionne aujourd'hui n'est pas modifié.
 
 ## Vérification
 
-- Rejouer mentalement le parseur sur les 23 lignes de l'exemple :
-  - `.5. DAHMOS / FATIMA ZAHRA / 05/08/1992 / 164 / 51` → nom `DAHMOS`, prénom `FATIMA ZAHRA`, taille 164, poids 51.
-  - `.20. MABOUHA NGOMA / FLORE JAURESINE / 15/12/1999 / 176 / 59` → nom `MABOUHA NGOMA`, prénom `FLORE JAURESINE`.
-  - Ligne titre + ligne d'en-tête → ignorées.
-- Après implémentation, je testerai avec l'image fournie (OCR) et je te demanderai un PDF/DOCX si tu en as un pour valider les 3 chemins.
+- Envoie-moi un PDF **texte** et une image (ou un PDF scanné) qui échouent aujourd'hui : je rejoue l'extraction avant/après et je te montre les `Row[]` produits pour valider que les colonnes sont bien alignées.
+- Si tu n'as qu'un exemple sous la main, je commence par lui et j'itère.

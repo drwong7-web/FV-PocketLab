@@ -21,6 +21,56 @@ export interface ParsedAthlete {
 type Field = "lastName" | "firstName" | "mass" | "height" | "birthDate" | "bib" | "position";
 type Row = string[]; // cellules d'une ligne de tableau
 
+// ---------- Utilitaires géométriques ----------
+type XYItem = { x: number; y: number; s: string; h: number };
+
+/**
+ * Détecte les positions x de début de colonnes en construisant un histogramme
+ * des x et en regroupant les valeurs proches. Retourne les centres triés.
+ */
+function detectColumns(xs: number[], tol: number): number[] {
+  if (!xs.length) return [];
+  const sorted = [...xs].sort((a, b) => a - b);
+  const clusters: number[][] = [[sorted[0]]];
+  for (let i = 1; i < sorted.length; i++) {
+    const c = clusters[clusters.length - 1];
+    const mean = c.reduce((s, v) => s + v, 0) / c.length;
+    if (Math.abs(sorted[i] - mean) <= tol) c.push(sorted[i]);
+    else clusters.push([sorted[i]]);
+  }
+  // Ne garde que les colonnes qui apparaissent assez souvent (≥ 20% des lignes typiques)
+  const minSupport = Math.max(2, Math.floor(xs.length * 0.05));
+  return clusters
+    .filter((c) => c.length >= minSupport)
+    .map((c) => c.reduce((s, v) => s + v, 0) / c.length)
+    .sort((a, b) => a - b);
+}
+
+function snapItemsToColumns(band: XYItem[], cols: number[]): Row {
+  const cells: string[] = cols.map(() => "");
+  for (const it of band) {
+    let best = 0;
+    let bestDist = Infinity;
+    for (let k = 0; k < cols.length; k++) {
+      const d = Math.abs(it.x - cols[k]);
+      if (d < bestDist) { bestDist = d; best = k; }
+    }
+    cells[best] = cells[best] ? cells[best] + " " + it.s : it.s;
+  }
+  return cells.map((c) => c.trim());
+}
+
+async function rasterizePdfPage(page: unknown, scale = 2): Promise<HTMLCanvasElement> {
+  const p = page as { getViewport: (o: { scale: number }) => { width: number; height: number }; render: (o: { canvasContext: CanvasRenderingContext2D; viewport: unknown }) => { promise: Promise<void> } };
+  const viewport = p.getViewport({ scale });
+  const canvas = document.createElement("canvas");
+  canvas.width = viewport.width;
+  canvas.height = viewport.height;
+  const ctx = canvas.getContext("2d")!;
+  await p.render({ canvasContext: ctx, viewport }).promise;
+  return canvas;
+}
+
 // ---------- Extraction : PDF ----------
 async function extractPdfRows(file: File): Promise<Row[]> {
   const pdfjs = await import("pdfjs-dist");
@@ -32,42 +82,48 @@ async function extractPdfRows(file: File): Promise<Row[]> {
   for (let i = 1; i <= doc.numPages; i++) {
     const page = await doc.getPage(i);
     const content = await page.getTextContent();
-    type Item = { x: number; y: number; s: string; h: number };
-    const items: Item[] = [];
+    const items: XYItem[] = [];
     for (const it of content.items as Array<{ str: string; transform: number[]; height?: number }>) {
       const s = (it.str || "").trim();
       if (!s) continue;
       items.push({ x: it.transform[4], y: it.transform[5], s, h: it.height || 10 });
     }
-    if (!items.length) continue;
+
+    // PDF scanné : pas de couche texte → OCR sur le rendu de la page
+    if (items.length < 5) {
+      try {
+        const canvas = await rasterizePdfPage(page, 2);
+        const ocrRows = await extractCanvasRows(canvas);
+        rows.push(...ocrRows);
+      } catch { /* ignore */ }
+      continue;
+    }
+
     items.sort((a, b) => b.y - a.y || a.x - b.x);
-    // Regroupe par bande y (tolérance ~ demi-hauteur ligne)
-    const bands: Item[][] = [];
-    const tol = 4;
+    // Bandes y (une bande = une ligne visuelle)
+    const medH = items.map((it) => it.h).sort((a, b) => a - b)[Math.floor(items.length / 2)] || 10;
+    const yTol = Math.max(2, medH * 0.5);
+    const bands: XYItem[][] = [];
     for (const it of items) {
       const b = bands[bands.length - 1];
-      if (b && Math.abs(b[0].y - it.y) <= tol) b.push(it);
+      if (b && Math.abs(b[0].y - it.y) <= yTol) b.push(it);
       else bands.push([it]);
+    }
+    // Détection de colonnes globale à la page (histogramme des x)
+    const allX = items.map((it) => it.x);
+    const xTol = Math.max(6, medH * 1.2);
+    const cols = detectColumns(allX, xTol);
+    if (cols.length < 2) {
+      // Fallback : chaque bande = une ligne mono-cellule
+      for (const band of bands) {
+        band.sort((a, b) => a.x - b.x);
+        rows.push([band.map((it) => it.s).join(" ").trim()]);
+      }
+      continue;
     }
     for (const band of bands) {
       band.sort((a, b) => a.x - b.x);
-      // Regroupe en cellules quand l'écart x est important
-      const cells: string[] = [];
-      let cur = band[0].s;
-      let prev = band[0];
-      for (let k = 1; k < band.length; k++) {
-        const cur2 = band[k];
-        const gap = cur2.x - (prev.x + prev.s.length * (prev.h * 0.5));
-        if (gap > 12) {
-          cells.push(cur.trim());
-          cur = cur2.s;
-        } else {
-          cur += " " + cur2.s;
-        }
-        prev = cur2;
-      }
-      cells.push(cur.trim());
-      rows.push(cells.filter((c) => c.length));
+      rows.push(snapItemsToColumns(band, cols));
     }
   }
   return rows;
@@ -137,52 +193,75 @@ async function extractDocxRows(file: File): Promise<Row[]> {
   return rows;
 }
 
-// ---------- Extraction : Image (OCR) ----------
-async function extractImageRows(file: File): Promise<Row[]> {
+// ---------- Extraction : Image / Canvas (OCR) ----------
+type TWord = { text: string; bbox: { x0: number; x1: number; y0: number; y1: number } };
+
+async function ocrWords(source: string | HTMLCanvasElement): Promise<TWord[]> {
   const { recognize } = await import("tesseract.js");
-  const url = URL.createObjectURL(file);
-  try {
-    const res = await recognize(url, "fra+eng");
-    // Utilise les lignes détectées par Tesseract (data.lines) avec bbox des mots
-    type TWord = { text: string; bbox: { x0: number; x1: number; y0: number; y1: number } };
-    type TLine = { words: TWord[]; bbox: { y0: number; y1: number } };
-    const data = res.data as unknown as { lines?: TLine[]; text?: string };
-    const rows: Row[] = [];
-    if (data.lines && data.lines.length) {
-      // Estimer un seuil de gap sur toute la page
-      const allGaps: number[] = [];
-      for (const ln of data.lines) {
-        const ws = ln.words.filter((w) => w.text.trim());
-        for (let k = 1; k < ws.length; k++) {
-          allGaps.push(ws[k].bbox.x0 - ws[k - 1].bbox.x1);
-        }
-      }
-      const median = (arr: number[]) => {
-        if (!arr.length) return 0;
-        const a = [...arr].sort((x, y) => x - y);
-        return a[Math.floor(a.length / 2)];
-      };
-      const gapThreshold = Math.max(20, median(allGaps) * 3);
-      for (const ln of data.lines) {
-        const ws = ln.words.filter((w) => w.text.trim());
-        if (!ws.length) continue;
-        const cells: string[] = [];
-        let cur = ws[0].text;
-        for (let k = 1; k < ws.length; k++) {
-          const gap = ws[k].bbox.x0 - ws[k - 1].bbox.x1;
-          if (gap > gapThreshold) { cells.push(cur.trim()); cur = ws[k].text; }
-          else cur += " " + ws[k].text;
-        }
-        cells.push(cur.trim());
-        rows.push(cells.filter(Boolean));
-      }
-    } else if (data.text) {
-      for (const line of data.text.split(/\r?\n/)) {
-        const cells = line.split(/\s{2,}|\t+/).map((s) => s.trim()).filter(Boolean);
-        if (cells.length) rows.push(cells);
-      }
+  const res = await recognize(source, "fra+eng");
+  const data = res.data as unknown as {
+    words?: TWord[];
+    lines?: Array<{ words: TWord[] }>;
+    text?: string;
+  };
+  if (data.words && data.words.length) return data.words.filter((w) => w.text?.trim());
+  if (data.lines) {
+    const out: TWord[] = [];
+    for (const ln of data.lines) for (const w of ln.words || []) if (w.text?.trim()) out.push(w);
+    return out;
+  }
+  return [];
+}
+
+function wordsToRows(words: TWord[]): Row[] {
+  if (!words.length) return [];
+  // Étape 1 : lignes par cluster y (centre)
+  const withCenter = words.map((w) => ({
+    ...w,
+    cx: (w.bbox.x0 + w.bbox.x1) / 2,
+    cy: (w.bbox.y0 + w.bbox.y1) / 2,
+    h: w.bbox.y1 - w.bbox.y0,
+  }));
+  const medH = [...withCenter].map((w) => w.h).sort((a, b) => a - b)[Math.floor(withCenter.length / 2)] || 12;
+  const yTol = Math.max(4, medH * 0.6);
+  const sorted = [...withCenter].sort((a, b) => a.cy - b.cy);
+  const lines: typeof sorted[] = [];
+  for (const w of sorted) {
+    const last = lines[lines.length - 1];
+    if (last) {
+      const mean = last.reduce((s, v) => s + v.cy, 0) / last.length;
+      if (Math.abs(w.cy - mean) <= yTol) { last.push(w); continue; }
+    }
+    lines.push([w]);
+  }
+  // Étape 2 : colonnes globales (x0)
+  const cols = detectColumns(withCenter.map((w) => w.bbox.x0), Math.max(12, medH * 1.5));
+  const rows: Row[] = [];
+  if (cols.length < 2) {
+    for (const ln of lines) {
+      ln.sort((a, b) => a.bbox.x0 - b.bbox.x0);
+      rows.push([ln.map((w) => w.text).join(" ").trim()]);
     }
     return rows;
+  }
+  for (const ln of lines) {
+    ln.sort((a, b) => a.bbox.x0 - b.bbox.x0);
+    const items: XYItem[] = ln.map((w) => ({ x: w.bbox.x0, y: w.cy, s: w.text, h: w.h }));
+    rows.push(snapItemsToColumns(items, cols));
+  }
+  return rows;
+}
+
+async function extractCanvasRows(canvas: HTMLCanvasElement): Promise<Row[]> {
+  const words = await ocrWords(canvas);
+  return wordsToRows(words);
+}
+
+async function extractImageRows(file: File): Promise<Row[]> {
+  const url = URL.createObjectURL(file);
+  try {
+    const words = await ocrWords(url);
+    return wordsToRows(words);
   } finally {
     URL.revokeObjectURL(url);
   }
