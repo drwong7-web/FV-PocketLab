@@ -323,12 +323,13 @@ const HEADER_MAP: Array<{ field: Field; re: RegExp }> = [
   { field: "birthDate", re: /^(date(\s*de)?(\s*naissance)?|naissance|birth(\s*date)?|dob|ddn)$/i },
   { field: "height",    re: /^(taille|height|stature|cm)$/i },
   { field: "mass",      re: /^(poids|weight|masse|kg)$/i },
-  { field: "bib",       re: /^(n[°ºo\.]?|#|num[eé]ro|dossard)$/i },
+  { field: "bib",       re: /^(n[°ºo0\.\s]*|no\.?|num[eé]ro|dossard|#)$/i },
   { field: "position",  re: /^(poste|position|role|r[oô]le)$/i },
 ];
-const TITLE_RE = /(liste\s+nominative|saison\s+sportive|équipe|equipe|club|effectif)/i;
+const TITLE_RE = /(liste\s+nominative|saison\s+sportive|pour\s+la\s+saison|équipe|equipe|club|effectif|asfar)/i;
 const DATE_RE = /\b(\d{4}-\d{2}-\d{2}|\d{1,2}[\/.\-]\d{1,2}[\/.\-]\d{2,4})\b/;
 const BIB_RE = /^\.?\s*\d{1,3}\s*\.?$/;
+
 
 function headerFieldFor(cell: string): Field | null {
   const c = cell.replace(/\s+/g, " ").trim();
