@@ -194,23 +194,43 @@ async function extractDocxRows(file: File): Promise<Row[]> {
 }
 
 // ---------- Extraction : Image / Canvas (OCR) ----------
-type TWord = { text: string; bbox: { x0: number; x1: number; y0: number; y1: number } };
+type TWord = { text: string; bbox: { x0: number; x1: number; y0: number; y1: number }; confidence?: number };
 
-async function ocrWords(source: string | HTMLCanvasElement): Promise<TWord[]> {
-  const { recognize } = await import("tesseract.js");
-  const res = await recognize(source, "fra+eng");
+async function ocrRecognize(source: string | HTMLCanvasElement): Promise<{ words: TWord[]; text: string }> {
+  const tess = await import("tesseract.js");
+  // tesseract.js v5 : par défaut les blocks/words ne sont PAS retournés.
+  // On les active explicitement.
+  const res = await tess.recognize(source, "fra+eng", {
+    // @ts-expect-error option supportée mais absente des types v5
+    output: { text: true, blocks: true, hocr: false, tsv: false },
+  });
   const data = res.data as unknown as {
+    text?: string;
     words?: TWord[];
     lines?: Array<{ words: TWord[] }>;
-    text?: string;
+    blocks?: Array<{
+      paragraphs?: Array<{
+        lines?: Array<{
+          words?: TWord[];
+        }>;
+      }>;
+    }>;
   };
-  if (data.words && data.words.length) return data.words.filter((w) => w.text?.trim());
-  if (data.lines) {
-    const out: TWord[] = [];
-    for (const ln of data.lines) for (const w of ln.words || []) if (w.text?.trim()) out.push(w);
-    return out;
+  const words: TWord[] = [];
+  const push = (w: TWord) => {
+    const t = (w?.text || "").trim();
+    if (!t) return;
+    if (typeof w.confidence === "number" && w.confidence < 30) return;
+    words.push({ text: t, bbox: w.bbox, confidence: w.confidence });
+  };
+  if (Array.isArray(data.words)) data.words.forEach(push);
+  if (!words.length && Array.isArray(data.lines)) {
+    for (const ln of data.lines) for (const w of ln.words || []) push(w);
   }
-  return [];
+  if (!words.length && Array.isArray(data.blocks)) {
+    for (const b of data.blocks) for (const p of b.paragraphs || []) for (const ln of p.lines || []) for (const w of ln.words || []) push(w);
+  }
+  return { words, text: data.text || "" };
 }
 
 function wordsToRows(words: TWord[]): Row[] {
@@ -252,20 +272,39 @@ function wordsToRows(words: TWord[]): Row[] {
   return rows;
 }
 
+/** Fallback : reconstruire les lignes depuis `data.text` en scindant sur les espaces multiples que Tesseract insère entre colonnes. */
+function textToRows(text: string): Row[] {
+  const rows: Row[] = [];
+  for (const raw of text.split(/\r?\n/)) {
+    const line = raw.replace(/\s+$/, "");
+    if (!line.trim()) continue;
+    const parts = line.split(/\t+|\s{2,}/).map((s) => s.trim()).filter(Boolean);
+    if (parts.length) rows.push(parts);
+  }
+  return rows;
+}
+
 async function extractCanvasRows(canvas: HTMLCanvasElement): Promise<Row[]> {
-  const words = await ocrWords(canvas);
-  return wordsToRows(words);
+  const { words, text } = await ocrRecognize(canvas);
+  const rows = wordsToRows(words);
+  if (rows.length >= 3) return rows;
+  const alt = textToRows(text);
+  return alt.length > rows.length ? alt : rows;
 }
 
 async function extractImageRows(file: File): Promise<Row[]> {
   const url = URL.createObjectURL(file);
   try {
-    const words = await ocrWords(url);
-    return wordsToRows(words);
+    const { words, text } = await ocrRecognize(url);
+    const rows = wordsToRows(words);
+    if (rows.length >= 3) return rows;
+    const alt = textToRows(text);
+    return alt.length > rows.length ? alt : rows;
   } finally {
     URL.revokeObjectURL(url);
   }
 }
+
 
 // ---------- Extraction : texte brut ----------
 function extractPlainRows(text: string): Row[] {
