@@ -30,48 +30,29 @@ export default function AppLayout() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [exportDir, setExportDir] = useState<string | null>(null);
   const [syncProvider, setSyncProviderState] = useState<SyncProvider>("none");
-  const [webdavUrl, setWebdavUrl] = useState("");
-  const [webdavUser, setWebdavUser] = useState("");
-  const [webdavPass, setWebdavPass] = useState("");
-  const [webdavPath, setWebdavPath] = useState("/SprintLab/snapshot.slfv");
-  const [gdriveClientId, setGdriveClientId] = useState("");
-  const [gdriveFileName, setGdriveFileName] = useState("sprintlab.slfv");
   const [syncBusy, setSyncBusy] = useState<null | "push" | "pull" | "both">(null);
   const [lastSyncAt, setLastSyncAt] = useState<number | undefined>(undefined);
   const pickerSupported = isDirectoryPickerSupported();
   const inIframe = isInIframe();
+  const preferredProvider = detectPreferredProvider();
+  const gdriveAvailable = !!managedGoogleClientId();
 
   useEffect(() => {
     if (settingsOpen) {
       setExportDir(getExportDirectoryLabel());
       const cfg = getPublicConfig();
       setSyncProviderState(cfg.provider);
-      setWebdavUrl(cfg.webdavUrl || "");
-      setWebdavUser(cfg.webdavUser || "");
-      setWebdavPath(cfg.webdavPath || "/SprintLab/snapshot.slfv");
-      setGdriveClientId(cfg.gdriveClientId || "");
-      setGdriveFileName(cfg.gdriveFileName || "sprintlab.slfv");
       setLastSyncAt(getSyncState().lastSyncAt);
-      getSecretConfig().then((s) => setWebdavPass(s.webdavPassword || ""));
     }
   }, [settingsOpen]);
 
-  const saveSyncSettings = async () => {
-    try {
-      setPublicConfig({
-        provider: syncProvider,
-        webdavUrl: webdavUrl.trim() || undefined,
-        webdavUser: webdavUser.trim() || undefined,
-        webdavPath: webdavPath.trim() || undefined,
-        gdriveClientId: gdriveClientId.trim() || undefined,
-        gdriveFileName: gdriveFileName.trim() || undefined,
-      });
-      const prev = await getSecretConfig();
-      await setSecretConfig({ ...prev, webdavPassword: webdavPass || undefined });
-      toast.success("Configuration sync enregistrée");
-    } catch (e) {
-      toast.error((e as Error).message);
-    }
+  const enableSync = (provider: Exclude<SyncProvider, "none">) => {
+    setPublicConfig({ provider, fileName: "sprintlab.slfv" });
+    setSyncProviderState(provider);
+  };
+  const disableSync = () => {
+    setPublicConfig({ provider: "none" });
+    setSyncProviderState("none");
   };
 
   const runSync = async (kind: "push" | "pull" | "both") => {
@@ -82,14 +63,16 @@ export default function AppLayout() {
       if (!res.ok) { toast.error(res.error || "Erreur de synchronisation"); return; }
       setLastSyncAt(getSyncState().lastSyncAt);
       if (kind === "pull" && res.pulled) {
-        toast.success(`Pull OK — ${res.pulled.totalKeys} clés (${res.pulled.added} ajoutées)`);
+        toast.success(`Récupération OK — ${res.pulled.totalKeys} clés (${res.pulled.added} ajoutées)`);
       } else if (kind === "push") {
-        toast.success("Push OK");
+        toast.success("Sauvegarde envoyée");
       } else {
-        toast.success("Sync OK");
+        toast.success("Synchronisation terminée");
       }
     } finally { setSyncBusy(null); }
   };
+
+
 
 
 
