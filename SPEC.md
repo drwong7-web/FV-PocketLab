@@ -2,7 +2,7 @@
 
 > **Living specification.** Update this file in the SAME turn as any change to architecture, routes, data model, libraries, calculation protocols, or product behavior. If a change doesn't affect any of those, no update needed. Kept so another agent (Cursor, Claude Code, Codex, etc.) can continue the work with the exact same architecture and plan.
 
-**Last updated:** 2026-07-03
+**Last updated:** 2026-07-04
 **Owner:** Lovable agent (auto-maintained)
 **Related docs:** `.lovable/plan.md` (ephemeral per-task plans), `mem://index.md` (agent memory rules)
 
@@ -24,7 +24,7 @@ Core user flows:
 - **Runtime:** Vite 5 + React 18 + TypeScript 5, TailwindCSS v3, shadcn/ui (Radix), lucide-react.
 - **Router:** react-router-dom v6. **State/data:** @tanstack/react-query + React context.
 - **Persistence:** `localStorage` via `src/lib/storage.ts` (namespaced `slfv:*` keys). No Supabase, no server. (Legacy `supabase/config.toml` is a placeholder, unused.)
-- **Sync (BYOC):** `src/lib/sync/` — snapshot/restore JSON blob pushed to user-chosen cloud (Google Drive / WebDAV). Credentials in `localStorage`.
+- **Sync (drive natif du téléphone) :** `src/lib/sync/` — un seul bouton dans Réglages. `detectPreferredProvider()` choisit iCloud sur iOS/iPadOS, Google Drive sinon (fallback fichier `.slfv`). Google Drive utilise un Client ID managé (`VITE_SLFV_GDRIVE_CLIENT_ID`) + scope `drive.appdata` ; iCloud passe par l'app Fichiers d'iOS (download « Enregistrer dans Fichiers » + `<input type=file>`). Aucun compte SprintLab, aucune saisie d'URL/mot de passe. WebDAV supprimé.
 - **Video / vision:** `@mediapipe/tasks-vision` for pose (jump apex detection). `requestVideoFrameCallback` / `requestAnimationFrame` for timeline. Custom video filters (`videoFilters.ts`) + stabilizer (`videoStabilizer.ts`) + One-Euro / Butterworth signal smoothing (`signalFilters.ts`).
 - **Local document parsing (no API):**
   - PDF text + rasterization: `pdfjs-dist`

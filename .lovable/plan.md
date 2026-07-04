@@ -1,43 +1,73 @@
-# Corriger l'import PDF et image (fichier `src/lib/import/athletes.ts`)
 
-Le parsing DOCX marche parce qu'on lit directement les `<w:tr>/<w:tc>` : on connaît les cellules. Pour le PDF et l'image, on reconstruit les cellules à partir de positions (x, y) et l'heuristique actuelle est trop fragile :
+## 1. Screenshot → « Aucun athlète détecté »
 
-- **PDF** : le seuil de gap (`> 12`) est en unités PDF, indépendant de la taille de police. Sur un tableau serré, deux colonnes fusionnent ; sur un tableau large, un prénom composé se coupe en deux colonnes. Résultat : `Taille` finit dans la colonne `Poids`, ou le prénom mange la date.
-- **PDF scanné** : `getTextContent()` renvoie zéro item, on ne tente jamais l'OCR → aucune ligne extraite.
-- **Image** : le seuil de gap est global à la page (médiane × 3). Une page avec beaucoup de mots collés (noms) écrase la médiane et la détection de colonnes s'effondre. Aucun alignement vertical n'est vérifié, donc `176` d'une ligne peut être classé avec le prénom d'une autre.
+Cause identifiée en relisant `src/lib/import/athletes.ts` et le screenshot fourni : `ocrWords()` demande à tesseract.js v5 les champs `data.words` / `data.lines`, mais dans cette version ils sont **vides par défaut**. Il faut activer explicitement la sortie mot-à-mot ; sinon `wordsToRows()` reçoit `[]` et l'import renvoie 0 athlète — exactement le symptôme.
 
-## Ce que je vais changer
+### Correctifs `src/lib/import/athletes.ts`
 
-### 1) PDF avec texte : détection de colonnes par histogramme, pas par gap local
-- Regrouper les items en bandes y (comme aujourd'hui).
-- Sur toutes les bandes, construire un **histogramme des positions x de début d'item**. Les pics = bords de colonnes du tableau.
-- Snap chaque item à sa colonne la plus proche → chaque ligne devient `Row = string[]` aligné (même longueur pour toutes les lignes).
-- Concaténer les items d'une même colonne avec un espace (gère "FATIMA ZAHRA" dans une seule cellule).
+1. **`ocrWords()`** : appeler `recognize(source, "fra+eng", { … })` avec `output: { blocks: true, text: true }` **et** parcourir `data.blocks → paragraphs → lines → words` pour construire `TWord[]`. Filtrer les mots à confiance `< 30`.
+2. **Fallback texte** si `words` reste vide : utiliser `data.text`, découper par lignes, puis chaque ligne par tabulations / `\s{2,}` (Tesseract insère des espaces multiples entre colonnes) → passer à `buildAthletes()` via `extractPlainRows()`.
+3. **Détection d'en-tête** plus tolérante aux erreurs OCR fréquentes :
+   - `N°` mal lu en `Ne`, `N.`, `Nº`, `No.` → élargir la regex.
+   - `Date de Naissance` scindé sur 2 lignes → fusionner la ligne « Naissance » seule (déjà un cas de continuation) **avant** `detectHeader`, pas seulement après.
+4. **Ligne titre multi-lignes** (« Liste nominative … / L'ASFAR / pour la saison 2025/2026 ») : renforcer `isHeaderOrTitle` pour matcher aussi `l'?asfar`, `pour la saison`, `saison`.
+5. **Robustesse colonnes** : quand `cols.length < 2`, tenter un second passage en découpant chaque ligne du texte OCR par `\s{2,}` avant d'abandonner.
 
-Bénéfice : plus de dépendance à un seuil magique ; les colonnes `Nom / Prénom / Date / Taille / Poids` restent séparées même quand elles sont proches.
+### Validation
 
-### 2) PDF scanné : fallback OCR automatique
-- Si une page renvoie < 5 items texte, la rasteriser via `page.render()` sur un `<canvas>` (déjà dispo via pdfjs, aucune dépendance ajoutée) puis passer le canvas à **tesseract.js** avec la même logique que l'image (voir §3).
-- On garde 100 % local, aucune API.
+Exécuter `parseAthletesFile()` sur le screenshot joint et vérifier que les 23 athlètes ressortent avec Nom/Prénom/Date/Taille/Poids corrects (y compris `.5.` DAHMOS / FATIMA ZAHRA et `.15.` MAHOUNA / PAULMICHE MICHOU multi-ligne).
 
-### 3) Image (OCR) : clustering 2D au lieu d'un seuil de gap global
-- Extraire `words` + `bbox` de tesseract (déjà fait).
-- **Étape lignes** : clusteriser par centre y avec tolérance = 0.6 × hauteur médiane des mots (au lieu d'utiliser `data.lines` de tesseract, qui coupe mal les lignes serrées).
-- **Étape colonnes** : construire un histogramme des `bbox.x0` sur toute la page ; les pics = colonnes. Attribuer chaque mot à sa colonne la plus proche. Concaténer par colonne.
-- Résultat : chaque `Row` a la même longueur que l'en-tête, donc `parseWithMap` lit la bonne colonne.
+---
 
-### 4) Filtres partagés (déjà en place mais renforcés)
-- Ignorer les lignes où **toutes** les cellules non vides matchent des mots d'en-tête (évite d'ingérer `Nom Prénom Taille Poids` sur la 2ᵉ page d'un PDF paginé).
-- Ignorer les lignes titre (`Liste nominative…`, `Saison…`, `Équipe…`).
-- Ligne "suite" (nom multi-lignes) : détectée quand la cellule N°/dossard est vide et qu'il n'y a ni date ni ≥ 2 nombres → fusion avec la ligne précédente cellule par cellule.
+## 2. Refonte de la synchronisation (remplace « BYOC »)
 
-## Ce que je ne touche pas
+Objectif produit : **un bouton « Synchroniser »**. L'app détecte le téléphone, ouvre le drive natif via l'auth du système, sans créer de compte SprintLab, sans coller de mot de passe.
 
-- L'UI `ImportPlayersDialog.tsx` et le contrat `ParsedAthlete[]` restent identiques.
-- Pas de nouvelle dépendance : `pdfjs-dist`, `jszip`, `tesseract.js` déjà présents.
-- Le chemin DOCX qui fonctionne aujourd'hui n'est pas modifié.
+### UX
+- Écran Réglages → section **Sauvegarde cloud** avec un seul bouton :
+  - iOS / iPadOS → « Sauvegarder sur iCloud Drive »
+  - Android / autres → « Sauvegarder sur Google Drive »
+  - + un lien secondaire discret : « Utiliser un fichier .slfv »
+- Après connexion, on affiche : provider utilisé, date de dernière sync, boutons **Envoyer** / **Récupérer** / **Synchroniser**.
+- Aucun champ URL, aucun mot de passe, aucun client-ID à saisir.
 
-## Vérification
+### Détection
+`detectPreferredProvider()` dans `src/lib/sync/config.ts` :
+- iOS (`/iPad|iPhone|iPod/` ou `navigator.platform === 'MacIntel' && maxTouchPoints > 1`) → `"icloud"`.
+- Sinon → `"gdrive"`.
+- Override manuel possible via le lien secondaire (`"file"`).
 
-- Envoie-moi un PDF **texte** et une image (ou un PDF scanné) qui échouent aujourd'hui : je rejoue l'extraction avant/après et je te montre les `Row[]` produits pour valider que les colonnes sont bien alignées.
-- Si tu n'as qu'un exemple sous la main, je commence par lui et j'itère.
+### Google Drive (Android + desktop)
+- On garde `gdriveAdapter` mais on retire le champ « Client ID » de l'UI : utiliser un **Client ID managé** stocké dans `import.meta.env.VITE_SLFV_GDRIVE_CLIENT_ID` (variable publique, safe côté client) — l'utilisateur ne voit qu'un bouton « Se connecter avec Google ».
+- Scope `drive.appdata`, fichier `sprintlab.slfv` (invisible pour l'utilisateur, propre à l'app).
+- Token stocké en localStorage, refresh via `initTokenClient` transparent.
+
+### iCloud Drive (iOS)
+Le navigateur iOS n'expose **aucune API iCloud directe**. Approche standard :
+- **Push** : générer le blob `.slfv` puis déclencher `<a download>` — sur iOS Safari, l'utilisateur choisit « Enregistrer dans Fichiers » → iCloud Drive/SprintLab.
+- **Pull** : `<input type="file" accept=".slfv">` — iOS ouvre le sélecteur Fichiers avec iCloud Drive natif.
+- On mémorise en localStorage l'emplacement conseillé et on affiche des instructions courtes la 1ʳᵉ fois.
+- Nouveau adapter `icloudAdapter` dans `src/lib/sync/adapters.ts` (essentiellement `fileAdapter` avec libellés adaptés et détection de la présence dans Files/iCloud).
+
+### Suppression
+- Retirer l'adaptateur **WebDAV** de l'UI et du sélecteur (on garde le code mort supprimé de `adapters.ts` pour rester local-only).
+- Retirer les champs `webdavUrl / webdavUser / webdavPath / webdavPassword` de `PublicConfig` / `SecretConfig`.
+- Simplifier `SyncProvider` à `"none" | "gdrive" | "icloud" | "file"`.
+
+### Fichiers touchés
+- `src/lib/sync/config.ts` — nouveau `SyncProvider`, `detectPreferredProvider()`, suppression WebDAV.
+- `src/lib/sync/adapters.ts` — retirer WebDAV, ajouter `icloudAdapter`, Google Drive sans champ Client ID (lecture env).
+- `src/lib/sync/manager.ts` — inchangé sauf typage.
+- Écran Réglages (créer/adapter section) : bouton unique + statut.
+- `.env` : ajouter `VITE_SLFV_GDRIVE_CLIENT_ID` (le user fournira la valeur ; si vide, on désactive Drive et on retombe sur fichier).
+- **`SPEC.md`** — mettre à jour section « Sync (BYOC) » → « Sync (Drive natif) », lister les 3 providers, bumper `Last updated`.
+
+---
+
+## 3. Vérifs finales
+- Build (`tsgo`) OK.
+- Import du screenshot fourni → 23 athlètes.
+- Sur iPhone : bouton unique « Sauvegarder sur iCloud Drive » → dialog Fichiers.
+- Sur Android : bouton unique « Sauvegarder sur Google Drive » → OAuth Google.
+
+Aucune donnée quitte l'appareil sans action explicite de l'utilisateur.

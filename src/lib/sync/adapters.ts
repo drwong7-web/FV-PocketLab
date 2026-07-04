@@ -1,9 +1,11 @@
 /**
- * Adaptateurs BYOC.
- * Chaque adaptateur expose simplement push(blob) / pull() → Blob | null.
- * Le blob est toujours le snapshot chiffré (cf. snapshot.ts).
+ * Adaptateurs de sync natifs :
+ *   - fileAdapter   : téléchargement/upload d'un fichier .slfv (fallback universel).
+ *   - icloudAdapter : iOS/iPadOS → utilise l'app Fichiers (iCloud Drive) via
+ *     un download (« Enregistrer dans Fichiers ») et un <input type=file>.
+ *   - gdriveAdapter : OAuth Google natif, dossier appData privé de l'app.
  */
-import { getPublicConfig, getSecretConfig, setSecretConfig } from "./config";
+import { getPublicConfig, getSecretConfig, setSecretConfig, managedGoogleClientId } from "./config";
 
 export interface SyncAdapter {
   id: string;
@@ -12,10 +14,14 @@ export interface SyncAdapter {
   pull(): Promise<Blob | null>;
 }
 
-// ---------- Local file (download/upload) ----------
+function fileNameOf(): string {
+  return (getPublicConfig().fileName || "sprintlab.slfv").trim() || "sprintlab.slfv";
+}
+
+// ---------- Fichier local (download/upload) ----------
 export const fileAdapter: SyncAdapter = {
   id: "file",
-  label: "Fichier local (.slfv)",
+  label: "Fichier .slfv",
   async push(blob) {
     const a = document.createElement("a");
     const url = URL.createObjectURL(blob);
@@ -38,63 +44,39 @@ export const fileAdapter: SyncAdapter = {
   },
 };
 
-// ---------- WebDAV ----------
-function webdavUrl(): { url: string; user: string; path: string } {
-  const cfg = getPublicConfig();
-  if (!cfg.webdavUrl) throw new Error("URL WebDAV manquante.");
-  const path = cfg.webdavPath?.trim() || "/SprintLab/snapshot.slfv";
-  const base = cfg.webdavUrl.replace(/\/+$/, "");
-  const target = base + (path.startsWith("/") ? path : `/${path}`);
-  return { url: target, user: cfg.webdavUser || "", path };
-}
-async function webdavAuthHeader(): Promise<string> {
-  const cfg = getPublicConfig();
-  const s = await getSecretConfig();
-  if (!cfg.webdavUser || !s.webdavPassword) throw new Error("Identifiants WebDAV manquants.");
-  return "Basic " + btoa(`${cfg.webdavUser}:${s.webdavPassword}`);
-}
-async function webdavMkcol(url: string, auth: string) {
-  // Création récursive du dossier parent (idempotent)
-  const u = new URL(url);
-  const parts = u.pathname.split("/").filter(Boolean);
-  parts.pop(); // retire le filename
-  let acc = "";
-  for (const p of parts) {
-    acc += `/${p}`;
-    try {
-      await fetch(`${u.origin}${acc}`, { method: "MKCOL", headers: { Authorization: auth } });
-    } catch { /* ignore */ }
-  }
-}
-export const webdavAdapter: SyncAdapter = {
-  id: "webdav",
-  label: "WebDAV (Nextcloud, ownCloud, …)",
+// ---------- iCloud Drive (iOS) ----------
+// Aucune API navigateur → on passe par l'app Fichiers d'iOS. Le download
+// affiche « Enregistrer dans Fichiers » avec iCloud Drive proposé par défaut.
+export const icloudAdapter: SyncAdapter = {
+  id: "icloud",
+  label: "iCloud Drive",
   async push(blob) {
-    const { url } = webdavUrl();
-    const auth = await webdavAuthHeader();
-    await webdavMkcol(url, auth);
-    const res = await fetch(url, {
-      method: "PUT",
-      headers: { Authorization: auth, "Content-Type": "application/octet-stream" },
-      body: blob,
-    });
-    if (!res.ok) throw new Error(`WebDAV PUT ${res.status}`);
+    const a = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    a.href = url;
+    a.download = fileNameOf();
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   },
   async pull() {
-    const { url } = webdavUrl();
-    const auth = await webdavAuthHeader();
-    const res = await fetch(url, { method: "GET", headers: { Authorization: auth } });
-    if (res.status === 404) return null;
-    if (!res.ok) throw new Error(`WebDAV GET ${res.status}`);
-    return await res.blob();
+    return new Promise<Blob | null>((resolve) => {
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = ".slfv,application/octet-stream,application/json";
+      input.onchange = () => resolve(input.files?.[0] ?? null);
+      input.oncancel = () => resolve(null);
+      input.click();
+    });
   },
 };
 
-// ---------- Google Drive (PKCE-free token client via GIS) ----------
+// ---------- Google Drive (OAuth natif, Client ID managé) ----------
 const GIS_SRC = "https://accounts.google.com/gsi/client";
 function loadGis(): Promise<void> {
   return new Promise((resolve, reject) => {
-    if ((window as any).google?.accounts?.oauth2) return resolve();
+    if ((window as unknown as { google?: { accounts?: { oauth2?: unknown } } }).google?.accounts?.oauth2) return resolve();
     const s = document.createElement("script");
     s.src = GIS_SRC; s.async = true; s.defer = true;
     s.onload = () => resolve();
@@ -103,28 +85,29 @@ function loadGis(): Promise<void> {
   });
 }
 async function gdriveToken(force = false): Promise<string> {
-  const cfg = getPublicConfig();
+  const clientId = managedGoogleClientId();
   const s = await getSecretConfig();
   const now = Date.now();
   if (!force && s.gdriveAccessToken && (s.gdriveTokenExpiresAt ?? 0) > now + 30_000) {
     return s.gdriveAccessToken;
   }
-  if (!cfg.gdriveClientId) throw new Error("Client ID Google manquant.");
+  if (!clientId) throw new Error("Google Drive n'est pas configuré sur cette build.");
   await loadGis();
   return new Promise<string>((resolve, reject) => {
     try {
-      const client = (window as any).google.accounts.oauth2.initTokenClient({
-        client_id: cfg.gdriveClientId,
-        scope: "https://www.googleapis.com/auth/drive.appdata",
-        prompt: "",
-        callback: async (resp: any) => {
-          if (resp?.error) return reject(new Error(`OAuth Google : ${resp.error}`));
-          const token = resp.access_token as string;
-          const exp = now + Math.max(0, Number(resp.expires_in || 0) - 30) * 1000;
-          await setSecretConfig({ ...(await getSecretConfig()), gdriveAccessToken: token, gdriveTokenExpiresAt: exp });
-          resolve(token);
-        },
-      });
+      const client = (window as unknown as { google: { accounts: { oauth2: { initTokenClient: (o: unknown) => { requestAccessToken: (o: unknown) => void } } } } })
+        .google.accounts.oauth2.initTokenClient({
+          client_id: clientId,
+          scope: "https://www.googleapis.com/auth/drive.appdata",
+          prompt: "",
+          callback: async (resp: { error?: string; access_token?: string; expires_in?: number }) => {
+            if (resp?.error) return reject(new Error(`OAuth Google : ${resp.error}`));
+            const token = resp.access_token as string;
+            const exp = now + Math.max(0, Number(resp.expires_in || 0) - 30) * 1000;
+            await setSecretConfig({ ...(await getSecretConfig()), gdriveAccessToken: token, gdriveTokenExpiresAt: exp });
+            resolve(token);
+          },
+        });
       client.requestAccessToken({ prompt: s.gdriveAccessToken ? "" : "consent" });
     } catch (e) { reject(e as Error); }
   });
@@ -141,10 +124,9 @@ async function gdriveFindFile(token: string, name: string): Promise<string | nul
 }
 export const gdriveAdapter: SyncAdapter = {
   id: "gdrive",
-  label: "Google Drive (appData)",
+  label: "Google Drive",
   async push(blob) {
-    const cfg = getPublicConfig();
-    const name = cfg.gdriveFileName || "sprintlab.slfv";
+    const name = fileNameOf();
     const token = await gdriveToken();
     const existing = await gdriveFindFile(token, name);
     const metadata = existing ? {} : { name, parents: ["appDataFolder"] };
@@ -164,8 +146,7 @@ export const gdriveAdapter: SyncAdapter = {
     if (!res.ok) throw new Error(`Drive upload ${res.status}`);
   },
   async pull() {
-    const cfg = getPublicConfig();
-    const name = cfg.gdriveFileName || "sprintlab.slfv";
+    const name = fileNameOf();
     const token = await gdriveToken();
     const id = await gdriveFindFile(token, name);
     if (!id) return null;
@@ -179,7 +160,7 @@ export const gdriveAdapter: SyncAdapter = {
 
 export function getAdapter(id: string): SyncAdapter | null {
   if (id === "file") return fileAdapter;
-  if (id === "webdav") return webdavAdapter;
+  if (id === "icloud") return icloudAdapter;
   if (id === "gdrive") return gdriveAdapter;
   return null;
 }

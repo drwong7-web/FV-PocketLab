@@ -10,10 +10,12 @@ import { useSettings, type Lang, type Theme } from "@/lib/settings";
 import { clearExportDirectory, getExportDirectoryLabel, isDirectoryPickerSupported, isInIframe, pickExportDirectory } from "@/lib/exportTarget";
 
 import {
-  getPublicConfig, setPublicConfig, getSecretConfig, setSecretConfig,
-  getSyncState, type SyncProvider,
+  getPublicConfig, setPublicConfig,
+  getSyncState, detectPreferredProvider, managedGoogleClientId,
+  type SyncProvider,
 } from "@/lib/sync/config";
 import { syncPushNow, syncPullNow, syncBothNow } from "@/lib/sync/manager";
+
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -28,48 +30,29 @@ export default function AppLayout() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [exportDir, setExportDir] = useState<string | null>(null);
   const [syncProvider, setSyncProviderState] = useState<SyncProvider>("none");
-  const [webdavUrl, setWebdavUrl] = useState("");
-  const [webdavUser, setWebdavUser] = useState("");
-  const [webdavPass, setWebdavPass] = useState("");
-  const [webdavPath, setWebdavPath] = useState("/SprintLab/snapshot.slfv");
-  const [gdriveClientId, setGdriveClientId] = useState("");
-  const [gdriveFileName, setGdriveFileName] = useState("sprintlab.slfv");
   const [syncBusy, setSyncBusy] = useState<null | "push" | "pull" | "both">(null);
   const [lastSyncAt, setLastSyncAt] = useState<number | undefined>(undefined);
   const pickerSupported = isDirectoryPickerSupported();
   const inIframe = isInIframe();
+  const preferredProvider = detectPreferredProvider();
+  const gdriveAvailable = !!managedGoogleClientId();
 
   useEffect(() => {
     if (settingsOpen) {
       setExportDir(getExportDirectoryLabel());
       const cfg = getPublicConfig();
       setSyncProviderState(cfg.provider);
-      setWebdavUrl(cfg.webdavUrl || "");
-      setWebdavUser(cfg.webdavUser || "");
-      setWebdavPath(cfg.webdavPath || "/SprintLab/snapshot.slfv");
-      setGdriveClientId(cfg.gdriveClientId || "");
-      setGdriveFileName(cfg.gdriveFileName || "sprintlab.slfv");
       setLastSyncAt(getSyncState().lastSyncAt);
-      getSecretConfig().then((s) => setWebdavPass(s.webdavPassword || ""));
     }
   }, [settingsOpen]);
 
-  const saveSyncSettings = async () => {
-    try {
-      setPublicConfig({
-        provider: syncProvider,
-        webdavUrl: webdavUrl.trim() || undefined,
-        webdavUser: webdavUser.trim() || undefined,
-        webdavPath: webdavPath.trim() || undefined,
-        gdriveClientId: gdriveClientId.trim() || undefined,
-        gdriveFileName: gdriveFileName.trim() || undefined,
-      });
-      const prev = await getSecretConfig();
-      await setSecretConfig({ ...prev, webdavPassword: webdavPass || undefined });
-      toast.success("Configuration sync enregistrée");
-    } catch (e) {
-      toast.error((e as Error).message);
-    }
+  const enableSync = (provider: Exclude<SyncProvider, "none">) => {
+    setPublicConfig({ provider, fileName: "sprintlab.slfv" });
+    setSyncProviderState(provider);
+  };
+  const disableSync = () => {
+    setPublicConfig({ provider: "none" });
+    setSyncProviderState("none");
   };
 
   const runSync = async (kind: "push" | "pull" | "both") => {
@@ -80,14 +63,16 @@ export default function AppLayout() {
       if (!res.ok) { toast.error(res.error || "Erreur de synchronisation"); return; }
       setLastSyncAt(getSyncState().lastSyncAt);
       if (kind === "pull" && res.pulled) {
-        toast.success(`Pull OK — ${res.pulled.totalKeys} clés (${res.pulled.added} ajoutées)`);
+        toast.success(`Récupération OK — ${res.pulled.totalKeys} clés (${res.pulled.added} ajoutées)`);
       } else if (kind === "push") {
-        toast.success("Push OK");
+        toast.success("Sauvegarde envoyée");
       } else {
-        toast.success("Sync OK");
+        toast.success("Synchronisation terminée");
       }
     } finally { setSyncBusy(null); }
   };
+
+
 
 
 
@@ -306,83 +291,84 @@ export default function AppLayout() {
             <section className="space-y-3">
               <div className="flex items-center gap-2 text-sm font-semibold">
                 {syncProvider === "none" ? <CloudOff className="h-4 w-4 text-primary" /> : <Cloud className="h-4 w-4 text-primary" />}
-                <h3>Sync (BYOC — Bring Your Own Cloud)</h3>
+                <h3>Sauvegarde cloud</h3>
               </div>
               <p className="text-xs text-muted-foreground">
-                Vos données restent sur l'appareil. Choisissez où exporter une copie de sauvegarde.
+                Vos données restent sur l'appareil. En un tap, envoyez une copie chiffrée vers le drive de votre téléphone.
               </p>
 
-              <div className="grid grid-cols-4 gap-2">
-                {([
-                  { id: "none", label: "Aucun" },
-                  { id: "file", label: "Fichier" },
-                  { id: "webdav", label: "WebDAV" },
-                  { id: "gdrive", label: "Drive" },
-                ] as { id: SyncProvider; label: string }[]).map((p) => (
+              {syncProvider === "none" ? (
+                <div className="space-y-2">
+                  {preferredProvider === "icloud" ? (
+                    <Button
+                      onClick={() => enableSync("icloud")}
+                      className="w-full bg-gradient-primary text-primary-foreground"
+                    >
+                      <Cloud className="h-4 w-4 mr-2" /> Sauvegarder sur iCloud Drive
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={() => enableSync("gdrive")}
+                      disabled={!gdriveAvailable}
+                      className="w-full bg-gradient-primary text-primary-foreground"
+                    >
+                      <Cloud className="h-4 w-4 mr-2" /> Sauvegarder sur Google Drive
+                    </Button>
+                  )}
+                  {preferredProvider === "gdrive" && !gdriveAvailable && (
+                    <p className="text-[11px] text-muted-foreground">
+                      Google Drive indisponible sur cette build. Utilisez le fichier .slfv.
+                    </p>
+                  )}
                   <button
-                    key={p.id}
-                    onClick={() => setSyncProviderState(p.id)}
-                    className={cn(
-                      "rounded-lg border px-2 py-1.5 text-xs font-medium transition-all",
-                      syncProvider === p.id
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-border bg-card hover:border-primary/40",
-                    )}
+                    onClick={() => enableSync("file")}
+                    className="w-full text-[11px] text-muted-foreground hover:text-primary underline underline-offset-2"
                   >
-                    {p.label}
+                    Utiliser un fichier .slfv à la place
                   </button>
-                ))}
-              </div>
-
-              {syncProvider === "webdav" && (
+                </div>
+              ) : (
                 <div className="space-y-2">
-                  <Input value={webdavUrl} onChange={(e) => setWebdavUrl(e.target.value)} placeholder="https://cloud.example.com/remote.php/dav/files/user" className="h-9 text-xs" />
-                  <div className="grid grid-cols-2 gap-2">
-                    <Input value={webdavUser} onChange={(e) => setWebdavUser(e.target.value)} placeholder="Utilisateur" className="h-9 text-xs" />
-                    <Input type="password" value={webdavPass} onChange={(e) => setWebdavPass(e.target.value)} placeholder="Mot de passe / App password" className="h-9 text-xs" />
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">
+                      Provider :{" "}
+                      <span className="text-foreground font-medium">
+                        {syncProvider === "gdrive" && "Google Drive"}
+                        {syncProvider === "icloud" && "iCloud Drive (Fichiers)"}
+                        {syncProvider === "file" && "Fichier .slfv"}
+                      </span>
+                    </span>
+                    <button onClick={disableSync} className="text-muted-foreground hover:text-destructive underline underline-offset-2">
+                      Désactiver
+                    </button>
                   </div>
-                  <Input value={webdavPath} onChange={(e) => setWebdavPath(e.target.value)} placeholder="/SprintLab/snapshot.slfv" className="h-9 text-xs font-mono" />
+
+                  <div className="grid grid-cols-3 gap-2 pt-1">
+                    <Button variant="outline" size="sm" disabled={!!syncBusy} onClick={() => runSync("pull")}>
+                      <Download className="h-3.5 w-3.5 mr-1" /> Récupérer
+                    </Button>
+                    <Button variant="outline" size="sm" disabled={!!syncBusy} onClick={() => runSync("push")}>
+                      <Upload className="h-3.5 w-3.5 mr-1" /> Envoyer
+                    </Button>
+                    <Button size="sm" disabled={!!syncBusy || syncProvider !== "gdrive"} onClick={() => runSync("both")} className="bg-gradient-primary text-primary-foreground">
+                      <RefreshCw className={cn("h-3.5 w-3.5 mr-1", syncBusy === "both" && "animate-spin")} /> Sync
+                    </Button>
+                  </div>
+
+                  {syncProvider === "icloud" && (
+                    <p className="text-[11px] text-muted-foreground">
+                      Sur iPhone, choisissez « Enregistrer dans Fichiers » → iCloud Drive lors de l'envoi.
+                    </p>
+                  )}
+                  {lastSyncAt && (
+                    <p className="text-[11px] text-muted-foreground">
+                      Dernière synchronisation : {new Date(lastSyncAt).toLocaleString()}
+                    </p>
+                  )}
                 </div>
-              )}
-
-              {syncProvider === "gdrive" && (
-                <div className="space-y-2">
-                  <p className="text-[11px] text-muted-foreground">
-                    Créez un OAuth Client ID Web sur{" "}
-                    <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noreferrer" className="text-primary underline">Google Cloud Console</a>
-                    {" "}avec l'origin <code className="font-mono">{window.location.origin}</code> autorisée. Scope utilisé : <code className="font-mono">drive.appdata</code>.
-                  </p>
-                  <Input value={gdriveClientId} onChange={(e) => setGdriveClientId(e.target.value)} placeholder="123…apps.googleusercontent.com" className="h-9 text-xs font-mono" />
-                  <Input value={gdriveFileName} onChange={(e) => setGdriveFileName(e.target.value)} placeholder="sprintlab.slfv" className="h-9 text-xs font-mono" />
-                </div>
-              )}
-
-              {syncProvider !== "none" && (
-                <Button variant="outline" size="sm" onClick={saveSyncSettings} className="w-full">
-                  Enregistrer la configuration
-                </Button>
-              )}
-
-              {syncProvider !== "none" && (
-                <div className="grid grid-cols-3 gap-2 pt-1">
-                  <Button variant="outline" size="sm" disabled={!!syncBusy} onClick={() => runSync("pull")}>
-                    <Download className="h-3.5 w-3.5 mr-1" /> Pull
-                  </Button>
-                  <Button variant="outline" size="sm" disabled={!!syncBusy} onClick={() => runSync("push")}>
-                    <Upload className="h-3.5 w-3.5 mr-1" /> Push
-                  </Button>
-                  <Button size="sm" disabled={!!syncBusy || syncProvider === "file"} onClick={() => runSync("both")} className="bg-gradient-primary text-primary-foreground">
-                    <RefreshCw className={cn("h-3.5 w-3.5 mr-1", syncBusy === "both" && "animate-spin")} /> Sync
-                  </Button>
-                </div>
-              )}
-
-              {lastSyncAt && (
-                <p className="text-[11px] text-muted-foreground">
-                  Dernière synchronisation : {new Date(lastSyncAt).toLocaleString()}
-                </p>
               )}
             </section>
+
           </div>
 
 

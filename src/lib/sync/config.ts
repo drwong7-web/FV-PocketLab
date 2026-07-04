@@ -1,22 +1,22 @@
 /**
- * Persistance de la configuration de sync BYOC (stockage en clair local).
+ * Persistance de la configuration de sync (stockage local).
+ * L'app détecte automatiquement le drive natif du téléphone :
+ *   - iOS/iPadOS → iCloud Drive (via l'app Fichiers du système)
+ *   - Android / desktop → Google Drive (OAuth Google natif)
+ *   - Fallback manuel → Fichier .slfv téléchargeable
  */
-export type SyncProvider = "none" | "file" | "webdav" | "gdrive";
+export type SyncProvider = "none" | "gdrive" | "icloud" | "file";
 
-const CFG_KEY = "fv:sync:cfg-v1";
-const SECRETS_KEY = "fv:sync:secrets-v1";
+const CFG_KEY = "fv:sync:cfg-v2";
+const SECRETS_KEY = "fv:sync:secrets-v2";
 const STATE_KEY = "fv:sync:state-v1";
 
 export interface PublicConfig {
   provider: SyncProvider;
-  webdavUrl?: string;
-  webdavUser?: string;
-  webdavPath?: string;
-  gdriveClientId?: string;
-  gdriveFileName?: string;
+  /** Nom du fichier de snapshot côté drive (par défaut sprintlab.slfv). */
+  fileName?: string;
 }
 export interface SecretConfig {
-  webdavPassword?: string;
   gdriveAccessToken?: string;
   gdriveTokenExpiresAt?: number;
 }
@@ -24,6 +24,21 @@ export interface SyncState {
   lastSyncAt?: number;
   lastDirection?: "push" | "pull" | "both";
   lastError?: string;
+}
+
+/** Détecte le provider recommandé selon l'appareil. */
+export function detectPreferredProvider(): Exclude<SyncProvider, "none"> {
+  if (typeof navigator === "undefined") return "gdrive";
+  const ua = navigator.userAgent || "";
+  const isIOS = /iPad|iPhone|iPod/.test(ua)
+    || (navigator.platform === "MacIntel" && (navigator as unknown as { maxTouchPoints?: number }).maxTouchPoints! > 1);
+  return isIOS ? "icloud" : "gdrive";
+}
+
+/** Client ID Google managé (publique, injecté à la build). */
+export function managedGoogleClientId(): string {
+  const v = (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_SLFV_GDRIVE_CLIENT_ID;
+  return (v || "").trim();
 }
 
 export function getPublicConfig(): PublicConfig {
