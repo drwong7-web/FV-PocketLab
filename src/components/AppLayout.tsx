@@ -10,10 +10,12 @@ import { useSettings, type Lang, type Theme } from "@/lib/settings";
 import { clearExportDirectory, getExportDirectoryLabel, isDirectoryPickerSupported, isInIframe, pickExportDirectory } from "@/lib/exportTarget";
 
 import {
-  getPublicConfig, setPublicConfig, getSecretConfig, setSecretConfig,
-  getSyncState, type SyncProvider,
+  getPublicConfig, setPublicConfig,
+  getSyncState, detectPreferredProvider, managedGoogleClientId,
+  type SyncProvider,
 } from "@/lib/sync/config";
 import { syncPushNow, syncPullNow, syncBothNow } from "@/lib/sync/manager";
+
 import { cn } from "@/lib/utils";
 
 const navItems = [
