@@ -233,12 +233,16 @@ function parseTsvWords(tsv?: string | null): TWord[] {
 
 async function ocrRecognize(source: HTMLCanvasElement): Promise<OcrResult> {
   const tess = await import("tesseract.js");
-  const createWorker = (tess as unknown as { createWorker: (langs?: string) => Promise<{
+  const api = ((tess as unknown as { default?: unknown }).default ?? tess) as {
+    createWorker: (langs?: string) => Promise<{
     setParameters: (params: Record<string, string>) => Promise<unknown>;
     recognize: (image: HTMLCanvasElement, options?: Record<string, unknown>, output?: Record<string, boolean>) => Promise<{ data: unknown }>;
     terminate: () => Promise<unknown>;
-  }> }).createWorker;
-  const PSM = (tess as unknown as { PSM?: Record<string, string> }).PSM ?? { AUTO: "3", SPARSE_TEXT: "11" };
+  }>;
+    PSM?: Record<string, string>;
+  };
+  const createWorker = api.createWorker;
+  const PSM = api.PSM ?? { AUTO: "3", SPARSE_TEXT: "11" };
   const worker = await createWorker("fra+eng");
   const attempts: OcrResult[] = [];
   try {
@@ -407,14 +411,14 @@ async function extractCanvasRows(canvas: HTMLCanvasElement): Promise<Row[]> {
   return alt.length > rows.length ? alt : rows;
 }
 
-async function extractImageRows(file: File): Promise<Row[]> {
+async function extractImageRows(file: File): Promise<{ rows: Row[]; text: string }> {
   const canvas = await preprocessImageFile(file);
   const { words, text, rows: ocrRows } = await ocrRecognize(canvas);
   const rows = ocrRows.length ? ocrRows : wordsToRows(words);
   const alt = textToRows(text);
   const compact = extractNominalListRows(text);
-  const candidates = [rows, alt, compact].sort((a, b) => b.length - a.length);
-  return candidates[0] ?? [];
+  const candidates = [rows, alt, compact].sort((a, b) => (buildAthletes(b).length * 1000 + b.length) - (buildAthletes(a).length * 1000 + a.length));
+  return { rows: candidates[0] ?? [], text };
 }
 
 
@@ -693,8 +697,11 @@ export async function parseAthletesFile(file: File): Promise<ParsedAthlete[]> {
   const mime = (file.type || "").toLowerCase();
   const name = file.name.toLowerCase();
   let rows: Row[] = [];
+  let detectedText = "";
   if (mime.startsWith("image/") || /\.(png|jpe?g|webp|bmp|gif)$/.test(name)) {
-    rows = await extractImageRows(file);
+    const extracted = await extractImageRows(file);
+    rows = extracted.rows;
+    detectedText = extracted.text;
   } else if (mime === "application/pdf" || name.endsWith(".pdf")) {
     rows = await extractPdfRows(file);
   } else if (
@@ -707,5 +714,10 @@ export async function parseAthletesFile(file: File): Promise<ParsedAthlete[]> {
   } else {
     throw new Error(`Type de fichier non supporté : ${mime || name}`);
   }
-  return buildAthletes(rows);
+  const athletes = buildAthletes(rows);
+  if (athletes.length === 0 && detectedText.trim()) {
+    const excerpt = detectedText.replace(/\s+/g, " ").trim().slice(0, 180);
+    throw new AthleteImportError(`Texte détecté, mais aucun athlète reconnu. Vérifiez le cadrage ou essayez un export PDF/DOCX. Extrait OCR : “${excerpt}”`, detectedText);
+  }
+  return athletes;
 }
