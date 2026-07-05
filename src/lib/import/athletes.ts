@@ -600,7 +600,7 @@ function isAlphaNameOnlyRow(row: Row): boolean {
 
 function rowLooksComplete(row: Row, map: Record<number, Field> | null): boolean {
   const athlete = map ? (parseWithMap(row, map) ?? parseHeuristic(row)) : parseHeuristic(row);
-  return !!(athlete?.birthDate && athlete.height && athlete.mass);
+  return !!(athlete?.birthDate && (athlete.height || athlete.mass));
 }
 
 function mergePendingNameIntoNumberedRow(row: Row, pending: Row, map: Record<number, Field> | null): Row {
