@@ -417,7 +417,7 @@ async function extractImageRows(file: File): Promise<{ rows: Row[]; text: string
   const rows = ocrRows.length ? ocrRows : wordsToRows(words);
   const alt = textToRows(text);
   const compact = extractNominalListRows(text);
-  const candidates = [rows, alt, compact].sort((a, b) => (buildAthletes(b).length * 1000 + b.length) - (buildAthletes(a).length * 1000 + a.length));
+  const candidates = [rows, alt, compact].sort((a, b) => scoreRowsForImport(b) - scoreRowsForImport(a));
   return { rows: candidates[0] ?? [], text };
 }
 
@@ -741,6 +741,13 @@ function buildAthletes(rows: Row[]): ParsedAthlete[] {
     out.push(athlete);
   }
   return out;
+}
+
+function scoreRowsForImport(rows: Row[]): number {
+  const athletes = buildAthletes(rows);
+  const complete = athletes.filter((a) => a.birthDate && a.height && a.mass).length;
+  const suspicious = athletes.filter((a) => /^\d+$/.test(a.lastName) || !/[A-Za-zÀ-ÿ]/.test(a.firstName)).length;
+  return athletes.length * 1000 + complete * 50 + rows.length - suspicious * 100;
 }
 
 function parseWithMap(row: Row, map: Record<number, Field>): ParsedAthlete | null {
