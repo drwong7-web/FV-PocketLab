@@ -445,7 +445,7 @@ const HEADER_MAP: Array<{ field: Field; re: RegExp }> = [
 const TITLE_RE = /(liste\s+nominative|saison\s+sportive|pour\s+la\s+saison|équipe|equipe|club|effectif|asfar)/i;
 const DATE_RE = /\b(\d{4}-\d{2}-\d{2}|\d{1,2}[\/.\-]\d{1,2}[\/.\-]\d{2,4})\b/;
 const BIB_RE = /^\.?\s*\d{1,3}\s*\.?$/;
-const COMPACT_ATHLETE_RE = /^\s*\.?\s*\d{1,3}\s*\.?\s+(.+?)\s+(\d{1,2}[\/.\-]\d{1,2}[\/.\-]\d{2,4})\s+(\d{2,3})\s+(\d{2,3})\s*$/;
+const COMPACT_ATHLETE_RE = /^\s*\.?\s*\d{1,3}\s*[.\]/,|)]?\s+(.+?)\s+(\d{1,2}[\/.\-]\d{1,2}[\/.\-]\d{2,4})\s+(\d{2,3})\s+(\d{2,3})\s*$/;
 const GIVEN_NAME_STARTERS = new Set([
   "KHADIJA", "ZINEB", "SIHAM", "NOUHAILA", "FATIMA", "DOHA", "SAFA", "NAJAT", "OUAHIBA", "AZIZA", "HIND", "SANAA",
   "PAULMICHE", "SOFIA", "OUAFAA", "YOULANDE", "HAJAR", "FLORE", "NOURA", "HANANE", "ANISSA", "JAURESINE",
@@ -544,20 +544,24 @@ function parseCompactAthleteLine(raw: string): ParsedAthlete | null {
 function extractNominalListRows(text: string): Row[] {
   const rows: Row[] = [];
   let current = "";
+  let pendingName = "";
   const flush = () => {
     if (parseCompactAthleteLine(current)) rows.push([current.trim()]);
     current = "";
   };
   for (const raw of text.split(/\r?\n/)) {
-    const line = raw.replace(/\s+/g, " ").trim();
+    const line = raw.replace(/[|]+/g, " ").replace(/\s+/g, " ").trim();
     if (!line) continue;
-    if (/^\.?\s*\d{1,3}\s*\.?\s+/.test(line)) {
+    if (/^\.?\s*\d{1,3}\s*[.\]/,|)]?\s+/.test(line)) {
       flush();
-      current = line;
+      current = pendingName ? line.replace(/^([.\s]*\d{1,3}\s*[.\]/,|)]?\s+)/, `$1${pendingName} `) : line;
+      pendingName = "";
       if (COMPACT_ATHLETE_RE.test(current)) flush();
     } else if (current) {
       current = `${current} ${line}`;
       if (COMPACT_ATHLETE_RE.test(current)) flush();
+    } else if (/^[A-Za-zÀ-ÿ' \-]+$/.test(line) && !isHeaderOrTitle([line])) {
+      pendingName = [pendingName, line].filter(Boolean).join(" ").trim();
     }
   }
   flush();
