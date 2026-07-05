@@ -417,6 +417,9 @@ async function extractImageRows(file: File): Promise<{ rows: Row[]; text: string
   const rows = ocrRows.length ? ocrRows : wordsToRows(words);
   const alt = textToRows(text);
   const compact = extractNominalListRows(text);
+  const compactCount = buildAthletes(compact).length;
+  const bestStructuredCount = Math.max(buildAthletes(rows).length, buildAthletes(alt).length);
+  if (compactCount >= 10 && compactCount >= bestStructuredCount - 1) return { rows: compact, text };
   const candidates = [rows, alt, compact].sort((a, b) => scoreRowsForImport(b) - scoreRowsForImport(a));
   return { rows: candidates[0] ?? [], text };
 }
