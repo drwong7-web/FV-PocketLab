@@ -21,6 +21,13 @@ export interface ParsedAthlete {
 type Field = "lastName" | "firstName" | "mass" | "height" | "birthDate" | "bib" | "position";
 type Row = string[]; // cellules d'une ligne de tableau
 
+export class AthleteImportError extends Error {
+  constructor(message: string, public readonly detectedText?: string) {
+    super(message);
+    this.name = "AthleteImportError";
+  }
+}
+
 // ---------- Utilitaires géométriques ----------
 type XYItem = { x: number; y: number; s: string; h: number };
 
@@ -196,16 +203,70 @@ async function extractDocxRows(file: File): Promise<Row[]> {
 // ---------- Extraction : Image / Canvas (OCR) ----------
 type TWord = { text: string; bbox: { x0: number; x1: number; y0: number; y1: number }; confidence?: number };
 
-async function ocrRecognize(source: string | HTMLCanvasElement): Promise<{ words: TWord[]; text: string }> {
+type OcrResult = { words: TWord[]; text: string; rows: Row[] };
+
+function parseTsvWords(tsv?: string | null): TWord[] {
+  if (!tsv) return [];
+  const lines = tsv.split(/\r?\n/).filter((ln) => ln.trim());
+  if (lines.length < 2) return [];
+  const header = lines[0].split("\t");
+  const idx = (name: string) => header.indexOf(name);
+  const iLevel = idx("level"), iLeft = idx("left"), iTop = idx("top"), iWidth = idx("width"), iHeight = idx("height"), iConf = idx("conf"), iText = idx("text");
+  if ([iLeft, iTop, iWidth, iHeight, iText].some((i) => i < 0)) return [];
+  const words: TWord[] = [];
+  for (let i = 1; i < lines.length; i++) {
+    const parts = lines[i].split("\t");
+    if (iLevel >= 0 && parts[iLevel] !== "5") continue;
+    const text = parts.slice(iText).join("\t").trim();
+    if (!text) continue;
+    const confidence = iConf >= 0 ? parseFloat(parts[iConf]) : undefined;
+    if (typeof confidence === "number" && Number.isFinite(confidence) && confidence < 30) continue;
+    const left = parseFloat(parts[iLeft]);
+    const top = parseFloat(parts[iTop]);
+    const width = parseFloat(parts[iWidth]);
+    const height = parseFloat(parts[iHeight]);
+    if (![left, top, width, height].every(Number.isFinite)) continue;
+    words.push({ text, bbox: { x0: left, y0: top, x1: left + width, y1: top + height }, confidence });
+  }
+  return words;
+}
+
+async function ocrRecognize(source: HTMLCanvasElement): Promise<OcrResult> {
   const tess = await import("tesseract.js");
-  // tesseract.js v5 : par défaut les blocks/words ne sont PAS retournés.
-  // On les active explicitement.
-  const res = await tess.recognize(source, "fra+eng", {
-    // @ts-expect-error option supportée mais absente des types v5
-    output: { text: true, blocks: true, hocr: false, tsv: false },
-  });
-  const data = res.data as unknown as {
+  const api = ((tess as unknown as { default?: unknown }).default ?? tess) as {
+    createWorker: (langs?: string) => Promise<{
+    setParameters: (params: Record<string, string>) => Promise<unknown>;
+    recognize: (image: HTMLCanvasElement, options?: Record<string, unknown>, output?: Record<string, boolean>) => Promise<{ data: unknown }>;
+    terminate: () => Promise<unknown>;
+  }>;
+    PSM?: Record<string, string>;
+  };
+  const createWorker = api.createWorker;
+  const PSM = api.PSM ?? { AUTO: "3", SPARSE_TEXT: "11" };
+  const worker = await createWorker("fra+eng");
+  const attempts: OcrResult[] = [];
+  try {
+    for (const mode of [PSM.AUTO ?? "3", PSM.SPARSE_TEXT ?? "11"]) {
+      await worker.setParameters({
+        tessedit_pageseg_mode: mode,
+        preserve_interword_spaces: "1",
+        user_defined_dpi: "300",
+      });
+      const res = await worker.recognize(source, {}, { text: true, blocks: true, tsv: true });
+      attempts.push(ocrDataToResult(res.data));
+      if (attempts[attempts.length - 1].words.length >= 20) break;
+    }
+  } finally {
+    await worker.terminate();
+  }
+  return attempts.sort((a, b) => (b.words.length + b.rows.length * 4 + b.text.length / 80) - (a.words.length + a.rows.length * 4 + a.text.length / 80))[0]
+    ?? { words: [], text: "", rows: [] };
+}
+
+function ocrDataToResult(raw: unknown): OcrResult {
+  const data = raw as {
     text?: string;
+    tsv?: string | null;
     words?: TWord[];
     lines?: Array<{ words: TWord[] }>;
     blocks?: Array<{
@@ -216,21 +277,79 @@ async function ocrRecognize(source: string | HTMLCanvasElement): Promise<{ words
       }>;
     }>;
   };
-  const words: TWord[] = [];
+  const words: TWord[] = parseTsvWords(data.tsv);
   const push = (w: TWord) => {
     const t = (w?.text || "").trim();
     if (!t) return;
+    if (!w.bbox) return;
     if (typeof w.confidence === "number" && w.confidence < 30) return;
     words.push({ text: t, bbox: w.bbox, confidence: w.confidence });
   };
-  if (Array.isArray(data.words)) data.words.forEach(push);
+  if (!words.length && Array.isArray(data.words)) data.words.forEach(push);
   if (!words.length && Array.isArray(data.lines)) {
     for (const ln of data.lines) for (const w of ln.words || []) push(w);
   }
   if (!words.length && Array.isArray(data.blocks)) {
     for (const b of data.blocks) for (const p of b.paragraphs || []) for (const ln of p.lines || []) for (const w of ln.words || []) push(w);
   }
-  return { words, text: data.text || "" };
+  return { words, text: data.text || "", rows: wordsToRows(words) };
+}
+
+function preprocessDrawable(drawable: CanvasImageSource, sourceWidth: number, sourceHeight: number): HTMLCanvasElement {
+  const targetMinWidth = 1600;
+  const targetMaxSide = 2800;
+  const upscale = sourceWidth < targetMinWidth ? targetMinWidth / sourceWidth : 1;
+  const clamp = Math.min(targetMaxSide / sourceWidth, targetMaxSide / sourceHeight, upscale);
+  const scale = Math.max(1, Math.min(upscale, clamp || 1));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(sourceWidth * scale));
+  canvas.height = Math.max(1, Math.round(sourceHeight * scale));
+  const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(drawable, 0, 0, canvas.width, canvas.height);
+
+  const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const d = img.data;
+  for (let i = 0; i < d.length; i += 4) {
+    let g = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+    g = (g - 128) * 1.35 + 128;
+    if (g > 220) g = 255;
+    if (g < 70) g = 0;
+    const v = Math.max(0, Math.min(255, Math.round(g)));
+    d[i] = v; d[i + 1] = v; d[i + 2] = v; d[i + 3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
+  return canvas;
+}
+
+async function preprocessImageFile(file: File): Promise<HTMLCanvasElement> {
+  if (typeof createImageBitmap === "function") {
+    const bitmap = await createImageBitmap(file);
+    try {
+      return preprocessDrawable(bitmap, bitmap.width, bitmap.height);
+    } finally {
+      bitmap.close?.();
+    }
+  }
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const el = new Image();
+      el.onload = () => resolve(el);
+      el.onerror = () => reject(new Error("Image illisible"));
+      el.src = url;
+    });
+    return preprocessDrawable(img, img.naturalWidth || img.width, img.naturalHeight || img.height);
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+function preprocessCanvas(canvas: HTMLCanvasElement): HTMLCanvasElement {
+  return preprocessDrawable(canvas, canvas.width, canvas.height);
 }
 
 function wordsToRows(words: TWord[]): Row[] {
@@ -285,24 +404,24 @@ function textToRows(text: string): Row[] {
 }
 
 async function extractCanvasRows(canvas: HTMLCanvasElement): Promise<Row[]> {
-  const { words, text } = await ocrRecognize(canvas);
-  const rows = wordsToRows(words);
+  const { words, text, rows: ocrRows } = await ocrRecognize(preprocessCanvas(canvas));
+  const rows = ocrRows.length ? ocrRows : wordsToRows(words);
   if (rows.length >= 3) return rows;
   const alt = textToRows(text);
   return alt.length > rows.length ? alt : rows;
 }
 
-async function extractImageRows(file: File): Promise<Row[]> {
-  const url = URL.createObjectURL(file);
-  try {
-    const { words, text } = await ocrRecognize(url);
-    const rows = wordsToRows(words);
-    if (rows.length >= 3) return rows;
-    const alt = textToRows(text);
-    return alt.length > rows.length ? alt : rows;
-  } finally {
-    URL.revokeObjectURL(url);
-  }
+async function extractImageRows(file: File): Promise<{ rows: Row[]; text: string }> {
+  const canvas = await preprocessImageFile(file);
+  const { words, text, rows: ocrRows } = await ocrRecognize(canvas);
+  const rows = ocrRows.length ? ocrRows : wordsToRows(words);
+  const alt = textToRows(text);
+  const compact = extractNominalListRows(text);
+  const compactCount = buildAthletes(compact).length;
+  const bestStructuredCount = Math.max(buildAthletes(rows).length, buildAthletes(alt).length);
+  if (compactCount >= 10 && compactCount >= bestStructuredCount - 1) return { rows: compact, text };
+  const candidates = [rows, alt, compact].sort((a, b) => scoreRowsForImport(b) - scoreRowsForImport(a));
+  return { rows: candidates[0] ?? [], text };
 }
 
 
@@ -329,6 +448,13 @@ const HEADER_MAP: Array<{ field: Field; re: RegExp }> = [
 const TITLE_RE = /(liste\s+nominative|saison\s+sportive|pour\s+la\s+saison|équipe|equipe|club|effectif|asfar)/i;
 const DATE_RE = /\b(\d{4}-\d{2}-\d{2}|\d{1,2}[\/.\-]\d{1,2}[\/.\-]\d{2,4})\b/;
 const BIB_RE = /^\.?\s*\d{1,3}\s*\.?$/;
+const NUMBERED_ROW_RE = /^\s*\.?\s*\d{1,3}\s*(?:[.,|)]|\/|\])?\s+/;
+const NUMBERED_ROW_PREFIX_RE = /^(\s*\.?\s*\d{1,3}\s*(?:[.,|)]|\/|\])?\s+)/;
+const COMPACT_ATHLETE_RE = /^\s*\.?\s*\d{1,3}\s*(?:[.,|)]|\/|\])?\s+(.+?)\s+(\d{1,2}[\/.\-]\d{1,2}[\/.\-]\d{2,4})\s+(\d{2,3})\s+(\d{2,3})\s*$/;
+const GIVEN_NAME_STARTERS = new Set([
+  "KHADIJA", "ZINEB", "SIHAM", "NOUHAILA", "FATIMA", "DOHA", "SAFA", "NAJAT", "OUAHIBA", "AZIZA", "HIND", "SANAA",
+  "PAULMICHE", "SOFIA", "OUAFAA", "YOULANDE", "HAJAR", "FLORE", "NOURA", "HANANE", "ANISSA", "JAURESINE",
+]);
 
 
 function headerFieldFor(cell: string): Field | null {
@@ -393,6 +519,145 @@ function parseMass(raw: string): number | undefined {
   return undefined;
 }
 
+function splitCompactName(raw: string): { lastName: string; firstName: string } | null {
+  const words = raw.replace(/\s+/g, " ").trim().split(" ").filter(Boolean);
+  if (words.length < 2) return null;
+  const upper = words.map((w) => w.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase());
+  const knownIdx = upper.findIndex((w, i) => i > 0 && GIVEN_NAME_STARTERS.has(w));
+  const splitAt = knownIdx > 0 ? knownIdx : 1;
+  return {
+    lastName: cleanName(words.slice(0, splitAt).join(" ")),
+    firstName: cleanName(words.slice(splitAt).join(" ")),
+  };
+}
+
+function parseCompactAthleteLine(raw: string): ParsedAthlete | null {
+  const compact = raw.replace(/[|]+/g, " ").replace(/\s+/g, " ").trim();
+  const m = compact.match(COMPACT_ATHLETE_RE);
+  if (!m) return null;
+  const names = splitCompactName(m[1]);
+  if (!names?.lastName || !names.firstName) return null;
+  return {
+    lastName: names.lastName,
+    firstName: names.firstName,
+    birthDate: normalizeDate(m[2]),
+    height: parseHeight(m[3]),
+    mass: parseMass(m[4]),
+  };
+}
+
+function extractNominalListRows(text: string): Row[] {
+  const rows: Row[] = [];
+  let current = "";
+  let pendingName = "";
+  const flush = () => {
+    if (parseCompactAthleteLine(current)) rows.push([current.trim()]);
+    current = "";
+  };
+  for (const raw of text.split(/\r?\n/)) {
+    const line = raw.replace(/[|]+/g, " ").replace(/\s+/g, " ").trim();
+    if (!line) continue;
+    if (NUMBERED_ROW_RE.test(line)) {
+      flush();
+      current = pendingName ? line.replace(NUMBERED_ROW_PREFIX_RE, `$1${pendingName} `) : line;
+      pendingName = "";
+      if (COMPACT_ATHLETE_RE.test(current)) flush();
+    } else if (current) {
+      current = `${current} ${line}`;
+      if (COMPACT_ATHLETE_RE.test(current)) flush();
+    } else if (/^[A-Za-zÀ-ÿ' \-]+$/.test(line) && !isHeaderOrTitle([line])) {
+      pendingName = [pendingName, line].filter(Boolean).join(" ").trim();
+    }
+  }
+  flush();
+  return rows;
+}
+
+function rowHasBib(row: Row): boolean {
+  return row.some((c) => BIB_RE.test(c.trim()));
+}
+
+function mapIndex(map: Record<number, Field> | null, field: Field): number | null {
+  if (!map) return null;
+  for (const [idxStr, f] of Object.entries(map)) if (f === field) return parseInt(idxStr, 10);
+  return null;
+}
+
+function appendCell(row: Row, idx: number | null, value: string) {
+  if (idx === null || !value.trim()) return;
+  row[idx] = [row[idx], value.trim()].filter(Boolean).join(" ").trim();
+}
+
+function setCellIfEmpty(row: Row, idx: number | null, value: string) {
+  if (idx === null || !value.trim()) return;
+  if (!row[idx]?.trim()) row[idx] = value.trim();
+}
+
+function isAlphaNameOnlyRow(row: Row): boolean {
+  const joined = row.join(" ").trim();
+  if (!joined || DATE_RE.test(joined) || rowHasBib(row)) return false;
+  const numCells = row.filter((c) => /^\s*\d+([.,]\d+)?\s*(kg|cm|m)?\s*$/i.test(c));
+  if (numCells.length > 0) return false;
+  return row.some((c) => c.trim()) && row.every((c) => !c.trim() || /^[A-Za-zÀ-ÿ' \-]+$/.test(c.trim()));
+}
+
+function rowLooksComplete(row: Row, map: Record<number, Field> | null): boolean {
+  const athlete = map ? (parseWithMap(row, map) ?? parseHeuristic(row)) : parseHeuristic(row);
+  return !!(athlete?.birthDate && (athlete.height || athlete.mass));
+}
+
+function mergePendingNameIntoNumberedRow(row: Row, pending: Row, map: Record<number, Field> | null): Row {
+  const merged = [...row];
+  const lastIdx = mapIndex(map, "lastName");
+  const firstIdx = mapIndex(map, "firstName");
+  if (lastIdx !== null || firstIdx !== null) {
+    appendCell(merged, lastIdx, pending[lastIdx ?? -1] || "");
+    const firstPending = pending[firstIdx ?? -1] || pending.filter((_, i) => i !== lastIdx).join(" ");
+    if (firstIdx !== null) merged[firstIdx] = [firstPending.trim(), merged[firstIdx]].filter(Boolean).join(" ").trim();
+    return merged;
+  }
+  return [[pending.join(" "), row.join(" ")].filter(Boolean).join(" ")];
+}
+
+function mergeWrappedContinuation(prev: Row, row: Row, map: Record<number, Field> | null): Row | null {
+  if (rowHasBib(row)) return null;
+  if (rowLooksComplete(prev, map) && isAlphaNameOnlyRow(row)) return null;
+  const joined = row.join(" ").replace(/\s+/g, " ").trim();
+  if (!joined || isHeaderOrTitle(row)) return null;
+  const hasDate = DATE_RE.test(joined);
+  const numericCells = row.filter((c) => /^\s*\d+([.,]\d+)?\s*(kg|cm|m)?\s*$/i.test(c));
+  const alphaCells = row.filter((c) => /^[A-Za-zÀ-ÿ' \-]+$/.test(c.trim()));
+  if (!hasDate && numericCells.length === 0 && alphaCells.length === 0) return null;
+
+  const merged = [...prev];
+  const lastIdx = mapIndex(map, "lastName");
+  const firstIdx = mapIndex(map, "firstName");
+  const dateIdx = mapIndex(map, "birthDate");
+  const heightIdx = mapIndex(map, "height");
+  const massIdx = mapIndex(map, "mass");
+
+  const date = joined.match(DATE_RE)?.[1];
+  if (date) setCellIfEmpty(merged, dateIdx, date);
+
+  const nums = numericCells.map((c) => c.trim());
+  for (const n of nums) {
+    if (parseHeight(n) && heightIdx !== null && !merged[heightIdx]?.trim()) { merged[heightIdx] = n; continue; }
+    if (parseMass(n) && massIdx !== null && !merged[massIdx]?.trim()) { merged[massIdx] = n; continue; }
+  }
+
+  const nameText = alphaCells.join(" ").replace(/\s+/g, " ").trim();
+  if (nameText) {
+    const split = splitCompactName(nameText);
+    if (split && nameText.split(/\s+/).length > 1) {
+      appendCell(merged, lastIdx, split.lastName);
+      appendCell(merged, firstIdx, split.firstName);
+    } else {
+      appendCell(merged, firstIdx, nameText);
+    }
+  }
+  return merged;
+}
+
 function cleanName(s: string): string {
   return s.replace(/[.,;|]+/g, " ").replace(/\s+/g, " ").trim();
 }
@@ -433,9 +698,25 @@ function buildAthletes(rows: Row[]): ParsedAthlete[] {
   const map = header?.map ?? null;
 
   const dataRows: Row[] = [];
+  let pendingNameRow: Row | null = null;
   for (let i = startIdx; i < rows.length; i++) {
-    const row = rows[i];
+    let row = rows[i];
     if (isHeaderOrTitle(row)) continue;
+    if (pendingNameRow && rowHasBib(row)) {
+      row = mergePendingNameIntoNumberedRow(row, pendingNameRow, map);
+      pendingNameRow = null;
+    }
+    if (dataRows.length > 0 && isAlphaNameOnlyRow(row) && rowLooksComplete(dataRows[dataRows.length - 1], map)) {
+      pendingNameRow = pendingNameRow ? mergePendingNameIntoNumberedRow(row, pendingNameRow, map) : row;
+      continue;
+    }
+    if (dataRows.length > 0) {
+      const wrapped = mergeWrappedContinuation(dataRows[dataRows.length - 1], row, map);
+      if (wrapped) {
+        dataRows[dataRows.length - 1] = wrapped;
+        continue;
+      }
+    }
     if (dataRows.length > 0 && isContinuationRow(row, map)) {
       // Fusion cellule à cellule sur la ligne précédente
       const prev = dataRows[dataRows.length - 1];
@@ -455,7 +736,7 @@ function buildAthletes(rows: Row[]): ParsedAthlete[] {
   const out: ParsedAthlete[] = [];
   const seen = new Set<string>();
   for (const row of dataRows) {
-    const athlete = map ? parseWithMap(row, map) : parseHeuristic(row);
+    const athlete = map ? (parseWithMap(row, map) ?? parseHeuristic(row)) : parseHeuristic(row);
     if (!athlete) continue;
     const key = `${athlete.lastName.toLowerCase()}|${athlete.firstName.toLowerCase()}|${athlete.birthDate ?? ""}`;
     if (seen.has(key)) continue;
@@ -463,6 +744,13 @@ function buildAthletes(rows: Row[]): ParsedAthlete[] {
     out.push(athlete);
   }
   return out;
+}
+
+function scoreRowsForImport(rows: Row[]): number {
+  const athletes = buildAthletes(rows);
+  const complete = athletes.filter((a) => a.birthDate && a.height && a.mass).length;
+  const suspicious = athletes.filter((a) => /^\d+$/.test(a.lastName) || !/[A-Za-zÀ-ÿ]/.test(a.firstName)).length;
+  return athletes.length * 1000 + complete * 50 + rows.length - suspicious * 100;
 }
 
 function parseWithMap(row: Row, map: Record<number, Field>): ParsedAthlete | null {
@@ -482,12 +770,13 @@ function parseWithMap(row: Row, map: Record<number, Field>): ParsedAthlete | nul
   const massRaw = get("mass");
   const dateRaw = get("birthDate");
   const posRaw = get("position");
+  const fallback = parseHeuristic(row);
   return {
     lastName,
     firstName,
-    height: heightRaw ? parseHeight(heightRaw) : undefined,
-    mass: massRaw ? parseMass(massRaw) : undefined,
-    birthDate: dateRaw ? normalizeDate(dateRaw) : undefined,
+    height: (heightRaw ? parseHeight(heightRaw) : undefined) ?? fallback?.height,
+    mass: (massRaw ? parseMass(massRaw) : undefined) ?? fallback?.mass,
+    birthDate: (dateRaw ? normalizeDate(dateRaw) : undefined) ?? fallback?.birthDate,
     position: posRaw || undefined,
   };
 }
@@ -495,8 +784,10 @@ function parseWithMap(row: Row, map: Record<number, Field>): ParsedAthlete | nul
 function parseHeuristic(row: Row): ParsedAthlete | null {
   // Fallback : reconstruire à partir des cellules brutes
   const flat = row.join(" \t ");
+  const compact = parseCompactAthleteLine(row.join(" "));
+  if (compact) return compact;
   const birthDate = normalizeDate(flat);
-  const cells = row.map((c) => c.trim()).filter((c) => c && !BIB_RE.test(c));
+  const cells = row.map((c) => (c || "").trim()).filter((c) => c && !BIB_RE.test(c));
   const nameCells: string[] = [];
   let mass: number | undefined, height: number | undefined;
   for (const c of cells) {
@@ -524,8 +815,11 @@ export async function parseAthletesFile(file: File): Promise<ParsedAthlete[]> {
   const mime = (file.type || "").toLowerCase();
   const name = file.name.toLowerCase();
   let rows: Row[] = [];
+  let detectedText = "";
   if (mime.startsWith("image/") || /\.(png|jpe?g|webp|bmp|gif)$/.test(name)) {
-    rows = await extractImageRows(file);
+    const extracted = await extractImageRows(file);
+    rows = extracted.rows;
+    detectedText = extracted.text;
   } else if (mime === "application/pdf" || name.endsWith(".pdf")) {
     rows = await extractPdfRows(file);
   } else if (
@@ -538,5 +832,10 @@ export async function parseAthletesFile(file: File): Promise<ParsedAthlete[]> {
   } else {
     throw new Error(`Type de fichier non supporté : ${mime || name}`);
   }
-  return buildAthletes(rows);
+  const athletes = buildAthletes(rows);
+  if (athletes.length === 0 && detectedText.trim()) {
+    const excerpt = detectedText.replace(/\s+/g, " ").trim().slice(0, 180);
+    throw new AthleteImportError(`Texte détecté, mais aucun athlète reconnu. Vérifiez le cadrage ou essayez un export PDF/DOCX. Extrait OCR : “${excerpt}”`, detectedText);
+  }
+  return athletes;
 }

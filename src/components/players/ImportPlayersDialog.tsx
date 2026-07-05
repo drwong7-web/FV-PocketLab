@@ -1,7 +1,7 @@
 import { useState, ChangeEvent } from "react";
 import { Upload, Loader2, Trash2 } from "lucide-react";
 import { createPlayer } from "@/lib/storage";
-import { parseAthletesFile } from "@/lib/import/athletes";
+import { AthleteImportError, parseAthletesFile } from "@/lib/import/athletes";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -58,7 +58,8 @@ export default function ImportPlayersDialog({ teamId, organizationId, onImported
       setRows(athletes.map((a) => ({ ...a, selected: true })));
       toast.success(`${athletes.length} athlète(s) détecté(s)`);
     } catch (err) {
-      toast.error("Échec de l'analyse : " + ((err as Error)?.message ?? "Erreur"));
+      if (err instanceof AthleteImportError) toast.error(err.message);
+      else toast.error("Échec de l'analyse : " + ((err as Error)?.message ?? "Erreur"));
     } finally {
       setLoading(false);
     }
