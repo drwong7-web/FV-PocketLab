@@ -590,8 +590,35 @@ function setCellIfEmpty(row: Row, idx: number | null, value: string) {
   if (!row[idx]?.trim()) row[idx] = value.trim();
 }
 
+function isAlphaNameOnlyRow(row: Row): boolean {
+  const joined = row.join(" ").trim();
+  if (!joined || DATE_RE.test(joined) || rowHasBib(row)) return false;
+  const numCells = row.filter((c) => /^\s*\d+([.,]\d+)?\s*(kg|cm|m)?\s*$/i.test(c));
+  if (numCells.length > 0) return false;
+  return row.some((c) => c.trim()) && row.every((c) => !c.trim() || /^[A-Za-zÀ-ÿ' \-]+$/.test(c.trim()));
+}
+
+function rowLooksComplete(row: Row, map: Record<number, Field> | null): boolean {
+  const athlete = map ? (parseWithMap(row, map) ?? parseHeuristic(row)) : parseHeuristic(row);
+  return !!(athlete?.birthDate && athlete.height && athlete.mass);
+}
+
+function mergePendingNameIntoNumberedRow(row: Row, pending: Row, map: Record<number, Field> | null): Row {
+  const merged = [...row];
+  const lastIdx = mapIndex(map, "lastName");
+  const firstIdx = mapIndex(map, "firstName");
+  if (lastIdx !== null || firstIdx !== null) {
+    appendCell(merged, lastIdx, pending[lastIdx ?? -1] || "");
+    const firstPending = pending[firstIdx ?? -1] || pending.filter((_, i) => i !== lastIdx).join(" ");
+    if (firstIdx !== null) merged[firstIdx] = [firstPending.trim(), merged[firstIdx]].filter(Boolean).join(" ").trim();
+    return merged;
+  }
+  return [[pending.join(" "), row.join(" ")].filter(Boolean).join(" ")];
+}
+
 function mergeWrappedContinuation(prev: Row, row: Row, map: Record<number, Field> | null): Row | null {
   if (rowHasBib(row)) return null;
+  if (rowLooksComplete(prev, map) && isAlphaNameOnlyRow(row)) return null;
   const joined = row.join(" ").replace(/\s+/g, " ").trim();
   if (!joined || isHeaderOrTitle(row)) return null;
   const hasDate = DATE_RE.test(joined);
@@ -668,9 +695,18 @@ function buildAthletes(rows: Row[]): ParsedAthlete[] {
   const map = header?.map ?? null;
 
   const dataRows: Row[] = [];
+  let pendingNameRow: Row | null = null;
   for (let i = startIdx; i < rows.length; i++) {
-    const row = rows[i];
+    let row = rows[i];
     if (isHeaderOrTitle(row)) continue;
+    if (pendingNameRow && rowHasBib(row)) {
+      row = mergePendingNameIntoNumberedRow(row, pendingNameRow, map);
+      pendingNameRow = null;
+    }
+    if (dataRows.length > 0 && isAlphaNameOnlyRow(row) && rowLooksComplete(dataRows[dataRows.length - 1], map)) {
+      pendingNameRow = pendingNameRow ? mergePendingNameIntoNumberedRow(row, pendingNameRow, map) : row;
+      continue;
+    }
     if (dataRows.length > 0) {
       const wrapped = mergeWrappedContinuation(dataRows[dataRows.length - 1], row, map);
       if (wrapped) {
