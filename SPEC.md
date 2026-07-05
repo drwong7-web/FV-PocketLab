@@ -2,7 +2,7 @@
 
 > **Living specification.** Update this file in the SAME turn as any change to architecture, routes, data model, libraries, calculation protocols, or product behavior. If a change doesn't affect any of those, no update needed. Kept so another agent (Cursor, Claude Code, Codex, etc.) can continue the work with the exact same architecture and plan.
 
-**Last updated:** 2026-07-04
+**Last updated:** 2026-07-05
 **Owner:** Lovable agent (auto-maintained)
 **Related docs:** `.lovable/plan.md` (ephemeral per-task plans), `mem://index.md` (agent memory rules)
 
@@ -10,7 +10,7 @@
 
 ## 1. Product
 
-Local-first web app to plan, capture and analyze athletic performance tests (linear sprint, vertical jump) for teams. Force–Velocity (FV) profiling with on-device video analysis. No account, no server: everything stays on the device with optional **Bring-Your-Own-Cloud** sync (Google Drive, WebDAV).
+Local-first web app to plan, capture and analyze athletic performance tests (linear sprint, vertical jump) for teams. Force–Velocity (FV) profiling with on-device video analysis. No account, no server: everything stays on the device with optional native drive sync (Google Drive on Android/desktop, iCloud Drive on iOS/iPadOS, `.slfv` file fallback).
 
 Core user flows:
 1. Create a team → add athletes (manual or import from PDF/DOCX/image via local OCR).
@@ -75,7 +75,7 @@ src/
     localHistory.ts            undo/redo for edits
     sync/
       config.ts                sync target selection + secrets
-      adapters.ts              GoogleDrive, WebDAV
+      adapters.ts              Google Drive, iCloud Drive / Files, `.slfv` file fallback
       snapshot.ts              build/restore JSON snapshot of all slfv:* keys
       manager.ts               scheduled push/pull
     import/
@@ -148,9 +148,9 @@ Entry: `parseAthletesFile(file) → ParsedAthlete[]`.
 - **DOCX** — JSZip → parse `<w:tbl>/<w:tr>/<w:tc>` directly.
 - **PDF (text layer)** — pdfjs → items grouped into y-bands, columns detected via x-histogram, cells snapped to columns.
 - **PDF (scanned)** — page rasterized then routed through image path.
-- **Image** — tesseract.js (`fra+eng`) → words + bboxes → y-cluster into lines → x-histogram into columns → snap.
+- **Image** — canvas preprocessing (white background, upscale, grayscale/contrast) → tesseract.js (`fra+eng`) using TSV/blocks/text outputs with `PSM.AUTO` then `PSM.SPARSE_TEXT` fallback → words + bboxes → y-cluster into lines → x-histogram into columns → snap.
 - **Text/CSV** — split on tabs / 2+ spaces / `;|,`.
-- Header detection (`Nom/Prénom/Taille/Poids/…`) maps columns to fields; heuristic fallback otherwise. Title rows + continuation rows (multi-line names) handled. Dedup on `lastName|firstName|birthDate`.
+- Header detection (`Nom/Prénom/Taille/Poids/…`) maps columns to fields; heuristic fallback otherwise. Title rows + continuation rows (multi-line names) handled. If OCR collapses a table into single lines, a compact “liste nominative” parser extracts numbered rows like `.15. NOM PRENOM DATE TAILLE POIDS`. Dedup on `lastName|firstName|birthDate`.
 
 UI: `components/players/ImportPlayersDialog.tsx` (dropzone + editable preview table before save).
 
