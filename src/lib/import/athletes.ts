@@ -735,7 +735,7 @@ function parseHeuristic(row: Row): ParsedAthlete | null {
   const compact = parseCompactAthleteLine(row.join(" "));
   if (compact) return compact;
   const birthDate = normalizeDate(flat);
-  const cells = row.map((c) => c.trim()).filter((c) => c && !BIB_RE.test(c));
+  const cells = row.map((c) => (c || "").trim()).filter((c) => c && !BIB_RE.test(c));
   const nameCells: string[] = [];
   let mass: number | undefined, height: number | undefined;
   for (const c of cells) {
