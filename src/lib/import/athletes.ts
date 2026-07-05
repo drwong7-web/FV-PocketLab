@@ -564,6 +564,64 @@ function extractNominalListRows(text: string): Row[] {
   return rows;
 }
 
+function rowHasBib(row: Row): boolean {
+  return row.some((c) => BIB_RE.test(c.trim()));
+}
+
+function mapIndex(map: Record<number, Field> | null, field: Field): number | null {
+  if (!map) return null;
+  for (const [idxStr, f] of Object.entries(map)) if (f === field) return parseInt(idxStr, 10);
+  return null;
+}
+
+function appendCell(row: Row, idx: number | null, value: string) {
+  if (idx === null || !value.trim()) return;
+  row[idx] = [row[idx], value.trim()].filter(Boolean).join(" ").trim();
+}
+
+function setCellIfEmpty(row: Row, idx: number | null, value: string) {
+  if (idx === null || !value.trim()) return;
+  if (!row[idx]?.trim()) row[idx] = value.trim();
+}
+
+function mergeWrappedContinuation(prev: Row, row: Row, map: Record<number, Field> | null): Row | null {
+  if (rowHasBib(row)) return null;
+  const joined = row.join(" ").replace(/\s+/g, " ").trim();
+  if (!joined || isHeaderOrTitle(row)) return null;
+  const hasDate = DATE_RE.test(joined);
+  const numericCells = row.filter((c) => /^\s*\d+([.,]\d+)?\s*(kg|cm|m)?\s*$/i.test(c));
+  const alphaCells = row.filter((c) => /^[A-Za-zÀ-ÿ' \-]+$/.test(c.trim()));
+  if (!hasDate && numericCells.length === 0 && alphaCells.length === 0) return null;
+
+  const merged = [...prev];
+  const lastIdx = mapIndex(map, "lastName");
+  const firstIdx = mapIndex(map, "firstName");
+  const dateIdx = mapIndex(map, "birthDate");
+  const heightIdx = mapIndex(map, "height");
+  const massIdx = mapIndex(map, "mass");
+
+  const date = joined.match(DATE_RE)?.[1];
+  if (date) setCellIfEmpty(merged, dateIdx, date);
+
+  const nums = numericCells.map((c) => c.trim());
+  for (const n of nums) {
+    if (parseHeight(n) && heightIdx !== null && !merged[heightIdx]?.trim()) { merged[heightIdx] = n; continue; }
+    if (parseMass(n) && massIdx !== null && !merged[massIdx]?.trim()) { merged[massIdx] = n; continue; }
+  }
+
+  const nameText = alphaCells.join(" ").replace(/\s+/g, " ").trim();
+  if (nameText) {
+    const split = splitCompactName(nameText);
+    if (split && nameText.split(/\s+/).length > 1) {
+      appendCell(merged, lastIdx, split.lastName);
+      appendCell(merged, firstIdx, split.firstName);
+    } else {
+      appendCell(merged, firstIdx, nameText);
+    }
+  }
+  return merged;
+}
+
 function cleanName(s: string): string {
   return s.replace(/[.,;|]+/g, " ").replace(/\s+/g, " ").trim();
 }
@@ -607,6 +665,13 @@ function buildAthletes(rows: Row[]): ParsedAthlete[] {
   for (let i = startIdx; i < rows.length; i++) {
     const row = rows[i];
     if (isHeaderOrTitle(row)) continue;
+    if (dataRows.length > 0) {
+      const wrapped = mergeWrappedContinuation(dataRows[dataRows.length - 1], row, map);
+      if (wrapped) {
+        dataRows[dataRows.length - 1] = wrapped;
+        continue;
+      }
+    }
     if (dataRows.length > 0 && isContinuationRow(row, map)) {
       // Fusion cellule à cellule sur la ligne précédente
       const prev = dataRows[dataRows.length - 1];
@@ -653,12 +718,13 @@ function parseWithMap(row: Row, map: Record<number, Field>): ParsedAthlete | nul
   const massRaw = get("mass");
   const dateRaw = get("birthDate");
   const posRaw = get("position");
+  const fallback = parseHeuristic(row);
   return {
     lastName,
     firstName,
-    height: heightRaw ? parseHeight(heightRaw) : undefined,
-    mass: massRaw ? parseMass(massRaw) : undefined,
-    birthDate: dateRaw ? normalizeDate(dateRaw) : undefined,
+    height: (heightRaw ? parseHeight(heightRaw) : undefined) ?? fallback?.height,
+    mass: (massRaw ? parseMass(massRaw) : undefined) ?? fallback?.mass,
+    birthDate: (dateRaw ? normalizeDate(dateRaw) : undefined) ?? fallback?.birthDate,
     position: posRaw || undefined,
   };
 }
