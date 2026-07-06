@@ -1,10 +1,12 @@
 /**
- * Local storage repository for SprintLab FV Pro (prototype persistence).
- * Wraps a simple namespaced key/value store, returning typed entities.
- * Easy to swap for Lovable Cloud later — keep the same function shapes.
+ * Repository local — API synchrone stable, persistance IndexedDB via Dexie
+ * (voir `src/lib/db/kvStore.ts`). Les lectures viennent d'un cache mémoire
+ * hydraté au boot ; les écritures sont miroir cache + write-through Dexie.
+ * Compatible avec les appelants historiques (aucun changement de signature).
  */
 
 import type { Organization, Player, Team, TestSession, User } from "./types";
+import { kvGet, kvSet, kvRemove } from "./db/kvStore";
 
 const KEYS = {
   users: "slfv:users",
@@ -16,15 +18,11 @@ const KEYS = {
 } as const;
 
 function read<T>(k: string, fallback: T): T {
-  try {
-    const raw = localStorage.getItem(k);
-    return raw ? (JSON.parse(raw) as T) : fallback;
-  } catch {
-    return fallback;
-  }
+  const v = kvGet<T>(k);
+  return v === undefined || v === null ? fallback : v;
 }
 function write<T>(k: string, v: T) {
-  localStorage.setItem(k, JSON.stringify(v));
+  kvSet(k, v);
 }
 
 export const uid = () =>
@@ -38,8 +36,8 @@ export function hashPassword(p: string) {
 }
 
 // ----- Users / Orgs -----
-export function listUsers(): User[] { return read(KEYS.users, []); }
-export function listOrgs(): Organization[] { return read(KEYS.orgs, []); }
+export function listUsers(): User[] { return read(KEYS.users, [] as User[]); }
+export function listOrgs(): Organization[] { return read(KEYS.orgs, [] as Organization[]); }
 
 export function createUserAndOrg(email: string, password: string, name: string, orgName: string): User {
   const users = listUsers();
@@ -76,7 +74,7 @@ export function currentUser(): User | null {
   if (!s.userId) return null;
   return listUsers().find((u) => u.id === s.userId) ?? null;
 }
-export function signOut() { localStorage.removeItem(KEYS.session); }
+export function signOut() { kvRemove(KEYS.session); }
 
 export function getOrganization(id: string) {
   return listOrgs().find((o) => o.id === id) ?? null;
@@ -98,7 +96,6 @@ export function createTeam(orgId: string, name: string, sport?: string): Team {
 }
 export function deleteTeam(id: string) {
   write(KEYS.teams, read<Team[]>(KEYS.teams, []).filter((t) => t.id !== id));
-  // cascade
   const players = read<Player[]>(KEYS.players, []).filter((p) => p.teamId !== id);
   write(KEYS.players, players);
 }
