@@ -1,10 +1,12 @@
 /**
- * Sync snapshot — collecte/restaure les données utilisateur (localStorage
- * namespacé) sous forme d'un blob JSON en clair.
+ * Sync snapshot — collecte/restaure les données utilisateur persistées via
+ * `src/lib/db/kvStore.ts` (IndexedDB) sous forme d'un blob JSON en clair.
  *
  * Politique de merge : LWW (Last-Write-Wins) par entité quand un `createdAt`
  * existe, sinon le snapshot le plus récent (au niveau du fichier) gagne.
  */
+
+import { kvGet, kvKeys, kvSet } from "@/lib/db/kvStore";
 
 const DATA_PREFIXES = ["slfv:", "fv:"];
 // Clés à NE PAS exporter (device-local uniquement)
@@ -34,13 +36,10 @@ export interface SnapshotV1 {
 
 function collect(): Record<string, unknown> {
   const out: Record<string, unknown> = {};
-  for (let i = 0; i < localStorage.length; i++) {
-    const k = localStorage.key(i);
-    if (!k) continue;
+  for (const k of kvKeys()) {
     if (EXCLUDED_KEYS.has(k)) continue;
     if (!DATA_PREFIXES.some((p) => k.startsWith(p))) continue;
-    try { out[k] = JSON.parse(localStorage.getItem(k) || "null"); }
-    catch { out[k] = localStorage.getItem(k); }
+    out[k] = kvGet(k);
   }
   return out;
 }
