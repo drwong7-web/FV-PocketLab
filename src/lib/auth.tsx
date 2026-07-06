@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, ReactNode } from "react";
 import { createUserAndOrg, currentUser, listUsers } from "@/lib/storage";
+import { kvGet, kvSet, kvRemove } from "@/lib/db/kvStore";
 import type { User } from "@/lib/types";
 
 const PROFILE_FLAG = "slfv:profile-ready";
@@ -19,8 +20,8 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 function hasProfile(): boolean {
   try {
-    if (localStorage.getItem(PROFILE_FLAG) === "1") return true;
-    const users = JSON.parse(localStorage.getItem("slfv:users") || "[]");
+    if (kvGet<string>(PROFILE_FLAG) === "1") return true;
+    const users = kvGet<unknown[]>("slfv:users") || [];
     return Array.isArray(users) && users.length > 0;
   } catch { return false; }
 }
@@ -47,16 +48,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!u) {
         u = createUserAndOrg(`local-${Date.now()}@device`, "n/a", name.trim(), org.trim());
       }
-      try { localStorage.setItem(PROFILE_FLAG, "1"); } catch { /* */ }
+      try { kvSet(PROFILE_FLAG, "1"); } catch { /* */ }
       setUser(u);
       setEnrolled(true);
     },
     signOut: () => {
       try {
-        localStorage.removeItem(PROFILE_FLAG);
-        localStorage.removeItem("slfv:users");
-        localStorage.removeItem("slfv:orgs");
-        localStorage.removeItem("slfv:session");
+        kvRemove(PROFILE_FLAG);
+        kvRemove("slfv:users");
+        kvRemove("slfv:orgs");
+        kvRemove("slfv:session");
       } catch { /* */ }
       setUser(null);
       setEnrolled(false);
