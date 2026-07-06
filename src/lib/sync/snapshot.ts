@@ -88,17 +88,16 @@ export function applySnapshot(snap: SnapshotV1, mode: "merge" | "replace" = "mer
     if (EXCLUDED_KEYS.has(k)) continue;
     const incoming = snap.data[k];
     if (mode === "replace" || !(k in MERGEABLE_COLLECTIONS)) {
-      try { localStorage.setItem(k, JSON.stringify(incoming ?? null)); } catch { /* */ }
+      try { kvSet(k, incoming ?? null); } catch { /* */ }
       added++;
       continue;
     }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let local: any[] = [];
-    try { local = JSON.parse(localStorage.getItem(k) || "[]"); } catch { local = []; }
+    const local: any[] = Array.isArray(kvGet(k)) ? (kvGet(k) as any[]) : [];
     const remote = Array.isArray(incoming) ? incoming : [];
     const before = local.length;
     const merged = mergeArrays(local, remote);
-    try { localStorage.setItem(k, JSON.stringify(merged)); } catch { /* */ }
+    try { kvSet(k, merged); } catch { /* */ }
     if (merged.length > before) added += merged.length - before;
     updated += Math.max(0, remote.length - (merged.length - before));
   }
