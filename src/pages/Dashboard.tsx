@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Activity, ArrowRight, Users } from "lucide-react";
+import { Activity, ArrowRight, Plus, Users } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { listPlayers, listTeams, getOrganization } from "@/lib/storage";
 import { listUnifiedTests } from "@/lib/unifiedTests";
