@@ -93,7 +93,7 @@ src/
 
 ## 4. Routes (`src/App.tsx`)
 
-Public: `/`, `/auth`.
+Public: `/auth`. Root `/` redirects to `/app` if a local profile exists, else `/auth` (no marketing landing in this project — landing lives in a separate Lovable project).
 Protected under `/app` (wraps `AppLayout`):
 - `` → Dashboard
 - `teams` / `teams/:teamId` / `players/:playerId`
