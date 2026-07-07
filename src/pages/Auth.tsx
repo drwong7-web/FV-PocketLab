@@ -1,5 +1,5 @@
 import { useEffect, useState, FormEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Activity, Loader2, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -71,9 +71,6 @@ export default function Auth() {
           </p>
         </div>
 
-        <p className="text-center mt-6 text-xs text-muted-foreground">
-          <Link to="/" className="hover:text-foreground">← Accueil</Link>
-        </p>
       </div>
     </div>
   );

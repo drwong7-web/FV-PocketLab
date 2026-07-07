@@ -2,7 +2,7 @@
 
 > **Living specification.** Update this file in the SAME turn as any change to architecture, routes, data model, libraries, calculation protocols, or product behavior. If a change doesn't affect any of those, no update needed. Kept so another agent (Cursor, Claude Code, Codex, etc.) can continue the work with the exact same architecture and plan.
 
-**Last updated:** 2026-07-06
+**Last updated:** 2026-07-07
 **Owner:** Lovable agent (auto-maintained)
 **Related docs:** `.lovable/plan.md` (ephemeral per-task plans), `mem://index.md` (agent memory rules)
 
@@ -81,19 +81,19 @@ src/
     import/
       athletes.ts              PDF/DOCX/image → ParsedAthlete[] (100% local)
   pages/
-    Landing.tsx, Auth.tsx
+    Auth.tsx
     Dashboard.tsx
     Teams.tsx, TeamDetail.tsx, PlayerDetail.tsx
     NewTest.tsx (chooser) → JumpTest.tsx | SprintTest.tsx
     TestList.tsx, TestResults.tsx
-    Index.tsx, NotFound.tsx
+    NotFound.tsx
 ```
 
 ---
 
 ## 4. Routes (`src/App.tsx`)
 
-Public: `/`, `/auth`.
+Public: `/auth`. Root `/` redirects to `/app` if a local profile exists, else `/auth` (no marketing landing in this project — landing lives in a separate Lovable project).
 Protected under `/app` (wraps `AppLayout`):
 - `` → Dashboard
 - `teams` / `teams/:teamId` / `players/:playerId`
