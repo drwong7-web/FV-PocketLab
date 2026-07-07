@@ -28,7 +28,7 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-3 gap-3">
         <MetricCard label="Teams" value={teams.length} accent="primary" icon={<Users className="w-4 h-4" />} />
-        <MetricCard label="Players" value={players.length} accent="accent" icon={<User className="w-4 h-4" />} />
+        <MetricCard label="PLAYERS\u00a0" value={players.length} accent="accent" icon={<User className="w-4 h-4" />} />
         <MetricCard label="Tests" value={tests.length} accent="success" icon={<Activity className="w-4 h-4" />} />
       </div>
 
