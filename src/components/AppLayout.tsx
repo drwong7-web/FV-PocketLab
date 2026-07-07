@@ -127,8 +127,8 @@ export default function AppLayout() {
               <Activity className="w-4 h-4 text-primary-foreground" />
             </div>
             <div className="leading-tight">
-              <div className="font-bold text-sm tracking-tight">SprintLab</div>
-              <div className="text-[10px] uppercase tracking-widest text-muted-foreground -mt-0.5">FV Pro</div>
+              <div className="font-bold text-sm tracking-tight">PocketLab</div>
+              <div className="text-[10px] uppercase tracking-widest text-muted-foreground -mt-0.5">{"\n"}</div>
             </div>
           </Link>
           <div className="flex items-center gap-1">
