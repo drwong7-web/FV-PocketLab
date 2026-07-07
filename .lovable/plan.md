@@ -1,5 +1,6 @@
-Retirer l'icône `+` (Plus) devant "New Test" sur le Dashboard.
+Replace the `Users` (two-person) icon on the "Players" metric card with the single-person `User` icon from lucide-react.
 
-**Fichier**: `src/pages/Dashboard.tsx` ligne 46
-- Supprimer `<Plus className="w-4 h-4" />` et les classes flex du wrapper devenues inutiles
-- Retirer l'import `Plus` de `lucide-react` s'il n'est plus utilisé ailleurs
+**Changes in `src/pages/Dashboard.tsx`:**
+- Import `User` alongside `Users` from `lucide-react`.
+- On line 31 (Players MetricCard), change `icon={<Users className="w-4 h-4" />}` to `icon={<User className="w-4 h-4" />}`.
+- Leave the Teams card unchanged (still uses `Users`).

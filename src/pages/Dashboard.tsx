@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Activity, ArrowRight, Plus, Users } from "lucide-react";
+import { Activity, ArrowRight, Plus, User, Users } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { listPlayers, listTeams, getOrganization } from "@/lib/storage";
 import { listUnifiedTests } from "@/lib/unifiedTests";
@@ -28,7 +28,7 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-3 gap-3">
         <MetricCard label="Teams" value={teams.length} accent="primary" icon={<Users className="w-4 h-4" />} />
-        <MetricCard label="Players" value={players.length} accent="accent" icon={<Users className="w-4 h-4" />} />
+        <MetricCard label="Players" value={players.length} accent="accent" icon={<User className="w-4 h-4" />} />
         <MetricCard label="Tests" value={tests.length} accent="success" icon={<Activity className="w-4 h-4" />} />
       </div>
 
