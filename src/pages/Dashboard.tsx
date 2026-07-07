@@ -36,14 +36,12 @@ export default function Dashboard() {
         <Link to="/app/teams" className="group glass-card p-5 flex items-center justify-between hover:border-primary/40 transition-colors bg-gradient-to-br from-primary/10 to-transparent">
           <div>
             <div className="font-semibold">Manage Teams</div>
-            <div className="text-xs text-muted-foreground mt-1">Organise athletes into squads.</div>
           </div>
           <ArrowRight className="w-5 h-5 text-primary" />
         </Link>
         <Link to="/app/tests/new" className="group glass-card p-5 flex items-center justify-between hover:border-primary/40 transition-colors bg-gradient-to-br from-primary/10 to-transparent">
           <div>
             <div className="font-semibold">New Test</div>
-            <div className="text-xs text-muted-foreground mt-1">Vertical jump or sprint test.</div>
           </div>
           <ArrowRight className="w-5 h-5 text-primary" />
         </Link>
