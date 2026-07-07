@@ -81,12 +81,12 @@ src/
     import/
       athletes.ts              PDF/DOCX/image → ParsedAthlete[] (100% local)
   pages/
-    Landing.tsx, Auth.tsx
+    Auth.tsx
     Dashboard.tsx
     Teams.tsx, TeamDetail.tsx, PlayerDetail.tsx
     NewTest.tsx (chooser) → JumpTest.tsx | SprintTest.tsx
     TestList.tsx, TestResults.tsx
-    Index.tsx, NotFound.tsx
+    NotFound.tsx
 ```
 
 ---
