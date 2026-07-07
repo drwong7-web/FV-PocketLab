@@ -118,6 +118,7 @@ export async function bootstrapKvStore(): Promise<void> {
       }
     }
     ready = true;
+    notifyReady();
   })();
   return bootPromise;
 }
