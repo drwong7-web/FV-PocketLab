@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, ReactNode } from "react";
 import { createUserAndOrg, currentUser, listUsers } from "@/lib/storage";
-import { kvGet, kvSet, kvRemove } from "@/lib/db/kvStore";
+import { kvGet, kvSet, kvRemove, useKvReady } from "@/lib/db/kvStore";
 import type { User } from "@/lib/types";
 
 const PROFILE_FLAG = "slfv:profile-ready";
@@ -27,6 +27,7 @@ function hasProfile(): boolean {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const kvReady = useKvReady();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [enrolled, setEnrolled] = useState(false);
@@ -37,9 +38,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    if (!kvReady) return;
     refreshProfile();
     setLoading(false);
-  }, [refreshProfile]);
+  }, [kvReady, refreshProfile]);
 
   const value = useMemo<AuthContextValue>(() => ({
     user, loading, enrolled,

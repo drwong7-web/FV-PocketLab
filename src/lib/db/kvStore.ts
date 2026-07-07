@@ -19,6 +19,7 @@
  */
 
 import Dexie, { type Table } from "dexie";
+import { useEffect, useState } from "react";
 
 interface KvRow { key: string; value: unknown }
 
@@ -36,6 +37,24 @@ let db: SlfvDb | null = null;
 let ready = false;
 let bootPromise: Promise<void> | null = null;
 let writeChain: Promise<unknown> = Promise.resolve();
+const readyListeners = new Set<() => void>();
+function notifyReady() { for (const fn of readyListeners) { try { fn(); } catch { /* */ } } }
+
+export function isKvReady(): boolean { return ready; }
+export function onKvReady(fn: () => void): () => void {
+  if (ready) { fn(); return () => {}; }
+  readyListeners.add(fn);
+  return () => readyListeners.delete(fn);
+}
+export function useKvReady(): boolean {
+  const [r, setR] = useState<boolean>(() => ready);
+  useEffect(() => {
+    if (ready) { setR(true); return; }
+    const off = onKvReady(() => setR(true));
+    return off;
+  }, []);
+  return r;
+}
 
 function isDataKey(k: string): boolean {
   return DATA_PREFIXES.some((p) => k.startsWith(p));
@@ -99,6 +118,7 @@ export async function bootstrapKvStore(): Promise<void> {
       }
     }
     ready = true;
+    notifyReady();
   })();
   return bootPromise;
 }
