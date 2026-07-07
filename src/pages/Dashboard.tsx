@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Activity, ArrowRight, Plus, Users } from "lucide-react";
+import { Activity, ArrowRight, Users } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { listPlayers, listTeams, getOrganization } from "@/lib/storage";
 import { listUnifiedTests } from "@/lib/unifiedTests";
@@ -42,9 +42,7 @@ export default function Dashboard() {
         </Link>
         <Link to="/app/tests/new" className="group glass-card p-5 flex items-center justify-between hover:border-primary/40 transition-colors bg-gradient-to-br from-primary/10 to-transparent">
           <div>
-            <div className="font-semibold flex items-center gap-2">
-              <Plus className="w-4 h-4" /> New Test
-            </div>
+            <div className="font-semibold">New Test</div>
             <div className="text-xs text-muted-foreground mt-1">Vertical jump or sprint test.</div>
           </div>
           <ArrowRight className="w-5 h-5 text-primary" />
