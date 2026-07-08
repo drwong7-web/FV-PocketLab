@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet } from "react-router-dom";
+import fvLogo from "@/assets/fv-logo.png.asset.json";
 import { Activity, Check, Cloud, CloudOff, Download, Folder, Home, Languages, Moon, Palette, RefreshCw, Settings as SettingsIcon, Sun, Upload, Users } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
@@ -123,9 +124,7 @@ export default function AppLayout() {
       <header className="sticky top-0 z-30 border-b border-border bg-background/80 backdrop-blur-xl">
         <div className="container flex items-center justify-between h-14 max-w-5xl">
           <Link to="/app" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-primary shadow-glow flex items-center justify-center">
-              <Activity className="w-4 h-4 text-primary-foreground" />
-            </div>
+            <img src={fvLogo.url} alt="FV logo" className="w-8 h-8 object-contain" />
             <div className="leading-tight">
               <div className="font-bold text-sm tracking-tight">PocketLab</div>
               <div className="text-[10px] uppercase tracking-widest text-muted-foreground -mt-0.5">{"\n"}</div>
