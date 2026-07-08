@@ -33,18 +33,19 @@ export default function Dashboard() {
       </div>
 
       <div className="grid sm:grid-cols-2 gap-3">
-        <Link to="/app/teams" className="group glass-card p-5 flex items-center justify-between hover:border-primary/40 transition-colors bg-gradient-to-br from-primary/10 to-transparent">
+        <Link to="/app/teams" className="group glass-card p-6 flex items-center justify-between hover:border-primary/40 transition-colors bg-gradient-to-br from-primary/10 to-transparent">
           <div>
-            <div className="font-semibold">Manage Teams</div>
+            <div className="font-bold text-lg tracking-tight">Manage Teams</div>
           </div>
-          <ArrowRight className="w-5 h-5 text-primary" />
+          <ArrowRight className="w-6 h-6 text-primary stroke-[2.5]" />
         </Link>
-        <Link to="/app/tests/new" className="group glass-card p-5 flex items-center justify-between hover:border-primary/40 transition-colors bg-gradient-to-br from-primary/10 to-transparent">
+        <Link to="/app/tests/new" className="group glass-card p-6 flex items-center justify-between hover:border-primary/40 transition-colors bg-gradient-to-br from-primary/10 to-transparent">
           <div>
-            <div className="font-semibold">New Test</div>
+            <div className="font-bold text-lg tracking-tight">New Test</div>
           </div>
-          <ArrowRight className="w-5 h-5 text-primary" />
+          <ArrowRight className="w-6 h-6 text-primary stroke-[2.5]" />
         </Link>
+
       </div>
 
       {lastTest && (
