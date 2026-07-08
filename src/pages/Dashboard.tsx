@@ -44,7 +44,7 @@ export default function Dashboard() {
           <div>
             <div className="font-bold text-lg tracking-tight">New Test</div>
           </div>
-          <ArrowRight className="w-6 h-6 text-primary stroke-[2.5]" />
+          <ArrowRight className="w-6 h-6 text-foreground stroke-[2.5]" />
         </Link>
 
       </div>
