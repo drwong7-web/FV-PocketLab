@@ -26,7 +26,7 @@ export default function NewTest() {
             <div>
               <h2 className="font-display text-lg font-bold uppercase">Vertical jump</h2>
               <p className="text-xs text-muted-foreground mt-1">
-                Samozino F-V profile from squat jumps with progressive loads.
+                {"\n"}
               </p>
             </div>
             <div className="text-xs text-primary group-hover:underline">Start →</div>
@@ -40,9 +40,9 @@ export default function NewTest() {
               <TrendingUp className="h-6 w-6" />
             </div>
             <div>
-              <h2 className="font-display text-lg font-bold uppercase">Sprint</h2>
+              <h2 className="font-display text-lg font-bold uppercase">&nbsp;LINEAR&nbsp;SPRINT</h2>
               <p className="text-xs text-muted-foreground mt-1">
-                Morin–Samozino horizontal F-V profile from split times.
+                {"\n"}
               </p>
             </div>
             <div className="text-xs text-primary group-hover:underline">Start →</div>
