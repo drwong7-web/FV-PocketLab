@@ -19,7 +19,6 @@ export default function NewTest() {
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Link to={`/app/tests/new/jump${qs}`} className="glass-card overflow-hidden group hover:border-primary/40 transition-colors">
-          <div className="gradient-primary h-2 w-full" />
           <div className="p-5 space-y-3">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl gradient-primary text-primary-foreground shadow-glow">
               <Zap className="h-6 w-6" />
@@ -35,7 +34,7 @@ export default function NewTest() {
         </Link>
 
         <Link to={`/app/tests/new/sprint${qs}`} className="glass-card overflow-hidden group hover:border-primary/40 transition-colors">
-          <div className="gradient-primary h-2 w-full" />
+          
           <div className="p-5 space-y-3">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl gradient-primary text-primary-foreground shadow-glow">
               <TrendingUp className="h-6 w-6" />
