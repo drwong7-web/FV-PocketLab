@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useSettings, type Lang, type Theme } from "@/lib/settings";
 import { clearExportDirectory, getExportDirectoryLabel, isDirectoryPickerSupported, isInIframe, pickExportDirectory } from "@/lib/exportTarget";
+import logoFv from "@/assets/logo-fv.png";
 
 import {
   getPublicConfig, setPublicConfig,
