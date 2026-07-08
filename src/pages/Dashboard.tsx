@@ -37,7 +37,8 @@ export default function Dashboard() {
           <div>
             <div className="font-bold text-lg tracking-tight">Manage Teams</div>
           </div>
-          <ArrowRight className="w-6 h-6 text-primary stroke-[2.5]" />
+          <ArrowRight className="w-6 h-6 text-foreground stroke-[2.5]" />
+
         </Link>
         <Link to="/app/tests/new" className="group glass-card p-6 flex items-center justify-between hover:border-primary/40 transition-colors bg-gradient-to-br from-primary/10 to-transparent">
           <div>
