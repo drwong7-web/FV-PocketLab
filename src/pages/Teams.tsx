@@ -34,7 +34,7 @@ export default function Teams() {
       <div className="flex items-end justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Teams</h1>
-          <p className="text-sm text-muted-foreground">{"\n"}</p>
+          <p className="text-sm text-muted-foreground">Group athletes by squad or session.</p>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
