@@ -1,6 +1,21 @@
-Replace the `Users` (two-person) icon on the "Players" metric card with the single-person `User` icon from lucide-react.
+Rendre les titres "Manage Teams" et "New Test" plus marqués dans `src/pages/Dashboard.tsx`.
 
-**Changes in `src/pages/Dashboard.tsx`:**
-- Import `User` alongside `Users` from `lucide-react`.
-- On line 31 (Players MetricCard), change `icon={<Users className="w-4 h-4" />}` to `icon={<User className="w-4 h-4" />}`.
-- Leave the Teams card unchanged (still uses `Users`).
+## Changements
+
+Sur les deux `<Link>` de la grille d'actions (lignes 36 et 42) :
+
+- Passer le texte de `font-semibold` (base ~14px) à `text-lg font-bold tracking-tight`
+- Ajouter `uppercase` léger via `text-base` → non, préférer : **`text-lg font-bold tracking-tight`** pour un poids visuel net sans casser le style
+- Augmenter le padding des cartes de `p-5` à `p-6` pour équilibrer avec le titre plus gros
+- Renforcer la flèche : `w-5 h-5` → `w-6 h-6` avec `stroke-[2.5]`
+
+## Détails techniques
+
+```tsx
+<Link ... className="group glass-card p-6 ...">
+  <div className="font-bold text-lg tracking-tight">Manage Teams</div>
+  <ArrowRight className="w-6 h-6 text-primary stroke-[2.5]" />
+</Link>
+```
+
+Aucun changement de logique, uniquement presentational. Pas de modification de SPEC.md (tweak visuel pur).
