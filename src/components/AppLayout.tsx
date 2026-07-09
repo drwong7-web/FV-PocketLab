@@ -387,7 +387,7 @@ export default function AppLayout() {
         className="fixed bottom-0 inset-x-0 z-40 border-t border-border bg-background/90 backdrop-blur-xl"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
-        <div className="container max-w-5xl grid grid-cols-3">
+        <div className="container max-w-5xl grid grid-cols-3 [perspective:800px]">
           {navItems.map(({ to, label, icon: Icon, end }) => (
             <NavLink
               key={to}
@@ -395,14 +395,28 @@ export default function AppLayout() {
               end={end}
               className={({ isActive }) =>
                 cn(
-                  "flex flex-col items-center gap-1 py-3 text-[11px] font-medium transition-colors",
-                  isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                  "group relative flex flex-col items-center gap-1 py-3 text-[11px] font-bold uppercase tracking-wide transition-all duration-300 [transform-style:preserve-3d]",
+                  isActive
+                    ? "text-primary [transform:translateY(-4px)_rotateX(12deg)] drop-shadow-[0_6px_10px_hsl(var(--primary)/0.45)]"
+                    : "text-muted-foreground hover:text-foreground hover:[transform:translateY(-2px)_rotateX(8deg)]"
                 )
               }
             >
               {({ isActive }) => (
                 <>
-                  <Icon className={cn("w-5 h-5 transition-transform", isActive && "scale-110")} />
+                  {isActive && (
+                    <span
+                      aria-hidden
+                      className="absolute inset-x-6 top-1 h-10 rounded-2xl bg-gradient-primary opacity-20 blur-md -z-10"
+                    />
+                  )}
+                  <Icon
+                    strokeWidth={2.5}
+                    className={cn(
+                      "w-5 h-5 transition-all duration-300",
+                      isActive && "scale-125 drop-shadow-[0_3px_6px_hsl(var(--primary)/0.6)]"
+                    )}
+                  />
                   {label}
                 </>
               )}
