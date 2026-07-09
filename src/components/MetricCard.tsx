@@ -23,22 +23,22 @@ export function MetricCard({ label, value, unit, hint, accent = "primary", icon,
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-2xl border bg-gradient-to-br p-4 shadow-card",
+        "engraved-surface relative overflow-hidden rounded-2xl border bg-gradient-to-br p-4",
         accentStyles[accent],
         className
       )}
     >
       <div className="flex items-start justify-between">
-        <span className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+        <span className="engraved text-[11px] font-semibold uppercase tracking-widest">
           {label}
         </span>
-        {icon && <div className="text-foreground/70">{icon}</div>}
+        {icon && <div className="engraved opacity-70">{icon}</div>}
       </div>
       <div className="mt-2 flex items-baseline gap-1">
-        <span className="metric-value">{value}</span>
-        {unit && <span className="text-sm text-muted-foreground font-medium">{unit}</span>}
+        <span className="engraved metric-value">{value}</span>
+        {unit && <span className="engraved text-sm font-medium">{unit}</span>}
       </div>
-      {hint && <div className="mt-1 text-xs text-muted-foreground">{hint}</div>}
+      {hint && <div className="engraved mt-1 text-xs">{hint}</div>}
     </div>
   );
 }
