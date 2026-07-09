@@ -17,8 +17,8 @@ export default function TestList() {
           <p className="text-sm text-muted-foreground">Across your organisation.</p>
         </div>
         <Link to="/app/tests/new">
-          <Button className="bg-gradient-primary text-primary-foreground font-semibold">
-            <Plus className="w-4 h-4 mr-1" /> New
+          <Button className="bg-gradient-primary text-primary-foreground font-bold uppercase tracking-wide">
+            <Plus className="w-4 h-4 mr-1 stroke-[3]" /> New
           </Button>
         </Link>
       </div>
