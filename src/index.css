@@ -68,18 +68,6 @@
     --shadow-card: 0 8px 30px -8px hsl(222 50% 2% / 0.6);
     --shadow-elevated: 0 20px 50px -20px hsl(222 50% 2% / 0.8);
 
-    /* 3D card relief (dark) */
-    --shadow-3d:
-      inset 0 1px 0 hsl(var(--foreground) / 0.08),
-      inset 0 -1px 0 hsl(0 0% 0% / 0.6),
-      0 1px 0 hsl(var(--foreground) / 0.04),
-      0 12px 28px -12px hsl(0 0% 0% / 0.7);
-    --shadow-3d-hover:
-      inset 0 1px 0 hsl(var(--foreground) / 0.12),
-      inset 0 -1px 0 hsl(0 0% 0% / 0.7),
-      0 1px 0 hsl(var(--foreground) / 0.06),
-      0 22px 40px -18px hsl(0 0% 0% / 0.8);
-
     /* Motion */
     --transition-smooth: cubic-bezier(0.22, 1, 0.36, 1);
 
@@ -128,18 +116,6 @@
     --shadow-card: 0 8px 30px -8px hsl(222 30% 60% / 0.18);
     --shadow-elevated: 0 20px 50px -20px hsl(222 30% 50% / 0.25);
 
-    /* 3D card relief (light) */
-    --shadow-3d:
-      inset 0 1px 0 hsl(0 0% 100% / 0.9),
-      inset 0 -1px 0 hsl(0 0% 0% / 0.12),
-      0 1px 0 hsl(0 0% 100% / 0.6),
-      0 12px 28px -14px hsl(222 30% 40% / 0.25);
-    --shadow-3d-hover:
-      inset 0 1px 0 hsl(0 0% 100% / 1),
-      inset 0 -1px 0 hsl(0 0% 0% / 0.15),
-      0 1px 0 hsl(0 0% 100% / 0.7),
-      0 20px 36px -16px hsl(222 30% 40% / 0.35);
-
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 222 30% 10%;
     --sidebar-primary: 142 70% 38%;
@@ -166,28 +142,7 @@
   .glass-card {
     background: var(--gradient-surface);
     @apply border border-border rounded-2xl;
-    box-shadow: var(--shadow-3d);
-    transition: transform 0.2s var(--transition-smooth), box-shadow 0.2s var(--transition-smooth);
-  }
-  .glass-card:hover {
-    box-shadow: var(--shadow-3d-hover);
-    transform: translateY(-2px);
-  }
-  .glass-card:active {
-    transform: translateY(0);
-    box-shadow: var(--shadow-3d);
-  }
-  .card-3d {
-    box-shadow: var(--shadow-3d);
-    transition: transform 0.2s var(--transition-smooth), box-shadow 0.2s var(--transition-smooth);
-  }
-  .card-3d:hover {
-    box-shadow: var(--shadow-3d-hover);
-    transform: translateY(-2px);
-  }
-  .card-3d:active {
-    transform: translateY(0);
-    box-shadow: var(--shadow-3d);
+    box-shadow: var(--shadow-card);
   }
   .metric-value {
     @apply text-3xl font-bold tracking-tight;
@@ -219,7 +174,7 @@
       inset 0 1px 0 hsl(var(--foreground) / 0.10),
       inset 0 -1px 0 hsl(0 0% 0% / 0.55),
       inset 0 10px 24px -10px hsl(0 0% 0% / 0.55),
-      0 12px 28px -12px hsl(0 0% 0% / 0.7);
+      var(--shadow-card);
   }
   /* Light mode: invert so the engraving reads as chiselled into paper/stone. */
   .light .engraved {
@@ -233,6 +188,6 @@
       inset 0 1px 0 hsl(0 0% 100% / 0.9),
       inset 0 -1px 0 hsl(0 0% 0% / 0.15),
       inset 0 8px 20px -10px hsl(0 0% 0% / 0.15),
-      0 12px 28px -14px hsl(222 30% 40% / 0.25);
+      var(--shadow-card);
   }
 }
