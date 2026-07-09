@@ -68,6 +68,18 @@
     --shadow-card: 0 8px 30px -8px hsl(222 50% 2% / 0.6);
     --shadow-elevated: 0 20px 50px -20px hsl(222 50% 2% / 0.8);
 
+    /* 3D card relief (dark) */
+    --shadow-3d:
+      inset 0 1px 0 hsl(var(--foreground) / 0.08),
+      inset 0 -1px 0 hsl(0 0% 0% / 0.6),
+      0 1px 0 hsl(var(--foreground) / 0.04),
+      0 12px 28px -12px hsl(0 0% 0% / 0.7);
+    --shadow-3d-hover:
+      inset 0 1px 0 hsl(var(--foreground) / 0.12),
+      inset 0 -1px 0 hsl(0 0% 0% / 0.7),
+      0 1px 0 hsl(var(--foreground) / 0.06),
+      0 22px 40px -18px hsl(0 0% 0% / 0.8);
+
     /* Motion */
     --transition-smooth: cubic-bezier(0.22, 1, 0.36, 1);
 
