@@ -1,22 +1,21 @@
-Remplacer les boutons "New" par "Add new" et supprimer l'icône `Plus` sur toutes les occurrences de l'app.
+Rendre les titres "Manage Teams" et "New Test" plus marqués dans `src/pages/Dashboard.tsx`.
 
-## Fichiers modifiés
+## Changements
 
-- `src/pages/Teams.tsx` (l. 41-43) — bouton "New" → "Add new", suppression `<Plus />`
-- `src/pages/TestList.tsx` (l. 20-22) — bouton "New" → "Add new", suppression `<Plus />`
-- `src/pages/PlayerDetail.tsx` (l. 61-63) — bouton "New test" → "Add new", suppression `<Plus />`
-- `src/pages/Dashboard.tsx` (l. ~85) — bouton "Create a team" reste inchangé (pas un bouton "New")
+Sur les deux `<Link>` de la grille d'actions (lignes 36 et 42) :
 
-## Détails
+- Passer le texte de `font-semibold` (base ~14px) à `text-lg font-bold tracking-tight`
+- Ajouter `uppercase` léger via `text-base` → non, préférer : **`text-lg font-bold tracking-tight`** pour un poids visuel net sans casser le style
+- Augmenter le padding des cartes de `p-5` à `p-6` pour équilibrer avec le titre plus gros
+- Renforcer la flèche : `w-5 h-5` → `w-6 h-6` avec `stroke-[2.5]`
 
-Chaque bouton devient :
+## Détails techniques
 
 ```tsx
-<Button className="bg-gradient-primary text-primary-foreground font-bold uppercase tracking-wide">
-  Add new
-</Button>
+<Link ... className="group glass-card p-6 ...">
+  <div className="font-bold text-lg tracking-tight">Manage Teams</div>
+  <ArrowRight className="w-6 h-6 text-primary stroke-[2.5]" />
+</Link>
 ```
 
-Retrait des imports `Plus` de `lucide-react` dans les fichiers concernés s'ils ne sont plus utilisés ailleurs.
-
-Aucun changement de logique, uniquement libellé et icône.
+Aucun changement de logique, uniquement presentational. Pas de modification de SPEC.md (tweak visuel pur).
