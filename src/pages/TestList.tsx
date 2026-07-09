@@ -18,7 +18,7 @@ export default function TestList() {
         </div>
         <Link to="/app/tests/new">
           <Button className="bg-gradient-primary text-primary-foreground font-bold uppercase tracking-wide">
-            <Plus className="w-4 h-4 mr-1 stroke-[3]" /> New
+            Add new
           </Button>
         </Link>
       </div>

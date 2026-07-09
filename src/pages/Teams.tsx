@@ -39,7 +39,7 @@ export default function Teams() {
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button className="bg-gradient-primary text-primary-foreground font-bold uppercase tracking-wide">
-              <Plus className="w-4 h-4 mr-1 stroke-[3]" /> New
+              Add new
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-sm">

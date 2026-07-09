@@ -59,7 +59,7 @@ export default function PlayerDetail() {
             <p className="text-sm text-muted-foreground">No tests yet. Run the first sprint!</p>
             <Link to={`/app/tests/new?playerId=${player.id}`}>
               <Button className="mt-3 bg-gradient-primary text-primary-foreground font-bold uppercase tracking-wide">
-                <Plus className="w-4 h-4 mr-1 stroke-[3]" /> New test
+                Add new
               </Button>
             </Link>
           </div>
