@@ -166,7 +166,28 @@
   .glass-card {
     background: var(--gradient-surface);
     @apply border border-border rounded-2xl;
-    box-shadow: var(--shadow-card);
+    box-shadow: var(--shadow-3d);
+    transition: transform 0.2s var(--transition-smooth), box-shadow 0.2s var(--transition-smooth);
+  }
+  .glass-card:hover {
+    box-shadow: var(--shadow-3d-hover);
+    transform: translateY(-2px);
+  }
+  .glass-card:active {
+    transform: translateY(0);
+    box-shadow: var(--shadow-3d);
+  }
+  .card-3d {
+    box-shadow: var(--shadow-3d);
+    transition: transform 0.2s var(--transition-smooth), box-shadow 0.2s var(--transition-smooth);
+  }
+  .card-3d:hover {
+    box-shadow: var(--shadow-3d-hover);
+    transform: translateY(-2px);
+  }
+  .card-3d:active {
+    transform: translateY(0);
+    box-shadow: var(--shadow-3d);
   }
   .metric-value {
     @apply text-3xl font-bold tracking-tight;
