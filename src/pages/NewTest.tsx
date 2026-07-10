@@ -1,6 +1,5 @@
 import { Link, useSearchParams } from "react-router-dom";
 import { ArrowLeft, TrendingUp, Zap } from "lucide-react";
-import jumpLogoAsset from "@/assets/jump-logo.png.asset.json";
 
 export default function NewTest() {
   const [params] = useSearchParams();
@@ -21,19 +20,14 @@ export default function NewTest() {
       <div className="grid gap-4 sm:grid-cols-2">
         <Link to={`/app/tests/new/jump${qs}`} className="glass-card overflow-hidden group hover:border-primary/40 transition-colors">
           <div className="p-5 space-y-3">
-            <div className="flex items-center gap-4">
-              <img
-                src={jumpLogoAsset.url}
-                alt="Vertical jump"
-                className="h-14 w-auto object-contain engraved-img"
-              />
-
-              <div>
-                <h2 className="font-display text-lg font-bold uppercase engraved">Vertical jump</h2>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {"\n"}
-                </p>
-              </div>
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl gradient-primary text-primary-foreground shadow-glow">
+              <Zap className="h-6 w-6" />
+            </div>
+            <div>
+              <h2 className="font-display text-lg font-bold uppercase">Vertical jump</h2>
+              <p className="text-xs text-muted-foreground mt-1">
+                {"\n"}
+              </p>
             </div>
             <div className="text-xs text-primary group-hover:underline">Start →</div>
           </div>

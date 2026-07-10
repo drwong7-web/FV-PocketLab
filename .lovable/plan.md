@@ -1,22 +1,21 @@
-## Plan: extraire le logo vert et l'appliquer gravé sur la carte
+## Effet gravé sur les MetricCard du Dashboard
 
-1. **Extraire le logo sur fond transparent**
-   - Utiliser `imagegen--edit_image` sur `/mnt/user-uploads/1783643485722.png` avec `transparent_background: true` pour isoler le logo vert et supprimer le fond noir.
-   - Sortie: `/tmp/jump-logo-transparent.png`.
+Appliquer un style « letterpress / gravé dans le métal » aux cartes de métriques (Teams, Players, Tests) via `src/components/MetricCard.tsx`.
 
-2. **Publier l'asset CDN**
-   - `lovable-assets create --file /tmp/jump-logo-transparent.png --filename jump-logo.png` → écrire dans `src/assets/jump-logo.png.asset.json` (remplace l'asset actuel qui pointe vers l'image à fond noir).
-   - Supprimer l'ancien asset via `lovable-assets delete` avant recréation pour éviter un orphelin.
+### Rendu visuel
 
-3. **Appliquer l'effet gravé sur la carte Vertical jump** (`src/pages/NewTest.tsx`)
-   - Le `<img>` est déjà en place (import inchangé, même URL).
-   - Remplacer le `drop-shadow` coloré par un effet gravé cohérent avec la classe `engraved` du reste du design system: double `drop-shadow` (highlight clair en bas, ombre sombre en haut) via tokens HSL, opacité adaptée dark/light. Pas de couleur hardcodée.
-   - Conserver la mise en page: logo à gauche, titre "Vertical jump" (classe `engraved`) centré verticalement à côté.
-
-4. **Vérification**
-   - `bun run build`.
-   - Screenshot Playwright de `/app/tests/new` (session Supabase injectée) pour confirmer le rendu gravé du logo vert transparent.
+- **Fond** : dégradé plus sombre et mat, façon plaque de métal brossé.
+- **Texte du label et de la valeur** : effet gravé — couleur légèrement plus sombre que le fond + ombre claire subtile en bas (`text-shadow` inset-like) et ombre foncée en haut, donnant l'impression d'être creusé dans la surface.
+- **Bordure intérieure** : liseré sombre en haut + liseré clair en bas (`inset` box-shadow) pour renforcer la profondeur.
+- **Icône** : même traitement gravé, opacité réduite.
 
 ### Détails techniques
-- Aucune modification du business logic, uniquement asset + présentation.
-- Pas de mise à jour SPEC.md (changement purement visuel).
+
+- Ajouter une classe utilitaire `.engraved` dans `src/index.css` (layer components) :
+  - `text-shadow: 0 1px 0 hsl(var(--foreground) / 0.08), 0 -1px 1px hsl(var(--background) / 0.6);`
+  - Couleur de texte : `hsl(var(--foreground) / 0.55)`.
+- Ajouter `.engraved-surface` avec `box-shadow: inset 0 1px 0 hsl(var(--background)/0.5), inset 0 -1px 0 hsl(var(--foreground)/0.1);`
+- Dans `MetricCard.tsx` :
+  - Ajouter `engraved-surface` sur le conteneur.
+  - Ajouter `engraved` sur `<span>` label et `<span>` value.
+- Aucun changement d'API du composant, aucune modification des données.
