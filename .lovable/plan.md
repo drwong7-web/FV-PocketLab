@@ -1,21 +1,33 @@
-## Effet gravé sur les MetricCard du Dashboard
+## Remplacement de l'icône par le logo uploadé
 
-Appliquer un style « letterpress / gravé dans le métal » aux cartes de métriques (Teams, Players, Tests) via `src/components/MetricCard.tsx`.
+### Objectif
+Sur la page `/app/tests/new` (fichier `src/pages/NewTest.tsx`), remplacer l’icône `Zap` actuelle de la carte **Vertical jump** par l’image uploadée (`user-uploads://1783643485722.png`). L’image doit être intégrée dans le style gravé de la carte, positionnée à gauche, avec le titre **Vertical jump** aligné à ses côtés et centré verticalement.
 
-### Rendu visuel
+### Étapes d’implémentation
 
-- **Fond** : dégradé plus sombre et mat, façon plaque de métal brossé.
-- **Texte du label et de la valeur** : effet gravé — couleur légèrement plus sombre que le fond + ombre claire subtile en bas (`text-shadow` inset-like) et ombre foncée en haut, donnant l'impression d'être creusé dans la surface.
-- **Bordure intérieure** : liseré sombre en haut + liseré clair en bas (`inset` box-shadow) pour renforcer la profondeur.
-- **Icône** : même traitement gravé, opacité réduite.
+1. **Externaliser l’image via Lovable Assets**
+   - Utiliser `lovable-assets create` depuis `/mnt/user-uploads/1783643485722.png`.
+   - Créer le pointeur `src/assets/jump-logo.png.asset.json`.
+   - Importer le pointeur dans `src/pages/NewTest.tsx`.
 
-### Détails techniques
+2. **Modifier `src/pages/NewTest.tsx`**
+   - Remplacer le bloc icône `Zap` (lignes ~23-25) par une balise `<img>` utilisant l’URL de l’asset.
+   - Restructurer le contenu de la carte pour avoir :
+     - l’image à gauche (taille contrôlée, ex. `h-12 w-auto` ou `h-14`) ;
+     - le titre **Vertical jump** à côté, centré verticalement ;
+     - conserver le style `font-display text-lg font-bold uppercase`.
+   - Appliquer un effet gravé cohérent avec les MetricCards : ombre portée / lueur subtile via les tokens du design system (pas de couleurs en dur).
 
-- Ajouter une classe utilitaire `.engraved` dans `src/index.css` (layer components) :
-  - `text-shadow: 0 1px 0 hsl(var(--foreground) / 0.08), 0 -1px 1px hsl(var(--background) / 0.6);`
-  - Couleur de texte : `hsl(var(--foreground) / 0.55)`.
-- Ajouter `.engraved-surface` avec `box-shadow: inset 0 1px 0 hsl(var(--background)/0.5), inset 0 -1px 0 hsl(var(--foreground)/0.1);`
-- Dans `MetricCard.tsx` :
-  - Ajouter `engraved-surface` sur le conteneur.
-  - Ajouter `engraved` sur `<span>` label et `<span>` value.
-- Aucun changement d'API du composant, aucune modification des données.
+3. **Préserver le second lien**
+   - La carte **Linear sprint** reste inchangée (icône `TrendingUp` conservée).
+
+4. **Vérification visuelle**
+   - Capturer un aperçu de la page `/app/tests/new` pour valider l’alignement et le rendu gravé.
+
+### Fichiers concernés
+- `src/pages/NewTest.tsx`
+- `src/assets/jump-logo.png.asset.json` (nouveau)
+
+### Non concerné
+- Aucune modification de logique métier, de routing ou de données.
+- Aucun changement sur la carte Linear sprint.
