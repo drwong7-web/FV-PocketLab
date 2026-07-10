@@ -21,18 +21,18 @@ export default function NewTest() {
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Link to={`/app/tests/new/jump${qs}`} className="glass-card overflow-hidden group hover:border-primary/40 transition-colors">
-          <div className="p-5 space-y-3">
-            <div className="flex h-12 w-12 items-center justify-center">
-              <img src={logoJump.url} alt="Vertical jump" className="engraved-logo h-12 w-auto" />
+          <div className="p-4 flex items-center gap-4">
+            <div className="flex-shrink-0 flex items-center justify-center h-28 w-28">
+              <img src={logoJump.url} alt="Vertical jump" className="engraved-logo h-full w-auto object-contain" />
             </div>
 
-            <div>
+            <div className="flex-1 space-y-2">
               <h2 className="font-display text-lg font-bold uppercase">Vertical jump</h2>
               <p className="text-xs text-muted-foreground mt-1">
                 {"\n"}
               </p>
+              <div className="text-xs text-primary group-hover:underline">Start →</div>
             </div>
-            <div className="text-xs text-primary group-hover:underline">Start →</div>
           </div>
         </Link>
 
