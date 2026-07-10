@@ -1,6 +1,6 @@
 import { Link, useSearchParams } from "react-router-dom";
 import { ArrowLeft, TrendingUp } from "lucide-react";
-import logoJump from "@/assets/logo-jump.png.asset.json";
+import logoJump from "@/assets/logo-jump-green.png.asset.json";
 
 
 export default function NewTest() {
