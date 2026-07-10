@@ -1,21 +1,19 @@
-## Effet gravé sur les MetricCard du Dashboard
+## Remplacer l'icône du Vertical Jump par le logo gravé
 
-Appliquer un style « letterpress / gravé dans le métal » aux cartes de métriques (Teams, Players, Tests) via `src/components/MetricCard.tsx`.
+### Étapes
 
-### Rendu visuel
+1. **Préparer le logo**
+   - Prendre `user-uploads://logo_jump_svg.png` (silhouette verte sur fond noir)
+   - Retirer le fond noir → PNG transparent via `imagegen--edit_image` avec `transparent_background: true`
+   - Enregistrer sous `src/assets/logo-jump.png` + pointer `.asset.json` via `lovable-assets`
 
-- **Fond** : dégradé plus sombre et mat, façon plaque de métal brossé.
-- **Texte du label et de la valeur** : effet gravé — couleur légèrement plus sombre que le fond + ombre claire subtile en bas (`text-shadow` inset-like) et ombre foncée en haut, donnant l'impression d'être creusé dans la surface.
-- **Bordure intérieure** : liseré sombre en haut + liseré clair en bas (`inset` box-shadow) pour renforcer la profondeur.
-- **Icône** : même traitement gravé, opacité réduite.
+2. **Ajouter un style « logo gravé »** dans `src/index.css`
+   - Nouvelle classe `.engraved-logo` : combine `filter: drop-shadow(...)` clair en bas + `drop-shadow(...)` sombre en haut pour donner l'effet debossé, plus légère baisse d'opacité, cohérente avec `.engraved` existante (variantes dark/light).
 
-### Détails techniques
+3. **Modifier `src/pages/NewTest.tsx`** (carte Vertical jump, lignes 22-26)
+   - Remplacer le bloc `<div className="flex h-12 w-12 ... gradient-primary ..."><Zap /></div>` par un `<img>` du logo avec la classe `engraved-logo`, mêmes dimensions (h-12 w-12), sans fond dégradé (l'effet gravé se lit sur la surface de la carte).
+   - Retirer l'import `Zap` s'il n'est plus utilisé.
 
-- Ajouter une classe utilitaire `.engraved` dans `src/index.css` (layer components) :
-  - `text-shadow: 0 1px 0 hsl(var(--foreground) / 0.08), 0 -1px 1px hsl(var(--background) / 0.6);`
-  - Couleur de texte : `hsl(var(--foreground) / 0.55)`.
-- Ajouter `.engraved-surface` avec `box-shadow: inset 0 1px 0 hsl(var(--background)/0.5), inset 0 -1px 0 hsl(var(--foreground)/0.1);`
-- Dans `MetricCard.tsx` :
-  - Ajouter `engraved-surface` sur le conteneur.
-  - Ajouter `engraved` sur `<span>` label et `<span>` value.
-- Aucun changement d'API du composant, aucune modification des données.
+### Portée
+- Seule la carte « Vertical jump » est modifiée. La carte « Linear sprint » garde son icône `TrendingUp`.
+- Aucun changement de logique métier.
