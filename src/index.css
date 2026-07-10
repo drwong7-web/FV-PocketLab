@@ -190,20 +190,21 @@
       inset 0 8px 20px -10px hsl(0 0% 0% / 0.15),
       var(--shadow-card);
   }
-  /* Engraved logo/image: mixes the image into the surface with debossed shadows. */
+  /* Engraved logo/image: tinted with the app's primary green and debossed into the surface. */
   .engraved-logo {
-    opacity: 0.85;
-    mix-blend-mode: luminosity;
+    opacity: 0.92;
+    mix-blend-mode: normal;
     filter:
-      drop-shadow(0 -1px 0 hsl(0 0% 0% / 0.6))
-      drop-shadow(0 1px 0 hsl(var(--foreground) / 0.15));
+      brightness(0) sepia(1) hue-rotate(78deg) saturate(4.5) brightness(1.05)
+      drop-shadow(0 -1px 0 hsl(0 0% 0% / 0.5))
+      drop-shadow(0 1px 0 hsl(var(--primary) / 0.35));
   }
   .light .engraved-logo {
-    mix-blend-mode: multiply;
-    opacity: 0.75;
+    opacity: 0.88;
     filter:
-      drop-shadow(0 -1px 0 hsl(0 0% 0% / 0.25))
-      drop-shadow(0 1px 0 hsl(0 0% 100% / 0.9));
+      brightness(0) sepia(1) hue-rotate(88deg) saturate(4) brightness(1.15)
+      drop-shadow(0 -1px 0 hsl(0 0% 0% / 0.2))
+      drop-shadow(0 1px 0 hsl(0 0% 100% / 0.8));
   }
 }
 
