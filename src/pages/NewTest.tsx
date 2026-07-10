@@ -1,5 +1,6 @@
 import { Link, useSearchParams } from "react-router-dom";
 import { ArrowLeft, TrendingUp, Zap } from "lucide-react";
+import jumpLogoAsset from "@/assets/jump-logo.png.asset.json";
 
 export default function NewTest() {
   const [params] = useSearchParams();
