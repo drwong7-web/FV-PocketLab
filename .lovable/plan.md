@@ -1,33 +1,22 @@
-## Remplacement de l'icône par le logo uploadé
+## Plan: extraire le logo vert et l'appliquer gravé sur la carte
 
-### Objectif
-Sur la page `/app/tests/new` (fichier `src/pages/NewTest.tsx`), remplacer l’icône `Zap` actuelle de la carte **Vertical jump** par l’image uploadée (`user-uploads://1783643485722.png`). L’image doit être intégrée dans le style gravé de la carte, positionnée à gauche, avec le titre **Vertical jump** aligné à ses côtés et centré verticalement.
+1. **Extraire le logo sur fond transparent**
+   - Utiliser `imagegen--edit_image` sur `/mnt/user-uploads/1783643485722.png` avec `transparent_background: true` pour isoler le logo vert et supprimer le fond noir.
+   - Sortie: `/tmp/jump-logo-transparent.png`.
 
-### Étapes d’implémentation
+2. **Publier l'asset CDN**
+   - `lovable-assets create --file /tmp/jump-logo-transparent.png --filename jump-logo.png` → écrire dans `src/assets/jump-logo.png.asset.json` (remplace l'asset actuel qui pointe vers l'image à fond noir).
+   - Supprimer l'ancien asset via `lovable-assets delete` avant recréation pour éviter un orphelin.
 
-1. **Externaliser l’image via Lovable Assets**
-   - Utiliser `lovable-assets create` depuis `/mnt/user-uploads/1783643485722.png`.
-   - Créer le pointeur `src/assets/jump-logo.png.asset.json`.
-   - Importer le pointeur dans `src/pages/NewTest.tsx`.
+3. **Appliquer l'effet gravé sur la carte Vertical jump** (`src/pages/NewTest.tsx`)
+   - Le `<img>` est déjà en place (import inchangé, même URL).
+   - Remplacer le `drop-shadow` coloré par un effet gravé cohérent avec la classe `engraved` du reste du design system: double `drop-shadow` (highlight clair en bas, ombre sombre en haut) via tokens HSL, opacité adaptée dark/light. Pas de couleur hardcodée.
+   - Conserver la mise en page: logo à gauche, titre "Vertical jump" (classe `engraved`) centré verticalement à côté.
 
-2. **Modifier `src/pages/NewTest.tsx`**
-   - Remplacer le bloc icône `Zap` (lignes ~23-25) par une balise `<img>` utilisant l’URL de l’asset.
-   - Restructurer le contenu de la carte pour avoir :
-     - l’image à gauche (taille contrôlée, ex. `h-12 w-auto` ou `h-14`) ;
-     - le titre **Vertical jump** à côté, centré verticalement ;
-     - conserver le style `font-display text-lg font-bold uppercase`.
-   - Appliquer un effet gravé cohérent avec les MetricCards : ombre portée / lueur subtile via les tokens du design system (pas de couleurs en dur).
+4. **Vérification**
+   - `bun run build`.
+   - Screenshot Playwright de `/app/tests/new` (session Supabase injectée) pour confirmer le rendu gravé du logo vert transparent.
 
-3. **Préserver le second lien**
-   - La carte **Linear sprint** reste inchangée (icône `TrendingUp` conservée).
-
-4. **Vérification visuelle**
-   - Capturer un aperçu de la page `/app/tests/new` pour valider l’alignement et le rendu gravé.
-
-### Fichiers concernés
-- `src/pages/NewTest.tsx`
-- `src/assets/jump-logo.png.asset.json` (nouveau)
-
-### Non concerné
-- Aucune modification de logique métier, de routing ou de données.
-- Aucun changement sur la carte Linear sprint.
+### Détails techniques
+- Aucune modification du business logic, uniquement asset + présentation.
+- Pas de mise à jour SPEC.md (changement purement visuel).
