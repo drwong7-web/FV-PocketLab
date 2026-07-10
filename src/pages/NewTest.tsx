@@ -22,9 +22,10 @@ export default function NewTest() {
       <div className="grid gap-4 sm:grid-cols-2">
         <Link to={`/app/tests/new/jump${qs}`} className="glass-card overflow-hidden group hover:border-primary/40 transition-colors">
           <div className="p-5 space-y-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl gradient-primary text-primary-foreground shadow-glow">
-              <Zap className="h-6 w-6" />
+            <div className="flex h-12 w-12 items-center justify-center">
+              <img src={logoJump.url} alt="Vertical jump" className="engraved-logo h-12 w-auto" />
             </div>
+
             <div>
               <h2 className="font-display text-lg font-bold uppercase">Vertical jump</h2>
               <p className="text-xs text-muted-foreground mt-1">
