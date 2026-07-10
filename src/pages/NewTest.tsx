@@ -25,8 +25,9 @@ export default function NewTest() {
               <img
                 src={jumpLogoAsset.url}
                 alt="Vertical jump"
-                className="h-14 w-auto object-contain drop-shadow-[0_0_14px_hsl(var(--primary)/0.55)]"
+                className="h-14 w-auto object-contain engraved-img"
               />
+
               <div>
                 <h2 className="font-display text-lg font-bold uppercase engraved">Vertical jump</h2>
                 <p className="text-xs text-muted-foreground mt-1">
