@@ -99,7 +99,7 @@ export default function ImportPlayersDialog({ teamId, organizationId, onImported
   return (
     <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) reset(); }}>
       <DialogTrigger asChild>
-        <Button variant="outline" className="font-semibold">
+        <Button className="bg-gradient-primary text-primary-foreground font-semibold">
           <Upload className="w-4 h-4 mr-1" /> Importer
         </Button>
       </DialogTrigger>
