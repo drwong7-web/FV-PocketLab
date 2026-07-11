@@ -464,10 +464,10 @@ export default function TestResults() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => doExport("pdf")}>
+              <DropdownMenuItem onClick={() => openExportDialog("pdf")}>
                 <FileType className="mr-2 h-4 w-4" /> PDF
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => doExport("docx")}>
+              <DropdownMenuItem onClick={() => openExportDialog("docx")}>
                 <FileText className="mr-2 h-4 w-4" /> Word (.docx)
               </DropdownMenuItem>
             </DropdownMenuContent>
