@@ -131,7 +131,7 @@ export default function AppLayout() {
           <div className="space-y-6 py-2">
             <section className="space-y-3">
               <div className="flex items-center gap-2 text-sm font-semibold">
-                <h3>LANGUE</h3>
+                <h3 className="uppercase">{t("language")}</h3>
               </div>
               <div className="grid grid-cols-3 gap-2">
                 {langs.map((l) => {
@@ -156,7 +156,7 @@ export default function AppLayout() {
 
             <section className="space-y-4">
               <div className="flex items-center gap-2 text-sm font-semibold">
-                <h3>THEME</h3>
+                <h3 className="uppercase">{t("theme")}</h3>
               </div>
 
               <div className="grid grid-cols-2 gap-2">
@@ -227,7 +227,7 @@ export default function AppLayout() {
 
             <section className="space-y-3">
               <div className="flex items-center gap-2 text-sm font-semibold">
-                <h3>SYNCHRONISATION</h3>
+                <h3 className="uppercase">{t("cloudBackup")}</h3>
               </div>
               <p className="text-xs text-muted-foreground">{"\n"}</p>
 
