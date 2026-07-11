@@ -1,13 +1,12 @@
 
 ## Objectif
-Améliorer le logo `src/assets/logo-jump-neon.png` (carte Saut Vertical) pour qu'il ait la même netteté et le même éclat néon que le logo Sprint linéaire.
+Remplacer le logo actuel `src/assets/logo-jump-neon.png` par la nouvelle image fournie par l'utilisateur, avec un rendu harmonisé au logo Sprint linéaire (fond transparent, silhouette néon verte nette).
 
 ## Étapes
-1. Utiliser `imagegen--edit_image` sur `src/assets/logo-jump-neon.png` avec un prompt du type :
-   - "Increase sharpness and enhance the neon green glow/light effects on this logo. Make the highlights brighter and crisper while keeping the exact same green color, composition and transparency. Match the polished neon shine of a matching sprint logo."
-2. Sauvegarder le résultat en écrasant `src/assets/logo-jump-neon.png` (les dimensions et la référence dans `src/pages/NewTest.tsx` restent inchangées).
-3. Vérifier visuellement dans la preview que les deux cartes sont harmonieuses.
+1. Traiter l'image uploadée (`user-uploads://kimi-1783767082987889270429299082386.jpeg`) via `imagegen--edit_image` avec `transparent_background: true` pour retirer le fond noir et conserver uniquement la silhouette néon verte + effets de lumière/particules, en préservant la netteté et l'éclat.
+2. Écraser `src/assets/logo-jump-neon.png` avec le résultat PNG transparent.
+3. Aucune modification de code nécessaire — `src/pages/NewTest.tsx` importe déjà ce fichier et applique la classe `.engraved-logo`.
 
 ## Portée
-- Aucune modification de code (JSX, CSS) — uniquement le fichier image.
-- Le style `.engraved-logo` déjà appliqué reste inchangé.
+- Uniquement le fichier image du logo Vertical Jump.
+- Pas de changement JSX/CSS.
