@@ -1,13 +1,39 @@
+## Problème
+
+Le dictionnaire de traduction dans `src/lib/settings.tsx` (`TR`) ne contient que ~15 clés, toutes utilisées uniquement dans la page Paramètres. Les autres pages (Dashboard, TestList, NewTest, JumpTest, SprintTest, TestResults, Teams, TeamDetail, PlayerDetail, Auth, AppLayout, etc.) contiennent leurs libellés en dur (majoritairement en français), donc changer la langue n'a aucun effet visible ailleurs. Le `html.lang` / `html.dir` (RTL arabe) sont bien appliqués, mais les textes ne changent pas.
 
 ## Objectif
-Améliorer le logo `src/assets/logo-jump-neon.png` (carte Saut Vertical) pour qu'il ait la même netteté et le même éclat néon que le logo Sprint linéaire.
 
-## Étapes
-1. Utiliser `imagegen--edit_image` sur `src/assets/logo-jump-neon.png` avec un prompt du type :
-   - "Increase sharpness and enhance the neon green glow/light effects on this logo. Make the highlights brighter and crisper while keeping the exact same green color, composition and transparency. Match the polished neon shine of a matching sprint logo."
-2. Sauvegarder le résultat en écrasant `src/assets/logo-jump-neon.png` (les dimensions et la référence dans `src/pages/NewTest.tsx` restent inchangées).
-3. Vérifier visuellement dans la preview que les deux cartes sont harmonieuses.
+Faire en sorte que le sélecteur de langue (fr / en / ar) traduise **toute** l'interface, pas seulement l'écran Paramètres.
 
-## Portée
-- Aucune modification de code (JSX, CSS) — uniquement le fichier image.
-- Le style `.engraved-logo` déjà appliqué reste inchangé.
+## Approche
+
+1. **Étendre le dictionnaire `TR`** dans `src/lib/settings.tsx` avec toutes les chaînes UI de l'app, regroupées par domaine :
+   - Navigation / layout : titres d'onglets, menu, boutons retour
+   - Auth : login, register, champs, erreurs
+   - Dashboard : titres, cartes de stats, actions rapides
+   - TestList / NewTest : noms de tests (Vertical Jump, Linear Sprint), descriptions, filtres
+   - JumpTest / SprintTest : étapes, instructions caméra, boutons (Start, Stop, Retry, Save), unités
+   - TestResults : métriques (hauteur, vitesse max, phase d'accélération, etc.), export
+   - Teams / TeamDetail / PlayerDetail : équipes, joueurs, ajout, champs formulaire
+   - Toasts / messages d'erreur communs
+
+2. **Remplacer les chaînes en dur** dans chaque page/composant par des appels `t("cle")` via `useSettings()`.
+
+3. **Gérer les valeurs dynamiques** (nombres, unités) avec de petites fonctions de format qui respectent la locale (`toLocaleString(s.lang)`), en gardant les unités techniques (`cm`, `m/s`, `s`) universelles.
+
+4. **RTL arabe** : vérifier que `html.dir = "rtl"` (déjà en place) rend correctement les listes/cartes. Ajuster ponctuellement les classes Tailwind si besoin (`text-start` au lieu de `text-left`, `ms-*` / `me-*`).
+
+5. **Mettre à jour `SPEC.md`** : documenter que l'app est intégralement traduite (fr / en / ar) et que toute nouvelle chaîne UI doit passer par `TR` + `t()`.
+
+## Détails techniques
+
+- Le contexte `SettingsProvider` re-render tout l'arbre à chaque changement de `s.lang` (déjà le cas), donc pas besoin d'ajouter un mécanisme réactif supplémentaire.
+- `t(k)` retourne la clé si absente : utile en dev pour repérer les oublis.
+- Ordre de travail suggéré, page par page pour éviter un diff monstrueux : layout + nav → TestList/NewTest → Jump/Sprint/Results → Teams/Players → Auth → Dashboard.
+- Aucun changement de logique métier, uniquement présentation.
+
+## Questions
+
+- Ok pour que je traduise **toutes** les pages en une seule passe, ou tu préfères que je commence par un sous-ensemble (ex. les écrans de test + navigation) et qu'on itère ?
+- L'arabe doit-il être une traduction complète et soignée, ou une base fonctionnelle (traductions courtes, à raffiner ensuite) ?
