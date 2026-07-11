@@ -1,11 +1,27 @@
-Le bouton **Sauvegarder sur Google Drive** (ligne 244) utilise actuellement le composant `<Button>` shadcn avec un dégradé plein (`bg-gradient-primary text-primary-foreground`).
+## Objectif
 
-Le bouton **English** (ligne 140) utilise un style "carte cliquable" : bordure arrondie, fond transparent/surface, taille text-sm, avec un état actif souligné par `border-primary bg-primary/10 text-primary shadow-glow`.
+Sur la page `/app/tests/new/jump`, remplacer le carré à dégradé contenant l'icône `Zap` (à gauche du titre "SAUT VERTICAL") par le logo `logo-jump-neon.png` (le même que celui utilisé dans la carte "Saut vertical" de la page de sélection de test), avec des dimensions adaptées.
 
-Plan :
-1. Remplacer le `<Button>` shadcn du Google Drive par un `<button>` natif avec les mêmes classes que les boutons de langue : `rounded-lg border px-3 py-2.5 text-sm font-medium transition-all`.
-2. Appliquer la variante inactive (`border-border bg-background hover:border-primary/40`) puisque ce n'est pas un toggle actif.
-3. Conserver la largeur `w-full`, le gestionnaire `onClick`, l'état `disabled` et le texte `t("backupGDrive")`.
-4. Vérifier le build.
+## Changement
 
-Résultat attendu : le bouton Google Drive aura le même aspect visuel que le bouton English (bordure, fond, hover), sans changer son comportement.
+Fichier: `src/pages/JumpTest.tsx`
+
+1. Ajouter l'import: `import logoJump from "@/assets/logo-jump-neon.png";`
+2. Retirer l'import de l'icône `Zap` depuis `lucide-react` (n'est plus utilisée).
+3. Remplacer le bloc actuel (lignes 145–147):
+   ```
+   <div className="flex h-10 w-10 items-center justify-center rounded-lg gradient-primary text-primary-foreground shadow-glow">
+     <Zap className="h-5 w-5" />
+   </div>
+   ```
+   par un `<img>` avec le logo, dimensionné pour s'accorder à la ligne du titre (plus grand que 10×10 mais compact pour un en-tête de page):
+   ```
+   <img src={logoJump} alt={t("verticalJump")} className="h-14 w-14 object-contain flex-shrink-0" />
+   ```
+
+Aucun autre changement (le titre, le sous-titre et le reste de la page restent identiques).
+
+## Vérification
+
+- Build passe.
+- Sur la page Test de saut vertical, le logo néon remplace le carré vert Zap et s'aligne visuellement avec le titre.
