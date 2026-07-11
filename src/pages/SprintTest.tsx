@@ -214,7 +214,7 @@ export default function SprintTest() {
             <p className="text-xs text-muted-foreground">{t("sprintTestSubtitle")}</p>
           </div>
         </div>
-        <Button size="sm" variant="outline" onClick={loadDemo} title={t("loadDemoTitle")}>
+        <Button size="sm" onClick={loadDemo} title={t("loadDemoTitle")} className="bg-gradient-primary text-primary-foreground font-semibold">
           <Sparkles className="mr-1.5 h-3.5 w-3.5" /> {t("demo")}
         </Button>
       </div>
