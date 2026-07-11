@@ -67,34 +67,39 @@ export default function Teams() {
           <p className="mt-3 text-sm text-muted-foreground">{t("noTeamsYet")}</p>
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {teams.map((tm) => {
             const count = allPlayers.filter((p) => p.teamId === tm.id).length;
             return (
-              <div key={tm.id} className="glass-card flex items-center group">
-                <Link to={`/app/teams/${tm.id}`} className="flex-1 p-4 flex items-center justify-between">
-                  <div>
-                    <div className="font-semibold">{tm.name}</div>
-                    <div className="text-xs text-muted-foreground mt-0.5">
-                      {tm.sport ? tm.sport + " · " : ""}{count} {count === 1 ? t("player").toLowerCase() : t("players").toLowerCase()}
-                    </div>
+              <Link
+                key={tm.id}
+                to={`/app/teams/${tm.id}`}
+                className="glass-card p-5 flex items-center justify-between group hover:border-primary/40 transition-colors bg-gradient-to-br from-primary/10 to-transparent"
+              >
+                <div>
+                  <div className="font-semibold">{tm.name}</div>
+                  <div className="text-xs text-muted-foreground mt-0.5">
+                    {tm.sport ? tm.sport + " · " : ""}{count} {count === 1 ? t("player").toLowerCase() : t("players").toLowerCase()}
                   </div>
+                </div>
+                <div className="flex items-center gap-1">
                   <ChevronRight className="w-5 h-5 text-muted-foreground" />
-                </Link>
-                <button
-                  className="p-3 text-muted-foreground hover:text-destructive transition-colors"
-                  onClick={() => {
-                    if (confirm(`${t("deleteTeamConfirm")} — "${tm.name}"`)) {
-                      deleteTeam(tm.id);
-                      force((n) => n + 1);
-                      toast.success(t("teamDeleted"));
-                    }
-                  }}
-                  aria-label={t("deleteTeam")}
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
+                  <button
+                    className="p-2 text-muted-foreground hover:text-destructive transition-colors"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (confirm(`${t("deleteTeamConfirm")} — "${tm.name}"`)) {
+                        deleteTeam(tm.id);
+                        force((n) => n + 1);
+                        toast.success(t("teamDeleted"));
+                      }
+                    }}
+                    aria-label={t("deleteTeam")}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </Link>
             );
           })}
         </div>

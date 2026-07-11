@@ -1,31 +1,65 @@
 ## Objectif
-Rendre les cartes de la page **Paramètres** visuellement identiques aux cartes utilisées dans le reste de l'application (Dashboard, Tests, Équipes, Joueurs, etc.).
+Réaligner la carte d'équipe dans `src/pages/Teams.tsx` (ligne 70-99) sur le design system des cartes du tableau de bord (`Dashboard.tsx`).
 
-## État actuel
-Les trois sections des paramètres utilisent :
-```
-<section className="space-y-3 bg-card border border-border rounded-2xl p-4 shadow-card">
-```
-Cela donne un fond plat `bg-card` et une ombre `shadow-card`.
+## Problème constaté
+La carte actuelle utilise `glass-card flex items-center group` sans :
+- padding uniforme sur la carte
+- effet `hover:border-primary/40`
+- `transition-colors`
+- fond dégradé `bg-gradient-to-br from-primary/10 to-transparent`
 
-Le reste de l'application utilise presque partout la classe utilitaire `.glass-card` définie dans `src/index.css` :
-```css
-.glass-card {
-  background: var(--gradient-surface);
-  @apply border border-border rounded-2xl;
-  box-shadow: var(--shadow-card);
-}
-```
-Ce qui produit un fond dégradé surface et une ombre cohérente avec le design system sport-science.
+Les cartes du tableau de bord utilisent ce pattern (ex. lignes 38, 44, 59, 77).
 
-## Modifications prévues
-1. **Remplacer les classes des 3 `<section>` des paramètres** pour utiliser `glass-card` au lieu de `bg-card border border-border rounded-2xl shadow-card`.
-2. **Conserver** les espacements internes (`space-y-3` / `space-y-4`) et le contenu existant.
-3. **Ajuster si nécessaire** les fonds des boutons/sélecteurs inactifs (`bg-background`) pour qu'ils restent lisibles sur le fond dégradé des cartes.
+## Plan de modification
+
+### 1. Restructurer la carte équipe
+Remplacer la structure actuelle :
+```tsx
+<div className="glass-card flex items-center group">
+  <Link to={`/app/teams/${tm.id}`} className="flex-1 p-4 flex items-center justify-between">
+    ...
+  </Link>
+  <button className="p-3 ...">...</button>
+</div>
+```
+
+Par une structure cohérente avec les cartes du dashboard :
+```tsx
+<Link
+  to={`/app/teams/${tm.id}`}
+  className="glass-card p-5 flex items-center justify-between group hover:border-primary/40 transition-colors bg-gradient-to-br from-primary/10 to-transparent"
+>
+  <div>
+    <div className="font-semibold">{tm.name}</div>
+    <div className="text-xs text-muted-foreground mt-0.5">
+      {tm.sport ? tm.sport + " · " : ""}{count} {count === 1 ? t("player").toLowerCase() : t("players").toLowerCase()}
+    </div>
+  </div>
+  <div className="flex items-center gap-1">
+    <ChevronRight className="w-5 h-5 text-muted-foreground" />
+    <button
+      onClick={(e) => {
+        e.preventDefault();
+        if (confirm(...)) { ... }
+      }}
+      className="p-2 text-muted-foreground hover:text-destructive transition-colors"
+      aria-label={t("deleteTeam")}
+    >
+      <Trash2 className="w-4 h-4" />
+    </button>
+  </div>
+</Link>
+```
+
+### 2. Gérer la suppression
+Le bouton de suppression doit être à l'intérieur du `<Link>` pour rester dans la carte, avec `e.preventDefault()` pour éviter la navigation lors du clic sur la corbeille.
+
+### 3. Vérification
+- Build pass
+- Vérifier visuellement que la carte suit le même style que les cartes du dashboard (padding, hover, dégradé)
 
 ## Fichier concerné
-- `src/components/AppLayout.tsx`
+- `src/pages/Teams.tsx`
 
-## Non concerné
-- Aucun changement de texte, de traduction, de comportement ou de logique métier.
-- Aucun ajout de dépendance.
+## Non-concerné (hors scope demandé)
+- Les autres cartes de liste similaires (`TeamDetail.tsx`, `PlayerDetail.tsx`) ne seront pas modifiées sauf si l'utilisateur le demande.
