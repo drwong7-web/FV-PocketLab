@@ -1,6 +1,6 @@
 import { Link, useSearchParams } from "react-router-dom";
 import { ArrowLeft, TrendingUp } from "lucide-react";
-import logoJump from "@/assets/logo-jump-green.png.asset.json";
+import logoJump from "@/assets/logo-jump-neon.png";
 
 
 export default function NewTest() {
@@ -23,7 +23,7 @@ export default function NewTest() {
         <Link to={`/app/tests/new/jump${qs}`} className="glass-card overflow-hidden group hover:border-primary/40 transition-colors">
           <div className="p-4 flex items-center gap-4">
             <div className="flex-shrink-0 flex items-center justify-center h-28 w-28">
-              <img src={logoJump.url} alt="Vertical jump" className="engraved-logo h-full w-auto object-contain" />
+              <img src={logoJump} alt="Vertical jump" className="engraved-logo h-full w-auto object-contain" />
             </div>
 
             <div className="flex-1 space-y-2">
