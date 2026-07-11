@@ -38,18 +38,17 @@ export default function NewTest() {
         </Link>
 
         <Link to={`/app/tests/new/sprint${qs}`} className="glass-card overflow-hidden group hover:border-primary/40 transition-colors">
-          
-          <div className="p-5 space-y-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl gradient-primary text-primary-foreground shadow-glow">
-              <TrendingUp className="h-6 w-6" />
+          <div className="p-4 flex items-center gap-4">
+            <div className="flex-shrink-0 flex items-center justify-center h-28 w-28">
+              <img src={logoSprint} alt="Linear sprint" className="engraved-logo h-full w-auto object-contain" />
             </div>
-            <div>
-              <h2 className="font-display text-lg font-bold uppercase">&nbsp;LINEAR&nbsp;SPRINT</h2>
+            <div className="flex-1 space-y-2">
+              <h2 className="font-display text-lg font-bold uppercase">Linear sprint</h2>
               <p className="text-xs text-muted-foreground mt-1">
                 {"\n"}
               </p>
+              <div className="text-xs text-primary group-hover:underline">Start →</div>
             </div>
-            <div className="text-xs text-primary group-hover:underline">Start →</div>
           </div>
         </Link>
       </div>
