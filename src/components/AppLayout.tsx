@@ -19,10 +19,12 @@ import { syncPushNow, syncPullNow, syncBothNow } from "@/lib/sync/manager";
 
 import { cn } from "@/lib/utils";
 
-const navItems = [
-  { to: "/app", label: "Dashboard", icon: Home, end: true },
-  { to: "/app/teams", label: "Teams", icon: Users },
-  { to: "/app/tests", label: "Tests", icon: Activity },
+import type { TKey } from "@/lib/settings";
+
+const navItems: { to: string; labelKey: TKey; icon: typeof Home; end?: boolean }[] = [
+  { to: "/app", labelKey: "navDashboard", icon: Home, end: true },
+  { to: "/app/teams", labelKey: "navTeams", icon: Users },
+  { to: "/app/tests", labelKey: "navTests", icon: Activity },
 ];
 
 export default function AppLayout() {
