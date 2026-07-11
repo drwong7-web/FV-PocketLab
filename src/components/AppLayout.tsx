@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet } from "react-router-dom";
 import fvLogo from "@/assets/fv-logo.png.asset.json";
-import { Activity, Check, Cloud, CloudOff, Download, Home, Languages, Moon, Palette, RefreshCw, Settings as SettingsIcon, Sun, Upload, Users } from "lucide-react";
+import { Activity, Check, Download, Home, Moon, RefreshCw, Settings as SettingsIcon, Sun, Upload, Users } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -131,7 +131,6 @@ export default function AppLayout() {
           <div className="space-y-6 py-2">
             <section className="space-y-3">
               <div className="flex items-center gap-2 text-sm font-semibold">
-                <Languages className="h-4 w-4 text-primary" />
                 <h3>{t("language")}</h3>
               </div>
               <div className="grid grid-cols-3 gap-2">
@@ -157,7 +156,6 @@ export default function AppLayout() {
 
             <section className="space-y-4">
               <div className="flex items-center gap-2 text-sm font-semibold">
-                <Palette className="h-4 w-4 text-primary" />
                 <h3>{t("theme")}</h3>
               </div>
 
@@ -229,7 +227,6 @@ export default function AppLayout() {
 
             <section className="space-y-3">
               <div className="flex items-center gap-2 text-sm font-semibold">
-                {syncProvider === "none" ? <CloudOff className="h-4 w-4 text-primary" /> : <Cloud className="h-4 w-4 text-primary" />}
                 <h3>{t("cloudBackup")}</h3>
               </div>
               <p className="text-xs text-muted-foreground">{t("cloudBackupDesc")}</p>
@@ -241,7 +238,7 @@ export default function AppLayout() {
                       onClick={() => enableSync("icloud")}
                       className="w-full bg-gradient-primary text-primary-foreground"
                     >
-                      <Cloud className="h-4 w-4 mr-2" /> {t("backupICloud")}
+                      {t("backupICloud")}
                     </Button>
                   ) : (
                     <Button
@@ -249,7 +246,7 @@ export default function AppLayout() {
                       disabled={!gdriveAvailable}
                       className="w-full bg-gradient-primary text-primary-foreground"
                     >
-                      <Cloud className="h-4 w-4 mr-2" /> {t("backupGDrive")}
+                      {t("backupGDrive")}
                     </Button>
                   )}
                   {preferredProvider === "gdrive" && !gdriveAvailable && (
