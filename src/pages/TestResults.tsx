@@ -34,6 +34,7 @@ import {
   getLocalTest, getLocalTests, markLocalTestSaved, saveLocalTest, setTestDraft,
 } from "@/lib/localHistory";
 import { toast } from "sonner";
+import { useSettings } from "@/lib/settings";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -225,6 +226,7 @@ async function generateStructuredPDF(test: TestRecord, chartDataUrl?: string): P
 export default function TestResults() {
   const { testId = "" } = useParams();
   const navigate = useNavigate();
+  const { t } = useSettings();
   const [test, setTest] = useState<TestRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const reportRef = useRef<HTMLDivElement>(null);
@@ -393,7 +395,7 @@ export default function TestResults() {
 
   const saveToHistory = () => {
     if (!test) return;
-    if (savedInHistory) { toast.info("Already saved"); return; }
+    if (savedInHistory) { toast.info(t("alreadySaved")); return; }
     if (!markLocalTestSaved(test.id)) {
       saveLocalTest({
         id: test.id,
@@ -403,26 +405,26 @@ export default function TestResults() {
       });
     }
     setSavedInHistory(true);
-    toast.success("Added to history");
+    toast.success(t("addedToHistory"));
   };
 
-  if (loading) return <div className="py-12 text-center text-sm text-muted-foreground">Loading…</div>;
-  if (!test) return <div className="py-12 text-center text-sm text-muted-foreground">Test not found.</div>;
+  if (loading) return <div className="py-12 text-center text-sm text-muted-foreground">{t("loadingEllipsis")}</div>;
+  if (!test) return <div className="py-12 text-center text-sm text-muted-foreground">{t("testNotFound")}</div>;
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <button onClick={goBackToTest} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary">
-          <ChevronLeft className="h-4 w-4" /> Back to test
+          <ChevronLeft className="h-4 w-4" /> {t("backToTest")}
         </button>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={saveToHistory} disabled={savedInHistory}>
-            <Save className="h-4 w-4" /> {savedInHistory ? "Saved" : "Save"}
+            <Save className="h-4 w-4" /> {savedInHistory ? t("saved") : t("save")}
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" disabled={exporting}>
-                <Download className="h-4 w-4" /> {exporting ? "Exporting…" : "Export"}
+                <Download className="h-4 w-4" /> {exporting ? t("exporting") : t("export")}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
