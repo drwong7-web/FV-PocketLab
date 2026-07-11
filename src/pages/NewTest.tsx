@@ -22,25 +22,25 @@ export default function NewTest() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <Link to={`/app/tests/new/jump${qs}`} className="glass-card overflow-hidden group hover:border-primary/40 transition-colors">
+        <Link to={`/app/tests/new/jump${qs}`} className="glass-card engraved-surface overflow-hidden group hover:border-primary/40 transition-colors bg-gradient-to-br from-primary/10 to-transparent">
           <div className="p-4 flex items-center gap-4">
             <div className="flex-shrink-0 flex items-center justify-center h-28 w-28">
               <img src={logoJump} alt={t("verticalJump")} className="engraved-logo h-full w-auto object-contain" />
             </div>
 
             <div className="flex-1 flex flex-col items-center justify-center">
-              <h2 className="font-display text-lg font-bold uppercase text-center">{t("verticalJump")}</h2>
+              <h2 className="engraved font-display text-lg font-bold uppercase text-center">{t("verticalJump")}</h2>
             </div>
           </div>
         </Link>
 
-        <Link to={`/app/tests/new/sprint${qs}`} className="glass-card overflow-hidden group hover:border-primary/40 transition-colors">
+        <Link to={`/app/tests/new/sprint${qs}`} className="glass-card engraved-surface overflow-hidden group hover:border-primary/40 transition-colors bg-gradient-to-br from-primary/10 to-transparent">
           <div className="p-4 flex items-center gap-4">
             <div className="flex-shrink-0 flex items-center justify-center h-28 w-28">
               <img src={logoSprint} alt={t("linearSprint")} className="engraved-logo h-full w-auto object-contain" />
             </div>
             <div className="flex-1 flex flex-col items-center justify-center">
-              <h2 className="font-display text-lg font-bold uppercase text-center">{t("linearSprint")}</h2>
+              <h2 className="engraved font-display text-lg font-bold uppercase text-center">{t("linearSprint")}</h2>
             </div>
           </div>
         </Link>
