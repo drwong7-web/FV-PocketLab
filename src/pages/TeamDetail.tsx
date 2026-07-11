@@ -9,10 +9,12 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import ImportPlayersDialog from "@/components/players/ImportPlayersDialog";
 import { toast } from "sonner";
+import { useSettings } from "@/lib/settings";
 
 export default function TeamDetail() {
   const { teamId = "" } = useParams();
   const { user } = useAuth();
+  const { t } = useSettings();
   const team = getTeam(teamId);
   const [open, setOpen] = useState(false);
   const [first, setFirst] = useState("");
@@ -25,8 +27,8 @@ export default function TeamDetail() {
   if (!team || !user) {
     return (
       <div className="glass-card p-6 text-center">
-        <p className="text-sm text-muted-foreground">Team not found.</p>
-        <Link to="/app/teams"><Button variant="ghost" className="mt-3"><ArrowLeft className="w-4 h-4 mr-1" /> Back</Button></Link>
+        <p className="text-sm text-muted-foreground">{t("teamNotFound")}</p>
+        <Link to="/app/teams"><Button variant="ghost" className="mt-3"><ArrowLeft className="w-4 h-4 mr-1" /> {t("back")}</Button></Link>
       </div>
     );
   }
@@ -37,7 +39,7 @@ export default function TeamDetail() {
     e.preventDefault();
     const m = parseFloat(mass);
     if (!first.trim() || !last.trim() || !m || m <= 0) {
-      toast.error("Please fill name and a valid mass.");
+      toast.error(t("fillNameAndMass"));
       return;
     }
     createPlayer({
@@ -51,19 +53,19 @@ export default function TeamDetail() {
     });
     setFirst(""); setLast(""); setMass("75"); setHeight(""); setPosition(""); setOpen(false);
     force((n) => n + 1);
-    toast.success("Player added");
+    toast.success(t("playerAdded"));
   };
 
   return (
     <div className="space-y-5">
       <Link to="/app/teams" className="inline-flex items-center text-xs text-muted-foreground hover:text-foreground">
-        <ArrowLeft className="w-3 h-3 mr-1" /> Teams
+        <ArrowLeft className="w-3 h-3 mr-1" /> {t("teams")}
       </Link>
 
       <div className="flex items-end justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{team.name}</h1>
-          <p className="text-sm text-muted-foreground">{team.sport ?? "Sport not set"}</p>
+          <p className="text-sm text-muted-foreground">{team.sport ?? t("sportNotSet")}</p>
         </div>
         <div className="flex items-center gap-2">
           <ImportPlayersDialog
@@ -74,37 +76,37 @@ export default function TeamDetail() {
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
               <Button className="bg-gradient-primary text-primary-foreground font-semibold">
-                <Plus className="w-4 h-4 mr-1" /> Player
+                <Plus className="w-4 h-4 mr-1" /> {t("player")}
               </Button>
             </DialogTrigger>
           <DialogContent className="max-w-sm">
-            <DialogHeader><DialogTitle>Add player</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>{t("addPlayer")}</DialogTitle></DialogHeader>
             <form onSubmit={onCreate} className="space-y-3 mt-2">
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <Label htmlFor="f">First name</Label>
+                  <Label htmlFor="f">{t("firstName")}</Label>
                   <Input id="f" value={first} onChange={(e) => setFirst(e.target.value)} required />
                 </div>
                 <div>
-                  <Label htmlFor="l">Last name</Label>
+                  <Label htmlFor="l">{t("lastName")}</Label>
                   <Input id="l" value={last} onChange={(e) => setLast(e.target.value)} required />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <Label htmlFor="m">Mass (kg)</Label>
+                  <Label htmlFor="m">{t("massKg")}</Label>
                   <Input id="m" type="number" step="0.1" value={mass} onChange={(e) => setMass(e.target.value)} required />
                 </div>
                 <div>
-                  <Label htmlFor="h">Height (cm)</Label>
+                  <Label htmlFor="h">{t("heightCm")}</Label>
                   <Input id="h" type="number" step="0.1" value={height} onChange={(e) => setHeight(e.target.value)} />
                 </div>
               </div>
               <div>
-                <Label htmlFor="pos">Position / role</Label>
-                <Input id="pos" value={position} onChange={(e) => setPosition(e.target.value)} placeholder="Sprinter, Winger…" />
+                <Label htmlFor="pos">{t("positionRole")}</Label>
+                <Input id="pos" value={position} onChange={(e) => setPosition(e.target.value)} placeholder={t("positionPlaceholder")} />
               </div>
-              <Button type="submit" className="w-full bg-gradient-primary text-primary-foreground font-semibold">Add</Button>
+              <Button type="submit" className="w-full bg-gradient-primary text-primary-foreground font-semibold">{t("add")}</Button>
             </form>
           </DialogContent>
           </Dialog>
@@ -114,7 +116,7 @@ export default function TeamDetail() {
       {players.length === 0 ? (
         <div className="glass-card p-8 text-center">
           <UserRound className="w-8 h-8 mx-auto text-muted-foreground" />
-          <p className="mt-3 text-sm text-muted-foreground">No players yet — add one.</p>
+          <p className="mt-3 text-sm text-muted-foreground">{t("noPlayers")}</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -137,13 +139,13 @@ export default function TeamDetail() {
               <button
                 className="p-3 text-muted-foreground hover:text-destructive transition-colors"
                 onClick={() => {
-                  if (confirm(`Delete ${p.firstName} ${p.lastName}?`)) {
+                  if (confirm(`${t("deletePlayerConfirm")} ${p.firstName} ${p.lastName}`)) {
                     deletePlayer(p.id);
                     force((n) => n + 1);
-                    toast.success("Player deleted");
+                    toast.success(t("playerDeleted"));
                   }
                 }}
-                aria-label="Delete player"
+                aria-label={t("deletePlayer")}
               >
                 <Trash2 className="w-4 h-4" />
               </button>

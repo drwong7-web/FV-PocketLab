@@ -24,6 +24,7 @@ import {
 import { CameraTimer } from "@/components/camera/CameraTimer";
 import { SprintVideoAnalyzer } from "@/components/camera/SprintVideoAnalyzer";
 import { saveLocalTest, consumeTestDraft } from "@/lib/localHistory";
+import { useSettings } from "@/lib/settings";
 
 type SplitRow = SprintSplit & {
   source?: "manual" | "video" | "ai";
@@ -37,6 +38,7 @@ type Surface = "track" | "grass" | "synthetic" | "indoor";
 export default function SprintTest() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { t } = useSettings();
   const [params] = useSearchParams();
   const initialAthleteId = params.get("athleteId") ?? params.get("playerId") ?? "";
 
@@ -83,14 +85,14 @@ export default function SprintTest() {
       setAirPressure(Math.round(w.pressureHpa).toString());
       setWindSpeed(Math.abs(w.windSpeedMs).toFixed(1));
       const observed = new Date(w.observedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-      setGeoInfo(`${w.locationName} — relevé ${observed}. Sélectionnez Propulsion ou Résistance selon l'observation sur le terrain.`);
-      toast.success("Conditions météo importées");
+      setGeoInfo(`${w.locationName} — ${observed}.`);
+      toast.success(t("weatherImported"));
     } catch (e) {
       const err = e as GeolocationPositionError | Error;
-      let msg = "Impossible de récupérer la météo.";
+      let msg = t("weatherError");
       if ("code" in err) {
-        if (err.code === 1) msg = "Autorisez la localisation dans votre navigateur.";
-        else if (err.code === 3) msg = "Délai dépassé — réessayez.";
+        if (err.code === 1) msg = t("allowLocation");
+        else if (err.code === 3) msg = t("timeoutRetry");
       } else if (err.message) {
         msg = err.message;
       }
@@ -155,11 +157,11 @@ export default function SprintTest() {
 
   const submit = async () => {
     setError("");
-    if (!user || !athleteId) { setError("Sélectionnez un athlète."); return; }
+    if (!user || !athleteId) { setError(t("selectAthlete")); return; }
     const mass = parseFloat(bodyMass);
     const h = parseFloat(height);
     const valid = splits.filter((s) => s.time > 0 && s.distance > 0);
-    if (valid.length < 3 || !mass || !h) { setError("Fournir au moins 3 splits + masse + taille."); return; }
+    if (valid.length < 3 || !mass || !h) { setError(t("needSplits")); return; }
 
     setBusy(true);
     try {
@@ -209,47 +211,47 @@ export default function SprintTest() {
             <TrendingUp className="h-5 w-5" />
           </div>
           <div>
-            <h1 className="font-display text-2xl font-bold uppercase">Test sprint</h1>
-            <p className="text-xs text-muted-foreground">Profil F-V horizontal — Morin & Samozino.</p>
+            <h1 className="font-display text-2xl font-bold uppercase">{t("sprintTestTitle")}</h1>
+            <p className="text-xs text-muted-foreground">{t("sprintTestSubtitle")}</p>
           </div>
         </div>
-        <Button size="sm" variant="outline" onClick={loadDemo} title="Charger les données de démonstration">
-          <Sparkles className="mr-1.5 h-3.5 w-3.5" /> Démo
+        <Button size="sm" variant="outline" onClick={loadDemo} title={t("loadDemoTitle")}>
+          <Sparkles className="mr-1.5 h-3.5 w-3.5" /> {t("demo")}
         </Button>
       </div>
 
       <Card>
-        <CardHeader><CardTitle className="font-display text-base">1. Athlète</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="font-display text-base">{t("step1Athlete")}</CardTitle></CardHeader>
         <CardContent className="space-y-3">
           <div className="space-y-1.5">
-            <Label>Équipe</Label>
+            <Label>{t("team")}</Label>
             <select
               value={teamId}
               onChange={(e) => { setTeamId(e.target.value); setAthleteId(""); }}
               className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
             >
-              <option value="">Sélectionner une équipe</option>
+              <option value="">{t("selectTeam")}</option>
               {teams.map((te) => (<option key={te.id} value={te.id}>{te.name}</option>))}
             </select>
           </div>
           <div className="space-y-1.5">
-            <Label>Athlète</Label>
+            <Label>{t("athlete")}</Label>
             <select
               value={athleteId}
               onChange={(e) => setAthleteId(e.target.value)}
               className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
             >
-              <option value="">Sélectionner…</option>
+              <option value="">{t("selectEllipsis")}</option>
               {filteredAthletes.map((a) => <option key={a.id} value={a.id}>{a.firstName} {a.lastName}</option>)}
             </select>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label>Masse corporelle (kg)</Label>
+              <Label>{t("bodyMass")}</Label>
               <Input type="number" step="0.1" value={bodyMass} onChange={(e) => setBodyMass(e.target.value)} />
             </div>
             <div className="space-y-1.5">
-              <Label>Taille (m)</Label>
+              <Label>{t("heightM")}</Label>
               <Input type="number" step="0.01" value={height} onChange={(e) => setHeight(e.target.value)} />
             </div>
           </div>
@@ -257,10 +259,10 @@ export default function SprintTest() {
       </Card>
 
       <Card>
-        <CardHeader><CardTitle className="font-display text-base">2. Protocole</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="font-display text-base">{t("step2Protocol")}</CardTitle></CardHeader>
         <CardContent className="space-y-3">
           <div className="space-y-1.5">
-            <Label>Distance du test</Label>
+            <Label>{t("testDistance")}</Label>
             <div className="grid grid-cols-3 gap-2">
               {([30, 40, 60] as TestDistance[]).map((d) => (
                 <button
@@ -280,33 +282,33 @@ export default function SprintTest() {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label>Type de départ</Label>
+              <Label>{t("startType")}</Label>
               <select
                 value={startType}
                 onChange={(e) => setStartType(e.target.value as StartType)}
                 className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
               >
-                <option value="standing">Debout</option>
-                <option value="three_point">3 appuis</option>
-                <option value="blocks">Starting-blocks</option>
+                <option value="standing">{t("standing")}</option>
+                <option value="three_point">{t("threePoint")}</option>
+                <option value="blocks">{t("blocks")}</option>
               </select>
             </div>
             <div className="space-y-1.5">
-              <Label>Surface</Label>
+              <Label>{t("surface")}</Label>
               <select
                 value={surface}
                 onChange={(e) => setSurface(e.target.value as Surface)}
                 className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
               >
-                <option value="track">Piste</option>
-                <option value="grass">Gazon</option>
-                <option value="synthetic">Synthétique</option>
-                <option value="indoor">Indoor</option>
+                <option value="track">{t("track")}</option>
+                <option value="grass">{t("grass")}</option>
+                <option value="synthetic">{t("synthetic")}</option>
+                <option value="indoor">{t("indoor")}</option>
               </select>
             </div>
           </div>
           <div className="space-y-1.5">
-            <Label>Type de chaussures</Label>
+            <Label>{t("shoeType")}</Label>
             <select
               value={shoeType}
               onChange={(e) => setShoeType(e.target.value as ShoeType)}
@@ -316,9 +318,7 @@ export default function SprintTest() {
                 <option key={k} value={k}>{SHOE_LABELS[k]}</option>
               ))}
             </select>
-            <p className="text-[11px] text-muted-foreground">
-              Une correction est appliquée selon la combinaison chaussure × surface (réf. : pointes sur piste).
-            </p>
+            <p className="text-[11px] text-muted-foreground">{t("shoeCorrection")}</p>
           </div>
         </CardContent>
       </Card>
@@ -326,7 +326,7 @@ export default function SprintTest() {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between gap-2">
-            <CardTitle className="font-display text-base">3. Conditions</CardTitle>
+            <CardTitle className="font-display text-base">{t("step3Conditions")}</CardTitle>
             <Button size="sm" variant="outline" onClick={autofillWeather} disabled={geoBusy}>
               {geoBusy ? (
                 <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
@@ -335,22 +335,22 @@ export default function SprintTest() {
               ) : (
                 <MapPin className="mr-1.5 h-3.5 w-3.5" />
               )}
-              {geoInfo ? "Actualiser" : "Localiser"}
+              {geoInfo ? t("refresh") : t("locate")}
             </Button>
           </div>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-3 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-xs">Temp (°C)</Label>
+              <Label className="text-xs">{t("temperature")}</Label>
               <Input type="number" value={airTemp} onChange={(e) => setAirTemp(e.target.value)} />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Pression (hPa)</Label>
+              <Label className="text-xs">{t("pressure")}</Label>
               <Input type="number" value={airPressure} onChange={(e) => setAirPressure(e.target.value)} />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Vent (m/s)</Label>
+              <Label className="text-xs">{t("windMs")}</Label>
               <Input
                 type="number"
                 step="0.1"
@@ -362,26 +362,24 @@ export default function SprintTest() {
             </div>
           </div>
           <div className="mt-3 space-y-1.5">
-            <Label className="text-xs flex items-center gap-1"><Wind className="h-3 w-3" /> Direction du vent</Label>
+            <Label className="text-xs flex items-center gap-1"><Wind className="h-3 w-3" /> {t("windDirection")}</Label>
             <ToggleGroup
               type="single"
               value={windDir}
               onValueChange={(v) => v && setWindDir(v as "tail" | "head" | "none")}
               className="justify-start gap-1"
             >
-              <ToggleGroupItem value="tail" aria-label="Vent de propulsion" className="h-8 px-2 text-xs">
-                Propulsion
+              <ToggleGroupItem value="tail" aria-label={t("tailwind")} className="h-8 px-2 text-xs">
+                {t("tailwind")}
               </ToggleGroupItem>
-              <ToggleGroupItem value="none" aria-label="Vent neutre" className="h-8 px-2 text-xs">
-                Neutre
+              <ToggleGroupItem value="none" aria-label={t("neutral")} className="h-8 px-2 text-xs">
+                {t("neutral")}
               </ToggleGroupItem>
-              <ToggleGroupItem value="head" aria-label="Vent de résistance" className="h-8 px-2 text-xs">
-                Résistance
+              <ToggleGroupItem value="head" aria-label={t("headwind")} className="h-8 px-2 text-xs">
+                {t("headwind")}
               </ToggleGroupItem>
             </ToggleGroup>
-            <p className="text-[11px] text-muted-foreground">
-              Propulsion = vent qui pousse l'athlète (V₀ ↑, P<sub>max</sub> ↑) · Résistance = vent qui freine (V₀ ↓, P<sub>max</sub> ↓) · Neutre = aucun effet.
-            </p>
+            <p className="text-[11px] text-muted-foreground">{t("windHint")}</p>
           </div>
           <ConditionsRecap
             tempC={parseFloat(airTemp)}
@@ -392,9 +390,7 @@ export default function SprintTest() {
             testDistance={testDistance}
           />
           {geoInfo && !geoError && (
-            <p className="mt-2 text-[11px] text-muted-foreground">
-              {geoInfo} · Vent estimé à 10 m — ajustez si vous mesurez sur place.
-            </p>
+            <p className="mt-2 text-[11px] text-muted-foreground">{geoInfo}</p>
           )}
           {geoError && <p className="mt-2 text-[11px] text-destructive">{geoError}</p>}
         </CardContent>
@@ -403,12 +399,12 @@ export default function SprintTest() {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle className="font-display text-base">4. Splits</CardTitle>
+            <CardTitle className="font-display text-base">{t("step4Splits")}</CardTitle>
             <div className="flex gap-1">
-              <Button size="sm" variant="outline" onClick={() => setCameraOpen(true)} aria-label="Caméra">
+              <Button size="sm" variant="outline" onClick={() => setCameraOpen(true)} aria-label={t("camera")}>
                 <Camera className="h-4 w-4 text-primary" />
               </Button>
-              <Button size="sm" variant="outline" onClick={() => setAnalyzerOpen(true)} aria-label="Analyse vidéo IA">
+              <Button size="sm" variant="outline" onClick={() => setAnalyzerOpen(true)} aria-label={t("videoAi")}>
                 <Video className="h-4 w-4 text-primary" />
               </Button>
               <Button size="sm" variant="outline" onClick={() => setSplits([...splits, { distance: 0, time: 0 }])}>
@@ -419,9 +415,9 @@ export default function SprintTest() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-[1fr_1fr_70px_auto] gap-2 text-xs font-medium text-muted-foreground">
-            <span>Distance (m)</span>
-            <span>Temps (s)</span>
-            <span className="text-center">Source</span>
+            <span>{t("distanceM")}</span>
+            <span>{t("timeS")}</span>
+            <span className="text-center">{t("source")}</span>
             <span></span>
           </div>
           {splits.map((s, i) => (
@@ -429,25 +425,25 @@ export default function SprintTest() {
               <Input type="number" step="0.5" value={s.distance || ""} onChange={(e) => updateSplit(i, "distance", e.target.value)} />
               <Input type="number" step="0.01" value={s.time || ""} onChange={(e) => updateSplit(i, "time", e.target.value)} />
               <span className="text-center text-[10px] uppercase tracking-wide text-muted-foreground">
-                {s.source === "video" ? "vidéo" : s.source === "ai" ? "IA" : "manuel"}
+                {s.source === "video" ? t("video") : s.source === "ai" ? t("ai") : t("manual")}
               </span>
-              <Button size="icon" variant="ghost" onClick={() => setSplits(splits.filter((_, j) => j !== i))} aria-label="Supprimer">
+              <Button size="icon" variant="ghost" onClick={() => setSplits(splits.filter((_, j) => j !== i))} aria-label={t("delete")}>
                 <Trash2 className="h-4 w-4 text-destructive" />
               </Button>
             </div>
           ))}
-          <p className="mt-2 text-xs text-muted-foreground">Astuce : utilisez la caméra ou l'analyse vidéo IA pour extraire les temps depuis une vidéo de course.</p>
+          <p className="mt-2 text-xs text-muted-foreground">{t("splitsHint")}</p>
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader><CardTitle className="font-display text-base">5. Notes</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="font-display text-base">{t("step5Notes")}</CardTitle></CardHeader>
         <CardContent>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={3}
-            placeholder="Observations, ressentis, contexte de la séance…"
+            placeholder={t("notesPlaceholder")}
             className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
           />
         </CardContent>
@@ -501,7 +497,7 @@ export default function SprintTest() {
       {error && <p className="text-sm text-destructive">{error}</p>}
 
       <Button onClick={submit} disabled={busy} className="w-full gradient-primary text-primary-foreground shadow-glow h-12">
-        {busy ? "Calcul…" : "Calculer le profil"}
+        {busy ? t("computing") : t("computeSprint")}
       </Button>
     </div>
   );
