@@ -480,6 +480,62 @@ export default function TestResults() {
           ? <JumpReport test={test} results={test.results as JumpResults} chartRef={chartRef} />
           : <SprintReport test={test} results={test.results as SprintResults} chartRef={chartRef} />}
       </div>
+
+      <Dialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Folder className="h-4 w-4 text-primary" />
+              {t("exportFolder")}
+            </DialogTitle>
+            <DialogDescription>
+              {pendingFormat === "pdf" ? "PDF" : "Word (.docx)"}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 py-2">
+            <div className="rounded-lg border border-border bg-card px-3 py-2.5 text-sm">
+              <span className="text-muted-foreground">{exportDir ?? t("defaultDownloads")}</span>
+            </div>
+            {pickerSupported ? (
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={handlePickFolder} className="flex-1">
+                  {t("chooseFolder")}
+                </Button>
+                {exportDir && (
+                  <Button variant="ghost" size="sm" onClick={handleResetFolder}>
+                    {t("resetFolder")}
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">{t("folderNotSupported")}</p>
+            )}
+            {pickerSupported && inIframe && (
+              <p className="text-xs text-muted-foreground">
+                {t("iframeBlocked")}{" "}
+                <a
+                  href={window.location.href}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-primary underline underline-offset-2"
+                >
+                  {t("openInNewTab")}
+                </a>
+              </p>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setExportDialogOpen(false)}>
+              {t("cancel")}
+            </Button>
+            <Button onClick={confirmExport} disabled={exporting} className="bg-gradient-primary text-primary-foreground">
+              <Download className="h-4 w-4 mr-1" /> {exporting ? t("exporting") : t("export")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
