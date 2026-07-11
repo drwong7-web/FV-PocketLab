@@ -1,4 +1,5 @@
 import { Link, useSearchParams } from "react-router-dom";
+import { useEffect } from "react";
 import { ArrowLeft } from "lucide-react";
 import logoJump from "@/assets/logo-jump-neon.png";
 import logoSprint from "@/assets/logo-sprint-neon.png";
