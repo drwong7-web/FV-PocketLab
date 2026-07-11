@@ -173,8 +173,8 @@ const TR = {
   delete: { fr: "Supprimer", en: "Delete", ar: "حذف" },
 
   // ---- Sprint test ----
-  sprintTestTitle: { fr: "Test sprint", en: "Sprint test", ar: "اختبار العدو" },
-  sprintTestSubtitle: { fr: "Profil F-V horizontal — Morin & Samozino.", en: "Horizontal F-V profile — Morin & Samozino.", ar: "ملف F-V الأفقي — مورين وسامودزينو." },
+  sprintTestTitle: { fr: "SPRINT LINEAIRE", en: "\u00a0SPRINT LINEAIRE", ar: "\u00a0العدو الخطي" },
+  sprintTestSubtitle: { fr: "Profil F-V horizontal\u00a0", en: "Profil F-V horizontal\u00a0", ar: "ملف F-V الأفقي" },
   demo: { fr: "Démo", en: "Demo", ar: "تجريبي" },
   loadDemoTitle: { fr: "Charger les données de démonstration", en: "Load demo data", ar: "تحميل البيانات التجريبية" },
   step1Athlete: { fr: "1. Athlète", en: "1. Athlete", ar: "1. الرياضي" },
