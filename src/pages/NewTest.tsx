@@ -11,6 +11,17 @@ export default function NewTest() {
   const athleteId = params.get("playerId") ?? params.get("athleteId") ?? "";
   const qs = athleteId ? `?athleteId=${athleteId}` : "";
 
+  useEffect(() => {
+    [logoJump, logoSprint].forEach((href) => {
+      const link = document.createElement("link");
+      link.rel = "preload";
+      link.as = "image";
+      link.href = href;
+      link.fetchPriority = "high";
+      document.head.appendChild(link);
+    });
+  }, []);
+
   return (
     <div className="space-y-6">
       <Link to="/app" className="inline-flex items-center text-xs text-muted-foreground hover:text-foreground">
