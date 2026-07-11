@@ -34,14 +34,11 @@ export default function AppLayout() {
   const [syncProvider, setSyncProviderState] = useState<SyncProvider>("none");
   const [syncBusy, setSyncBusy] = useState<null | "push" | "pull" | "both">(null);
   const [lastSyncAt, setLastSyncAt] = useState<number | undefined>(undefined);
-  const pickerSupported = isDirectoryPickerSupported();
-  const inIframe = isInIframe();
   const preferredProvider = detectPreferredProvider();
   const gdriveAvailable = !!managedGoogleClientId();
 
   useEffect(() => {
     if (settingsOpen) {
-      setExportDir(getExportDirectoryLabel());
       const cfg = getPublicConfig();
       setSyncProviderState(cfg.provider);
       setLastSyncAt(getSyncState().lastSyncAt);
@@ -75,28 +72,6 @@ export default function AppLayout() {
   };
 
 
-
-
-
-
-  const handlePickFolder = async () => {
-    const res = await pickExportDirectory();
-    if (res.ok === true) {
-      setExportDir(res.name);
-      toast.success(`${t("savedTo")} ${res.name}`);
-      return;
-    }
-    switch (res.reason) {
-      case "cancelled": toast(t("pickerCancelled")); break;
-      case "iframe-blocked": toast.error(t("iframeBlocked")); break;
-      case "unsupported": toast.error(t("browserUnsupported")); break;
-      default: toast.error(res.message || t("browserUnsupported"));
-    }
-  };
-  const handleResetFolder = async () => {
-    await clearExportDirectory();
-    setExportDir(null);
-  };
 
   const swatches = [
     { hue: "142", label: "Green" },
