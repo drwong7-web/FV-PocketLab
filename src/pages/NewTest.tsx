@@ -27,12 +27,8 @@ export default function NewTest() {
               <img src={logoJump} alt="Vertical jump" className="engraved-logo h-full w-auto object-contain" />
             </div>
 
-            <div className="flex-1 space-y-2">
-              <h2 className="font-display text-lg font-bold uppercase">Vertical jump</h2>
-              <p className="text-xs text-muted-foreground mt-1">
-                {"\n"}
-              </p>
-              <div className="text-xs text-primary group-hover:underline">Start →</div>
+            <div className="flex-1 flex flex-col items-center justify-center">
+              <h2 className="font-display text-lg font-bold uppercase text-center">Vertical jump</h2>
             </div>
           </div>
         </Link>
