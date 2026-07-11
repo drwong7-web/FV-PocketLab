@@ -1,14 +1,13 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet } from "react-router-dom";
 import fvLogo from "@/assets/fv-logo.png.asset.json";
-import { Activity, Check, Cloud, CloudOff, Download, Folder, Home, Languages, Moon, Palette, RefreshCw, Settings as SettingsIcon, Sun, Upload, Users } from "lucide-react";
+import { Activity, Check, Cloud, CloudOff, Download, Home, Languages, Moon, Palette, RefreshCw, Settings as SettingsIcon, Sun, Upload, Users } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useSettings, type Lang, type Theme } from "@/lib/settings";
-import { clearExportDirectory, getExportDirectoryLabel, isDirectoryPickerSupported, isInIframe, pickExportDirectory } from "@/lib/exportTarget";
 
 import {
   getPublicConfig, setPublicConfig,
