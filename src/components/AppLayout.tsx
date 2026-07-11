@@ -63,14 +63,14 @@ export default function AppLayout() {
     try {
       const fn = kind === "push" ? syncPushNow : kind === "pull" ? () => syncPullNow("merge") : syncBothNow;
       const res = await fn();
-      if (!res.ok) { toast.error(res.error || "Erreur de synchronisation"); return; }
+      if (!res.ok) { toast.error(res.error || t("syncError")); return; }
       setLastSyncAt(getSyncState().lastSyncAt);
       if (kind === "pull" && res.pulled) {
-        toast.success(`Récupération OK — ${res.pulled.totalKeys} clés (${res.pulled.added} ajoutées)`);
+        toast.success(`${t("pulledOk")} — ${res.pulled.totalKeys} keys (${res.pulled.added} added)`);
       } else if (kind === "push") {
-        toast.success("Sauvegarde envoyée");
+        toast.success(t("pushedOk"));
       } else {
-        toast.success("Synchronisation terminée");
+        toast.success(t("syncDone"));
       }
     } finally { setSyncBusy(null); }
   };
@@ -292,11 +292,9 @@ export default function AppLayout() {
             <section className="space-y-3">
               <div className="flex items-center gap-2 text-sm font-semibold">
                 {syncProvider === "none" ? <CloudOff className="h-4 w-4 text-primary" /> : <Cloud className="h-4 w-4 text-primary" />}
-                <h3>Sauvegarde cloud</h3>
+                <h3>{t("cloudBackup")}</h3>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Vos données restent sur l'appareil. En un tap, envoyez une copie chiffrée vers le drive de votre téléphone.
-              </p>
+              <p className="text-xs text-muted-foreground">{t("cloudBackupDesc")}</p>
 
               {syncProvider === "none" ? (
                 <div className="space-y-2">
@@ -305,7 +303,7 @@ export default function AppLayout() {
                       onClick={() => enableSync("icloud")}
                       className="w-full bg-gradient-primary text-primary-foreground"
                     >
-                      <Cloud className="h-4 w-4 mr-2" /> Sauvegarder sur iCloud Drive
+                      <Cloud className="h-4 w-4 mr-2" /> {t("backupICloud")}
                     </Button>
                   ) : (
                     <Button
@@ -313,62 +311,59 @@ export default function AppLayout() {
                       disabled={!gdriveAvailable}
                       className="w-full bg-gradient-primary text-primary-foreground"
                     >
-                      <Cloud className="h-4 w-4 mr-2" /> Sauvegarder sur Google Drive
+                      <Cloud className="h-4 w-4 mr-2" /> {t("backupGDrive")}
                     </Button>
                   )}
                   {preferredProvider === "gdrive" && !gdriveAvailable && (
-                    <p className="text-[11px] text-muted-foreground">
-                      Google Drive indisponible sur cette build. Utilisez le fichier .slfv.
-                    </p>
+                    <p className="text-[11px] text-muted-foreground">{t("gdriveUnavailable")}</p>
                   )}
                   <button
                     onClick={() => enableSync("file")}
                     className="w-full text-[11px] text-muted-foreground hover:text-primary underline underline-offset-2"
                   >
-                    Utiliser un fichier .slfv à la place
+                    {t("useSlfvFile")}
                   </button>
                 </div>
               ) : (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-muted-foreground">
-                      Provider :{" "}
+                      {t("provider")} :{" "}
                       <span className="text-foreground font-medium">
                         {syncProvider === "gdrive" && "Google Drive"}
-                        {syncProvider === "icloud" && "iCloud Drive (Fichiers)"}
-                        {syncProvider === "file" && "Fichier .slfv"}
+                        {syncProvider === "icloud" && "iCloud Drive"}
+                        {syncProvider === "file" && ".slfv"}
                       </span>
                     </span>
                     <button onClick={disableSync} className="text-muted-foreground hover:text-destructive underline underline-offset-2">
-                      Désactiver
+                      {t("disable")}
                     </button>
                   </div>
 
                   <div className="grid grid-cols-3 gap-2 pt-1">
                     <Button variant="outline" size="sm" disabled={!!syncBusy} onClick={() => runSync("pull")}>
-                      <Download className="h-3.5 w-3.5 mr-1" /> Récupérer
+                      <Download className="h-3.5 w-3.5 mr-1" /> {t("pull")}
                     </Button>
                     <Button variant="outline" size="sm" disabled={!!syncBusy} onClick={() => runSync("push")}>
-                      <Upload className="h-3.5 w-3.5 mr-1" /> Envoyer
+                      <Upload className="h-3.5 w-3.5 mr-1" /> {t("push")}
                     </Button>
                     <Button size="sm" disabled={!!syncBusy || syncProvider !== "gdrive"} onClick={() => runSync("both")} className="bg-gradient-primary text-primary-foreground">
-                      <RefreshCw className={cn("h-3.5 w-3.5 mr-1", syncBusy === "both" && "animate-spin")} /> Sync
+                      <RefreshCw className={cn("h-3.5 w-3.5 mr-1", syncBusy === "both" && "animate-spin")} /> {t("sync")}
                     </Button>
                   </div>
 
                   {syncProvider === "icloud" && (
-                    <p className="text-[11px] text-muted-foreground">
-                      Sur iPhone, choisissez « Enregistrer dans Fichiers » → iCloud Drive lors de l'envoi.
-                    </p>
+                    <p className="text-[11px] text-muted-foreground">{t("iCloudHint")}</p>
                   )}
                   {lastSyncAt && (
                     <p className="text-[11px] text-muted-foreground">
-                      Dernière synchronisation : {new Date(lastSyncAt).toLocaleString()}
+                      {t("lastSync")} : {new Date(lastSyncAt).toLocaleString()}
                     </p>
                   )}
                 </div>
               )}
             </section>
+
 
           </div>
 
