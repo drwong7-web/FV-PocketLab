@@ -128,8 +128,8 @@ export default function AppLayout() {
             <DialogDescription>{"\n"}</DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-6 py-2">
-            <section className="space-y-3">
+          <div className="space-y-4 py-2">
+            <section className="space-y-3 bg-card border border-border rounded-2xl p-4 shadow-card">
               <div className="flex items-center gap-2 text-sm font-semibold">
                 <h3 className="uppercase">{t("language")}</h3>
               </div>
@@ -144,7 +144,7 @@ export default function AppLayout() {
                         "rounded-lg border px-3 py-2.5 text-sm font-medium transition-all",
                         active
                           ? "border-primary bg-primary/10 text-primary shadow-glow"
-                          : "border-border bg-card hover:border-primary/40"
+                          : "border-border bg-background hover:border-primary/40"
                       )}
                     >
                       {l.native}
