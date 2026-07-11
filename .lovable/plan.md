@@ -1,36 +1,31 @@
-## Plan : cartes visuelles pour les rubriques des paramètres
+## Objectif
+Rendre les cartes de la page **Paramètres** visuellement identiques aux cartes utilisées dans le reste de l'application (Dashboard, Tests, Équipes, Joueurs, etc.).
 
-### Objectif
-Transformer la page (dialogue) des paramètres pour que chaque rubrique — **Langue**, **Thème**, **Synchronisation** — soit regroupée dans sa propre carte visuelle, séparée des autres rubriques.
+## État actuel
+Les trois sections des paramètres utilisent :
+```
+<section className="space-y-3 bg-card border border-border rounded-2xl p-4 shadow-card">
+```
+Cela donne un fond plat `bg-card` et une ombre `shadow-card`.
 
-### État actuel
-Dans `src/components/AppLayout.tsx`, les trois `<section>` du dialogue des paramètres sont empilées verticalement sans contour : `space-y-6 py-2`. Les titres de rubrique sont déjà traduits via `t(...)`.
+Le reste de l'application utilise presque partout la classe utilitaire `.glass-card` définie dans `src/index.css` :
+```css
+.glass-card {
+  background: var(--gradient-surface);
+  @apply border border-border rounded-2xl;
+  box-shadow: var(--shadow-card);
+}
+```
+Ce qui produit un fond dégradé surface et une ombre cohérente avec le design system sport-science.
 
-### Changements prévus
-1. **Dans `src/components/AppLayout.tsx`**
-   - Remplacer le conteneur global `space-y-6 py-2` par une grille verticale de cartes (`space-y-4` ou `grid gap-4`).
-   - Envelopper chaque `<section>` (Langue, Thème, Synchronisation) dans une carte utilisant les tokens du design system :
-     - `bg-card`
-     - `border border-border`
-     - `rounded-2xl`
-     - `shadow-card` (ou `glass-card` si la classe existe et est cohérente)
-     - `p-4` ou `p-5`
-   - Conserver le titre de rubrique en haut de chaque carte (`<h3 className="uppercase">{t(...)}</h3>`).
-   - Garder le contenu interne de chaque rubrique inchangé (sélecteurs de langue, boutons thème/clair-sombre, nuancier de couleur, slider de teinte, section synchronisation).
-   - S'assurer que les espacements internes (`space-y-3`, `space-y-4`) restent cohérents à l'intérieur de chaque carte.
+## Modifications prévues
+1. **Remplacer les classes des 3 `<section>` des paramètres** pour utiliser `glass-card` au lieu de `bg-card border border-border rounded-2xl shadow-card`.
+2. **Conserver** les espacements internes (`space-y-3` / `space-y-4`) et le contenu existant.
+3. **Ajuster si nécessaire** les fonds des boutons/sélecteurs inactifs (`bg-background`) pour qu'ils restent lisibles sur le fond dégradé des cartes.
 
-2. **Ajustements de style mineurs**
-   - Réduire légèrement l'espacement entre les cartes pour garder un rendu compact dans le dialogue.
-   - Vérifier que les titres de rubrique restent alignés et lisibles (pas de changement de taille prévu).
+## Fichier concerné
+- `src/components/AppLayout.tsx`
 
-### Fichiers modifiés
-- `src/components/AppLayout.tsx` : structuration des rubriques en cartes.
-
-### Non inclus dans ce plan
-- Aucun changement de wording/traduction.
-- Aucun changement de comportement (synchronisation, sélection de langue, etc.).
-- Aucun ajout de nouvelle fonctionnalité.
-
-### Validation
-- Vérifier visuellement le rendu dans l'aperçu (dialogue des paramètres).
-- S'assurer que `bunx tsc --noEmit` passe sans erreur.
+## Non concerné
+- Aucun changement de texte, de traduction, de comportement ou de logique métier.
+- Aucun ajout de dépendance.
