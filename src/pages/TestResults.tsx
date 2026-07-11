@@ -235,6 +235,40 @@ export default function TestResults() {
   const chartRef = useRef<HTMLDivElement>(null);
   const [exporting, setExporting] = useState(false);
   const [savedInHistory, setSavedInHistory] = useState(false);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [pendingFormat, setPendingFormat] = useState<"pdf" | "docx">("pdf");
+  const [exportDir, setExportDir] = useState<string | null>(null);
+  const pickerSupported = isDirectoryPickerSupported();
+  const inIframe = isInIframe();
+
+  const openExportDialog = (format: "pdf" | "docx") => {
+    setPendingFormat(format);
+    setExportDir(getExportDirectoryLabel());
+    setExportDialogOpen(true);
+  };
+
+  const handlePickFolder = async () => {
+    const res = await pickExportDirectory();
+    if (res.ok === true) {
+      setExportDir(res.name);
+      toast.success(`${t("savedTo")} ${res.name}`);
+      return;
+    }
+    switch (res.reason) {
+      case "cancelled": toast(t("pickerCancelled")); break;
+      case "iframe-blocked": toast.error(t("iframeBlocked")); break;
+      case "unsupported": toast.error(t("browserUnsupported")); break;
+      default: toast.error(res.message || t("browserUnsupported"));
+    }
+  };
+  const handleResetFolder = async () => {
+    await clearExportDirectory();
+    setExportDir(null);
+  };
+  const confirmExport = async () => {
+    setExportDialogOpen(false);
+    await doExport(pendingFormat);
+  };
 
   useEffect(() => {
     const local = getLocalTest(testId);
