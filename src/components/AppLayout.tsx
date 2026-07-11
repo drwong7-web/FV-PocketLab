@@ -129,7 +129,7 @@ export default function AppLayout() {
           </DialogHeader>
 
           <div className="space-y-4 py-2">
-            <section className="space-y-3 glass-card p-4">
+            <section className="space-y-3 glass-card p-5 bg-gradient-to-br from-primary/10 to-transparent hover:border-primary/40 transition-colors">
               <div className="flex items-center gap-2 text-sm font-semibold">
                 <h3 className="uppercase">{t("language")}</h3>
               </div>
@@ -154,7 +154,7 @@ export default function AppLayout() {
               </div>
             </section>
 
-            <section className="space-y-4 glass-card p-4">
+            <section className="space-y-4 glass-card p-5 bg-gradient-to-br from-primary/10 to-transparent hover:border-primary/40 transition-colors">
               <div className="flex items-center gap-2 text-sm font-semibold">
                 <h3 className="uppercase">{t("theme")}</h3>
               </div>
