@@ -211,7 +211,7 @@ export default function SprintTest() {
             <TrendingUp className="h-5 w-5" />
           </div>
           <div>
-            <h1 className="font-display text-2xl font-bold uppercase">{t("sprintTestTitle")}</h1>
+            <h1 className="font-display text-lg font-bold uppercase">{t("sprintTestTitle")}</h1>
             <p className="text-xs text-muted-foreground">{t("sprintTestSubtitle")}</p>
           </div>
         </div>
