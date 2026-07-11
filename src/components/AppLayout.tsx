@@ -225,7 +225,7 @@ export default function AppLayout() {
 
 
 
-            <section className="space-y-3 glass-card p-4">
+            <section className="space-y-3 glass-card p-5 bg-gradient-to-br from-primary/10 to-transparent hover:border-primary/40 transition-colors">
               <div className="flex items-center gap-2 text-sm font-semibold">
                 <h3 className="uppercase">{t("cloudBackup")}</h3>
               </div>
