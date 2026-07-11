@@ -145,8 +145,8 @@ const TR = {
   deleteTest: { fr: "Supprimer le test", en: "Delete test", ar: "حذف الاختبار" },
 
   // ---- Jump test ----
-  jumpTestTitle: { fr: "SAUT VERTICAL", en: "VERTICAL JUMP", ar: "اختبار القفز العمودي" },
-  jumpTestSubtitle: { fr: "Profil F-V à partir de squat jumps charges.", en: "\u00a0F-V profile from loaded squat jumps.", ar: "ملف F-V لسامودزينو من قفزات القرفصاء المحمّلة." },
+  jumpTestTitle: { fr: "SAUT VERTICAL", en: "VERTICAL JUMP", ar: "\u00a0القفز العمودي" },
+  jumpTestSubtitle: { fr: "Profil F-V à partir de squat jumps charges.", en: "\u00a0F-V profile from loaded squat jumps.", ar: "\u00a0منحنى القوة والسرعة من قفزات القرفصاء المحمّلة." },
   cameraCalib: { fr: "Étalonnage caméra", en: "Camera calibration", ar: "معايرة الكاميرا" },
   cameraCalibOptional: { fr: "Optionnel — utile uniquement si vous mesurez la hauteur au moyen de la caméra.", en: "Optional — needed only if you measure jump height with the camera.", ar: "اختياري — مطلوب فقط إذا كنت تقيس ارتفاع القفز بالكاميرا." },
   recalibrate: { fr: "Recalibrer", en: "Recalibrate", ar: "إعادة المعايرة" },
