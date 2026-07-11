@@ -131,7 +131,7 @@ export default function AppLayout() {
           <div className="space-y-4 py-2">
             <section className="space-y-3 glass-card p-5 bg-gradient-to-br from-primary/10 to-transparent hover:border-primary/40 transition-colors">
               <div className="flex items-center gap-2 text-sm font-semibold">
-                <h3 className="text-2xl uppercase">{t("language")}</h3>
+                <h3 className="text-lg uppercase">{t("language")}</h3>
               </div>
               <div className="grid grid-cols-3 gap-2">
                 {langs.map((l) => {
@@ -156,7 +156,7 @@ export default function AppLayout() {
 
             <section className="space-y-4 glass-card p-5 bg-gradient-to-br from-primary/10 to-transparent hover:border-primary/40 transition-colors">
               <div className="flex items-center gap-2 text-sm font-semibold">
-                <h3 className="text-2xl uppercase">{t("theme")}</h3>
+                <h3 className="text-lg uppercase">{t("theme")}</h3>
               </div>
 
               <div className="grid grid-cols-2 gap-2">
@@ -227,7 +227,7 @@ export default function AppLayout() {
 
             <section className="space-y-3 glass-card p-5 bg-gradient-to-br from-primary/10 to-transparent hover:border-primary/40 transition-colors">
               <div className="flex items-center gap-2 text-sm font-semibold">
-                <h3 className="text-2xl uppercase">{t("cloudBackup")}</h3>
+                <h3 className="text-lg uppercase">{t("cloudBackup")}</h3>
               </div>
               <p className="text-xs text-muted-foreground">{"\n"}</p>
 
