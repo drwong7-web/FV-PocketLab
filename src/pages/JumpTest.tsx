@@ -15,6 +15,7 @@ import {
   saveLocalTest, getSessionCalibration, setSessionCalibration, consumeTestDraft,
 } from "@/lib/localHistory";
 import { toast } from "sonner";
+import { useSettings } from "@/lib/settings";
 
 function roundTo5(n: number) {
   return Math.round(n / 5) * 5;
@@ -32,6 +33,7 @@ function defaultTrials(mass: number): JumpTrial[] {
 export default function JumpTest() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { t } = useSettings();
   const [params] = useSearchParams();
   const initialAthleteId = params.get("athleteId") ?? params.get("playerId") ?? "";
 
@@ -103,11 +105,11 @@ export default function JumpTest() {
 
   const submit = async () => {
     setError("");
-    if (!user || !athleteId) { setError("Select an athlete first."); return; }
+    if (!user || !athleteId) { setError(t("selectAthleteFirst")); return; }
     const mass = parseFloat(bodyMass);
     const hPO = parseFloat(pushOff);
     const valid = trials.filter((tr) => tr.jumpHeight > 0);
-    if (valid.length < 2 || !mass || !hPO) { setError("Provide at least 2 valid jumps + body mass + hPO."); return; }
+    if (valid.length < 2 || !mass || !hPO) { setError(t("needJumps")); return; }
 
     setBusy(true);
     try {
@@ -230,20 +232,18 @@ export default function JumpTest() {
               <span className="w-14 text-xs font-mono text-muted-foreground">{labels[i] ?? ""}</span>
               <Input type="number" step="0.5" placeholder="kg" value={tr.load || ""} onChange={(e) => updateTrial(i, "load", e.target.value)} />
               <Input type="number" step="0.1" placeholder="cm" value={tr.jumpHeight || ""} onChange={(e) => updateTrial(i, "jumpHeight", e.target.value)} />
-              <Button size="icon" variant="outline" onClick={() => setAiIndex(i)} aria-label="AI auto-detect" title="AI auto-detect (flight time)">
+              <Button size="icon" variant="outline" onClick={() => setAiIndex(i)} aria-label={t("aiAutoDetect")} title={t("aiAutoDetect")}>
                 <Sparkles className="h-4 w-4 text-primary" />
               </Button>
-              <Button size="icon" variant="outline" onClick={() => setCameraIndex(i)} aria-label="Camera" disabled={!pxPerCm} title="Manual marker (needs calibration)">
+              <Button size="icon" variant="outline" onClick={() => setCameraIndex(i)} aria-label={t("camera")} disabled={!pxPerCm}>
                 <Camera className="h-4 w-4 text-primary" />
               </Button>
-              <Button size="icon" variant="ghost" onClick={() => setTrials(trials.filter((_, j) => j !== i))} aria-label="Delete">
+              <Button size="icon" variant="ghost" onClick={() => setTrials(trials.filter((_, j) => j !== i))} aria-label={t("delete")}>
                 <Trash2 className="h-4 w-4 text-destructive" />
               </Button>
             </div>
           );})}
-          <p className="mt-2 text-xs text-muted-foreground">
-            ✨ <strong>AI</strong> auto-detects takeoff & landing from video (no calibration needed). 📷 manual marker uses px/cm calibration.
-          </p>
+          <p className="mt-2 text-xs text-muted-foreground">{t("aiHint")}</p>
         </CardContent>
       </Card>
 
@@ -257,7 +257,7 @@ export default function JumpTest() {
       {measuringHpo && (
         <CameraDistance
           pxPerCm={pxPerCm}
-          title="Measure hPO — extension"
+          title={t("measureHpo")}
           point1Label="ankle (low squat position)"
           point2Label="ankle (full extension)"
           onClose={() => setMeasuringHpo(false)}
@@ -286,7 +286,7 @@ export default function JumpTest() {
             next[aiIndex] = { ...next[aiIndex], jumpHeight: parseFloat((jumpHeight * 100).toFixed(1)) };
             setTrials(next);
             setAiIndex(null);
-            toast.success(`Jump detected: ${(jumpHeight * 100).toFixed(1)} cm`);
+            toast.success(`${t("jumpDetected")}: ${(jumpHeight * 100).toFixed(1)} cm`);
           }}
         />
       )}
@@ -294,7 +294,7 @@ export default function JumpTest() {
       {error && <p className="text-sm text-destructive">{error}</p>}
 
       <Button onClick={submit} disabled={busy} className="w-full gradient-primary text-primary-foreground shadow-glow h-12">
-        {busy ? "Computing…" : "Compute profile"}
+        {busy ? t("computing") : t("computeProfile")}
       </Button>
     </div>
   );
