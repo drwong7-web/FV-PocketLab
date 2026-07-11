@@ -5,9 +5,11 @@ import { listPlayers, listTeams, getOrganization } from "@/lib/storage";
 import { listUnifiedTests } from "@/lib/unifiedTests";
 import { Button } from "@/components/ui/button";
 import { MetricCard } from "@/components/MetricCard";
+import { useSettings } from "@/lib/settings";
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const { t } = useSettings();
   if (!user) return <div className="min-h-[60vh]" aria-hidden />;
   const org = getOrganization(user.organizationId);
   const teams = listTeams(user.organizationId);
@@ -21,38 +23,36 @@ export default function Dashboard() {
       <div>
         <p className="text-xs uppercase tracking-widest text-muted-foreground">{org?.name}</p>
         <h1 className="text-2xl font-bold tracking-tight mt-1">
-          Hello, {user.name.split(" ")[0]}
+          {t("hello")}, {user.name.split(" ")[0]}
         </h1>
-        <p className="text-sm text-muted-foreground mt-1">Your performance lab, in your pocket.</p>
+        <p className="text-sm text-muted-foreground mt-1">{t("tagline")}</p>
       </div>
 
       <div className="grid grid-cols-3 gap-3">
-        <MetricCard label="Teams" value={teams.length} accent="primary" icon={<Users className="w-4 h-4" />} />
-        <MetricCard label={"PLAYERS\u00a0"} value={players.length} accent="accent" icon={<User className="w-4 h-4" />} />
-        <MetricCard label="Tests" value={tests.length} accent="success" icon={<Activity className="w-4 h-4" />} />
+        <MetricCard label={t("teams")} value={teams.length} accent="primary" icon={<Users className="w-4 h-4" />} />
+        <MetricCard label={t("players")} value={players.length} accent="accent" icon={<User className="w-4 h-4" />} />
+        <MetricCard label={t("tests")} value={tests.length} accent="success" icon={<Activity className="w-4 h-4" />} />
       </div>
 
       <div className="grid sm:grid-cols-2 gap-3">
         <Link to="/app/teams" className="group glass-card p-6 flex items-center justify-between hover:border-primary/40 transition-colors bg-gradient-to-br from-primary/10 to-transparent">
           <div>
-            <div className="font-bold text-lg tracking-tight">Manage Teams</div>
+            <div className="font-bold text-lg tracking-tight">{t("manageTeams")}</div>
           </div>
           <ArrowRight className="w-6 h-6 text-foreground stroke-[2.5]" />
-
         </Link>
         <Link to="/app/tests/new" className="group glass-card p-6 flex items-center justify-between hover:border-primary/40 transition-colors bg-gradient-to-br from-primary/10 to-transparent">
           <div>
-            <div className="font-bold text-lg tracking-tight">New Test</div>
+            <div className="font-bold text-lg tracking-tight">{t("newTest")}</div>
           </div>
           <ArrowRight className="w-6 h-6 text-foreground stroke-[2.5]" />
         </Link>
-
       </div>
 
       {lastTest && (
         <div>
           <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground mb-3">
-            Latest test
+            {t("latestTest")}
           </h2>
           <Link
             to={`/app/tests/${lastTest.id}`}
@@ -61,7 +61,7 @@ export default function Dashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-xs text-muted-foreground">
-                  {new Date(lastTest.createdAt).toLocaleString()} · {lastTest.type === "jump" ? "Vertical jump" : "Sprint"}
+                  {new Date(lastTest.createdAt).toLocaleString()} · {lastTest.type === "jump" ? t("verticalJump") : t("sprint")}
                 </div>
                 <div className="font-semibold mt-1">
                   {lastTest.playerName} · {lastTest.primary}
@@ -75,13 +75,11 @@ export default function Dashboard() {
 
       {teams.length === 0 && (
         <div className="glass-card p-6 text-center bg-gradient-to-br from-primary/10 to-transparent hover:border-primary/40 transition-colors">
-          <h3 className="font-semibold">Get started</h3>
-          <p className="text-sm text-muted-foreground mt-1 mb-4">
-            Create your first team to start adding players and tests.
-          </p>
+          <h3 className="font-semibold">{t("getStarted")}</h3>
+          <p className="text-sm text-muted-foreground mt-1 mb-4">{t("getStartedDesc")}</p>
           <Link to="/app/teams">
             <Button className="bg-gradient-primary text-primary-foreground font-semibold">
-              <Plus className="w-4 h-4 mr-1" /> Create a team
+              <Plus className="w-4 h-4 mr-1" /> {t("createTeam")}
             </Button>
           </Link>
         </div>

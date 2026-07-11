@@ -6,9 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { useSettings } from "@/lib/settings";
 
 export default function Auth() {
   const { enrolled, enroll } = useAuth();
+  const { t } = useSettings();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState("");
@@ -20,11 +22,11 @@ export default function Auth() {
 
   const onEnroll = async (e: FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !org.trim()) { toast.error("Nom et team requis."); return; }
+    if (!name.trim() || !org.trim()) { toast.error(t("nameTeamRequired")); return; }
     setLoading(true);
     try {
       await enroll({ name, org });
-      toast.success("Profil créé.");
+      toast.success(t("profileCreated"));
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
@@ -42,7 +44,7 @@ export default function Auth() {
           <div className="leading-tight">
             <h1 className="text-xl font-bold tracking-tight">SprintLab FV Pro</h1>
             <p className="text-xs uppercase tracking-widest text-muted-foreground">
-              Local-first · Privé par défaut
+              {t("localFirst")}
             </p>
           </div>
         </div>
@@ -50,24 +52,24 @@ export default function Auth() {
         <div className="glass-card p-6 shadow-elevated">
           <div className="flex items-center gap-2 mb-4 text-sm font-semibold">
             <ShieldCheck className="w-4 h-4 text-primary" />
-            <span>Créer votre profil</span>
+            <span>{t("createProfile")}</span>
           </div>
           <form onSubmit={onEnroll} className="space-y-3">
             <div>
-              <Label htmlFor="name">Votre nom</Label>
+              <Label htmlFor="name">{t("yourName")}</Label>
               <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Coach Smith" required />
             </div>
             <div>
-              <Label htmlFor="org">Team</Label>
+              <Label htmlFor="org">{t("team")}</Label>
               <Input id="org" value={org} onChange={(e) => setOrg(e.target.value)} placeholder="FFA — Pôle Sprint" required />
             </div>
             <Button type="submit" className="w-full mt-2 bg-gradient-primary text-primary-foreground hover:opacity-90 shadow-glow font-semibold" disabled={loading}>
-              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Créer mon profil"}
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : t("createMyProfile")}
             </Button>
           </form>
 
           <p className="text-[11px] text-muted-foreground text-center mt-5">
-            Stockage 100% local · Aucune inscription en ligne
+            {t("storageNote")}
           </p>
         </div>
 

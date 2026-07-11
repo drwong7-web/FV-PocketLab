@@ -6,20 +6,21 @@ import { deleteTest, getPlayer, getTeam } from "@/lib/storage";
 import { listUnifiedTests } from "@/lib/unifiedTests";
 import { deleteLocalTest } from "@/lib/localHistory";
 import { Button } from "@/components/ui/button";
-import { MetricCard } from "@/components/MetricCard";
 import { toast } from "sonner";
+import { useSettings } from "@/lib/settings";
 
 export default function PlayerDetail() {
   const { playerId = "" } = useParams();
   const { user } = useAuth();
+  const { t } = useSettings();
   const [, force] = useState(0);
 
   const player = getPlayer(playerId);
   if (!player || !user) {
     return (
       <div className="glass-card p-6 text-center">
-        <p className="text-sm text-muted-foreground">Player not found.</p>
-        <Link to="/app/teams"><Button variant="ghost" className="mt-3"><ArrowLeft className="w-4 h-4 mr-1" /> Back</Button></Link>
+        <p className="text-sm text-muted-foreground">{t("playerNotFound")}</p>
+        <Link to="/app/teams"><Button variant="ghost" className="mt-3"><ArrowLeft className="w-4 h-4 mr-1" /> {t("back")}</Button></Link>
       </div>
     );
   }
@@ -29,7 +30,7 @@ export default function PlayerDetail() {
   return (
     <div className="space-y-5">
       <Link to={`/app/teams/${player.teamId}`} className="inline-flex items-center text-xs text-muted-foreground hover:text-foreground">
-        <ArrowLeft className="w-3 h-3 mr-1" /> {team?.name ?? "Team"}
+        <ArrowLeft className="w-3 h-3 mr-1" /> {team?.name ?? t("team")}
       </Link>
 
       <div className="flex items-center gap-4">
@@ -44,7 +45,7 @@ export default function PlayerDetail() {
         </div>
         <Link to={`/app/tests/new?playerId=${player.id}`}>
           <Button className="bg-gradient-primary text-primary-foreground font-semibold">
-            <Plus className="w-4 h-4 mr-1" /> Test
+            <Plus className="w-4 h-4 mr-1" /> {t("test")}
           </Button>
         </Link>
       </div>
@@ -52,28 +53,28 @@ export default function PlayerDetail() {
 
       <div>
         <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground mb-3">
-          Test history ({tests.length})
+          {t("testHistory")} ({tests.length})
         </h2>
         {tests.length === 0 ? (
           <div className="glass-card p-8 text-center">
-            <p className="text-sm text-muted-foreground">No tests yet. Run the first sprint!</p>
+            <p className="text-sm text-muted-foreground">{t("noTestsYet")}</p>
             <Link to={`/app/tests/new?playerId=${player.id}`}>
               <Button className="mt-3 bg-gradient-primary text-primary-foreground font-bold uppercase tracking-wide">
-                <Plus className="w-4 h-4 mr-1 stroke-[3]" /> New test
+                <Plus className="w-4 h-4 mr-1 stroke-[3]" /> {t("newTest")}
               </Button>
             </Link>
           </div>
         ) : (
           <div className="space-y-2">
-            {tests.map((t) => (
-              <div key={t.id} className="glass-card flex items-center">
-                <Link to={`/app/tests/${t.id}`} className="flex-1 p-4 flex items-center justify-between">
+            {tests.map((tt) => (
+              <div key={tt.id} className="glass-card flex items-center">
+                <Link to={`/app/tests/${tt.id}`} className="flex-1 p-4 flex items-center justify-between">
                   <div>
                     <div className="text-xs text-muted-foreground">
-                      {new Date(t.createdAt).toLocaleString()} · {t.type === "jump" ? "Vertical jump" : "Sprint"}
+                      {new Date(tt.createdAt).toLocaleString()} · {tt.type === "jump" ? t("verticalJump") : t("sprint")}
                     </div>
                     <div className="font-semibold mt-1 mono-num">
-                      {t.primary} · {t.secondary}
+                      {tt.primary} · {tt.secondary}
                     </div>
                   </div>
                   <ChevronRight className="w-5 h-5 text-muted-foreground" />
@@ -81,14 +82,14 @@ export default function PlayerDetail() {
                 <button
                   className="p-3 text-muted-foreground hover:text-destructive transition-colors"
                   onClick={() => {
-                    if (confirm("Delete this test?")) {
-                      if (t.source === "local") deleteLocalTest(t.id);
-                      else deleteTest(t.id);
+                    if (confirm(t("deleteTestConfirm"))) {
+                      if (tt.source === "local") deleteLocalTest(tt.id);
+                      else deleteTest(tt.id);
                       force((n) => n + 1);
-                      toast.success("Test deleted");
+                      toast.success(t("testDeleted"));
                     }
                   }}
-                  aria-label="Delete test"
+                  aria-label={t("deleteTest")}
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
