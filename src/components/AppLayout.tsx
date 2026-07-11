@@ -225,42 +225,6 @@ export default function AppLayout() {
               </div>
             </section>
 
-            <section className="space-y-3">
-              <div className="flex items-center gap-2 text-sm font-semibold">
-                <Folder className="h-4 w-4 text-primary" />
-                <h3>{t("exportFolder")}</h3>
-              </div>
-              <div className="rounded-lg border border-border bg-card px-3 py-2.5 text-sm">
-                <span className="text-muted-foreground">{exportDir ?? t("defaultDownloads")}</span>
-              </div>
-              {pickerSupported ? (
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={handlePickFolder} className="flex-1">
-                    {t("chooseFolder")}
-                  </Button>
-                  {exportDir && (
-                    <Button variant="ghost" size="sm" onClick={handleResetFolder}>
-                      {t("resetFolder")}
-                    </Button>
-                  )}
-                </div>
-              ) : (
-                <p className="text-xs text-muted-foreground">{t("folderNotSupported")}</p>
-              )}
-              {pickerSupported && inIframe && (
-                <p className="text-xs text-muted-foreground">
-                  {t("iframeBlocked")}{" "}
-                  <a
-                    href={window.location.href}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-primary underline underline-offset-2"
-                  >
-                    {t("openInNewTab")}
-                  </a>
-                </p>
-              )}
-            </section>
 
 
             <section className="space-y-3">
