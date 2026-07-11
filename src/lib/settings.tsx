@@ -46,7 +46,7 @@ const TR = {
  cancel: { fr: "Annuler", en: "Cancel", ar: "إلغاء" },
 
   // Cloud sync
-  cloudBackup: { fr: "Sauvegarde cloud", en: "Cloud backup", ar: "النسخ الاحتياطي السحابي" },
+  cloudBackup: { fr: "SYNCHRONISATION", en: "SYNC", ar: "المزامنة" },
   cloudBackupDesc: { fr: "Vos données restent sur l'appareil. En un tap, envoyez une copie chiffrée vers le drive de votre téléphone.", en: "Your data stays on device. One tap sends an encrypted copy to your phone's drive.", ar: "تبقى بياناتك على الجهاز. بضغطة واحدة، أرسل نسخة مشفرة إلى مساحة التخزين السحابية." },
   backupICloud: { fr: "Sauvegarder sur iCloud Drive", en: "Back up to iCloud Drive", ar: "احفظ على iCloud Drive" },
   backupGDrive: { fr: "Sauvegarder sur Google Drive", en: "Back up to Google Drive", ar: "احفظ على Google Drive" },
