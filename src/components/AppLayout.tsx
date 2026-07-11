@@ -125,13 +125,13 @@ export default function AppLayout() {
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle className="text-xl uppercase tracking-wide">{t("settings")}</DialogTitle>
-            <DialogDescription>{t("appearance")} · {t("language")}</DialogDescription>
+            <DialogDescription>{"\n"}</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-6 py-2">
             <section className="space-y-3">
               <div className="flex items-center gap-2 text-sm font-semibold">
-                <h3>{t("language")}</h3>
+                <h3>LANGUE</h3>
               </div>
               <div className="grid grid-cols-3 gap-2">
                 {langs.map((l) => {
@@ -156,7 +156,7 @@ export default function AppLayout() {
 
             <section className="space-y-4">
               <div className="flex items-center gap-2 text-sm font-semibold">
-                <h3>{t("theme")}</h3>
+                <h3>THEME</h3>
               </div>
 
               <div className="grid grid-cols-2 gap-2">
@@ -181,7 +181,7 @@ export default function AppLayout() {
               </div>
 
               <div className="space-y-2">
-                <p className="text-xs text-muted-foreground">{t("accentColor")}</p>
+                <p className="text-xs text-muted-foreground">{"\n"}</p>
                 <div className="grid grid-cols-8 gap-2">
                   {swatches.map((s) => {
                     const active = accent === s.hue;
@@ -205,8 +205,8 @@ export default function AppLayout() {
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>{t("customHue")}</span>
-                  <span className="font-mono">{accent}°</span>
+                  <span>{"\n"}</span>
+                  <span className="font-mono">{"\n"}</span>
                 </div>
                 <input
                   type="range"
@@ -227,9 +227,9 @@ export default function AppLayout() {
 
             <section className="space-y-3">
               <div className="flex items-center gap-2 text-sm font-semibold">
-                <h3>{t("cloudBackup")}</h3>
+                <h3>SYNCHRONISATION</h3>
               </div>
-              <p className="text-xs text-muted-foreground">{t("cloudBackupDesc")}</p>
+              <p className="text-xs text-muted-foreground">{"\n"}</p>
 
               {syncProvider === "none" ? (
                 <div className="space-y-2">
@@ -250,13 +250,13 @@ export default function AppLayout() {
                     </Button>
                   )}
                   {preferredProvider === "gdrive" && !gdriveAvailable && (
-                    <p className="text-[11px] text-muted-foreground">{t("gdriveUnavailable")}</p>
+                    <p className="text-[11px] text-muted-foreground">{"\n"}</p>
                   )}
                   <button
                     onClick={() => enableSync("file")}
                     className="w-full text-[11px] text-muted-foreground hover:text-primary underline underline-offset-2"
                   >
-                    {t("useSlfvFile")}
+                    {""}
                   </button>
                 </div>
               ) : (
