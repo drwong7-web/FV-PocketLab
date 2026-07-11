@@ -241,13 +241,13 @@ export default function AppLayout() {
                       {t("backupICloud")}
                     </Button>
                   ) : (
-                    <Button
+                    <button
                       onClick={() => enableSync("gdrive")}
                       disabled={!gdriveAvailable}
-                      className="w-full bg-gradient-primary text-primary-foreground"
+                      className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm font-medium transition-all hover:border-primary/40 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {t("backupGDrive")}
-                    </Button>
+                    </button>
                   )}
                   {preferredProvider === "gdrive" && !gdriveAvailable && (
                     <p className="text-[11px] text-muted-foreground">{"\n"}</p>
