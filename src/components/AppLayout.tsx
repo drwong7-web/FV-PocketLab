@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet } from "react-router-dom";
 import fvLogo from "@/assets/fv-logo.png.asset.json";
-import { Activity, Check, Cloud, Download, Home, Moon, RefreshCw, Settings as SettingsIcon, Sun, Upload, Users } from "lucide-react";
+import { Activity, Check, Download, Home, Moon, RefreshCw, Settings as SettingsIcon, Sun, Upload, Users } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
