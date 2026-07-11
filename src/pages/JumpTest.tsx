@@ -146,19 +146,19 @@ export default function JumpTest() {
           <Zap className="h-5 w-5" />
         </div>
         <div>
-          <h1 className="font-display text-2xl font-bold uppercase">Vertical jump test</h1>
-          <p className="text-xs text-muted-foreground">Samozino F-V profile from loaded squat jumps.</p>
+          <h1 className="font-display text-2xl font-bold uppercase">{t("jumpTestTitle")}</h1>
+          <p className="text-xs text-muted-foreground">{t("jumpTestSubtitle")}</p>
         </div>
       </div>
 
       <Card>
-        <CardHeader><CardTitle className="font-display text-base">Camera calibration</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="font-display text-base">{t("cameraCalib")}</CardTitle></CardHeader>
         <CardContent className="space-y-3">
-          <p className="text-xs text-muted-foreground">Optional — needed only if you measure jump height with the camera.</p>
+          <p className="text-xs text-muted-foreground">{t("cameraCalibOptional")}</p>
           <div className="flex items-center gap-2">
             <Button onClick={() => setCalibrating(true)} variant={pxPerCm ? "outline" : "default"} className={pxPerCm ? "" : "gradient-primary text-primary-foreground shadow-glow"}>
               <Ruler className="mr-2 h-4 w-4" />
-              {pxPerCm ? "Recalibrate" : "Start calibration"}
+              {pxPerCm ? t("recalibrate") : t("startCalibration")}
             </Button>
             {pxPerCm > 0 && (
               <span className="flex items-center gap-1 rounded-md bg-primary/15 px-2 py-1 font-mono text-xs text-primary">
@@ -170,21 +170,21 @@ export default function JumpTest() {
       </Card>
 
       <Card>
-        <CardHeader><CardTitle className="font-display text-base">Athlete & parameters</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="font-display text-base">{t("athleteParams")}</CardTitle></CardHeader>
         <CardContent className="space-y-3">
           <div className="space-y-1.5">
-            <Label>Team</Label>
+            <Label>{t("team")}</Label>
             <select value={teamId} onChange={(e) => { setTeamId(e.target.value); setAthleteId(""); }}
               className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm">
-              <option value="">Select a team</option>
+              <option value="">{t("selectTeam")}</option>
               {teams.map((te) => (<option key={te.id} value={te.id}>{te.name}</option>))}
             </select>
           </div>
           <div className="space-y-1.5">
-            <Label>Athlete</Label>
+            <Label>{t("athlete")}</Label>
             <select required value={athleteId} onChange={(e) => setAthleteId(e.target.value)}
               className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm">
-              <option value="">Select…</option>
+              <option value="">{t("selectEllipsis")}</option>
               {filteredAthletes.map((a) => (
                 <option key={a.id} value={a.id}>{a.firstName} {a.lastName}</option>
               ))}
@@ -192,27 +192,27 @@ export default function JumpTest() {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label>Body mass (kg)</Label>
+              <Label>{t("bodyMass")}</Label>
               <Input type="number" step="0.1" value={bodyMass} onChange={(e) => setBodyMass(e.target.value)} />
             </div>
             <div className="space-y-1.5">
-              <Label>hPO (m)</Label>
+              <Label>{t("hpo")}</Label>
               <div className="flex gap-1.5">
                 <Input type="number" step="0.01" value={pushOff} onChange={(e) => setPushOff(e.target.value)} />
-                <Button type="button" size="icon" variant="outline" onClick={() => setMeasuringHpo(true)} disabled={!pxPerCm} aria-label="Measure hPO with camera">
+                <Button type="button" size="icon" variant="outline" onClick={() => setMeasuringHpo(true)} disabled={!pxPerCm} aria-label={t("measureHpo")}>
                   <Camera className="h-4 w-4 text-primary" />
                 </Button>
               </div>
             </div>
           </div>
-          <p className="text-xs text-muted-foreground">hPO ≈ leg length × 0.4 (lower-limb extension distance).</p>
+          <p className="text-xs text-muted-foreground">{t("hpoHint")}</p>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle className="font-display text-base">Trials</CardTitle>
+            <CardTitle className="font-display text-base">{t("trials")}</CardTitle>
             <Button size="sm" variant="outline" onClick={() => setTrials([...trials, { load: 0, jumpHeight: 0 }])}>
               <Plus className="h-4 w-4" />
             </Button>
@@ -221,8 +221,8 @@ export default function JumpTest() {
         <CardContent>
           <div className="grid grid-cols-[auto_1fr_1fr_auto] gap-2 text-xs font-medium text-muted-foreground">
             <span className="w-14"></span>
-            <span>Load (kg)</span>
-            <span>Jump height (cm)</span>
+            <span>{t("loadKg")}</span>
+            <span>{t("jumpHeightCm")}</span>
             <span></span>
           </div>
           {trials.map((tr, i) => {
