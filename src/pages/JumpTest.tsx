@@ -143,9 +143,7 @@ export default function JumpTest() {
   return (
     <div className="space-y-5">
       <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg gradient-primary text-primary-foreground shadow-glow">
-          <Zap className="h-5 w-5" />
-        </div>
+        <img src={logoJump} alt={t("verticalJump")} className="h-14 w-14 object-contain flex-shrink-0" />
         <div>
           <h1 className="font-display text-2xl font-bold uppercase">{t("jumpTestTitle")}</h1>
           <p className="text-xs text-muted-foreground">{t("jumpTestSubtitle")}</p>
