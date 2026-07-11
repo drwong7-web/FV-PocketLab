@@ -174,7 +174,7 @@ const TR = {
 
   // ---- Sprint test ----
   sprintTestTitle: { fr: "LINEAR\u00a0SPRINT\u00a0", en: "LINEAR\u00a0SPRINT\u00a0", ar: "\u00a0العدو الخطي" },
-  sprintTestSubtitle: { fr: "Profil F-V horizontal\u00a0", en: "Profil F-V horizontal\u00a0", ar: "ملف F-V الأفقي" },
+  sprintTestSubtitle: { fr: "Profil F-V horizontal\u00a0", en: "Profil F-V horizontal\u00a0", ar: "منحنى القوة والسرعة\u00a0الأفقي" },
   demo: { fr: "Démo", en: "Demo", ar: "تجريبي" },
   loadDemoTitle: { fr: "Charger les données de démonstration", en: "Load demo data", ar: "تحميل البيانات التجريبية" },
   step1Athlete: { fr: "1. Athlète", en: "1. Athlete", ar: "1. الرياضي" },
