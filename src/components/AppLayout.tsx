@@ -225,7 +225,7 @@ export default function AppLayout() {
 
 
 
-            <section className="space-y-3">
+            <section className="space-y-3 bg-card border border-border rounded-2xl p-4 shadow-card">
               <div className="flex items-center gap-2 text-sm font-semibold">
                 <h3 className="uppercase">{t("cloudBackup")}</h3>
               </div>
