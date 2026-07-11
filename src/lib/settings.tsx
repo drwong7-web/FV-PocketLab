@@ -42,7 +42,8 @@ const TR = {
   openInNewTab: { fr: "Ouvrir dans un nouvel onglet", en: "Open in new tab", ar: "افتح في علامة تبويب جديدة" },
   iframeBlocked: { fr: "Sélection bloquée dans l'aperçu. Ouvrez l'app dans un nouvel onglet.", en: "Selection blocked in preview. Open the app in a new tab.", ar: "الاختيار محظور في المعاينة. افتح التطبيق في علامة تبويب جديدة." },
   browserUnsupported: { fr: "Navigateur non compatible. Utilisez Chrome ou Edge sur ordinateur.", en: "Browser not supported. Use Chrome or Edge on desktop.", ar: "المتصفح غير مدعوم. استخدم Chrome أو Edge على الكمبيوتر." },
-  pickerCancelled: { fr: "Sélection annulée", en: "Selection cancelled", ar: "تم إلغاء الاختيار" },
+ pickerCancelled: { fr: "Sélection annulée", en: "Selection cancelled", ar: "تم إلغاء الاختيار" },
+ cancel: { fr: "Annuler", en: "Cancel", ar: "إلغاء" },
 
   // Cloud sync
   cloudBackup: { fr: "Sauvegarde cloud", en: "Cloud backup", ar: "النسخ الاحتياطي السحابي" },

@@ -1,14 +1,13 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet } from "react-router-dom";
 import fvLogo from "@/assets/fv-logo.png.asset.json";
-import { Activity, Check, Cloud, CloudOff, Download, Folder, Home, Languages, Moon, Palette, RefreshCw, Settings as SettingsIcon, Sun, Upload, Users } from "lucide-react";
+import { Activity, Check, Cloud, CloudOff, Download, Home, Languages, Moon, Palette, RefreshCw, Settings as SettingsIcon, Sun, Upload, Users } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useSettings, type Lang, type Theme } from "@/lib/settings";
-import { clearExportDirectory, getExportDirectoryLabel, isDirectoryPickerSupported, isInIframe, pickExportDirectory } from "@/lib/exportTarget";
 
 import {
   getPublicConfig, setPublicConfig,
@@ -35,14 +34,11 @@ export default function AppLayout() {
   const [syncProvider, setSyncProviderState] = useState<SyncProvider>("none");
   const [syncBusy, setSyncBusy] = useState<null | "push" | "pull" | "both">(null);
   const [lastSyncAt, setLastSyncAt] = useState<number | undefined>(undefined);
-  const pickerSupported = isDirectoryPickerSupported();
-  const inIframe = isInIframe();
   const preferredProvider = detectPreferredProvider();
   const gdriveAvailable = !!managedGoogleClientId();
 
   useEffect(() => {
     if (settingsOpen) {
-      setExportDir(getExportDirectoryLabel());
       const cfg = getPublicConfig();
       setSyncProviderState(cfg.provider);
       setLastSyncAt(getSyncState().lastSyncAt);
@@ -76,28 +72,6 @@ export default function AppLayout() {
   };
 
 
-
-
-
-
-  const handlePickFolder = async () => {
-    const res = await pickExportDirectory();
-    if (res.ok === true) {
-      setExportDir(res.name);
-      toast.success(`${t("savedTo")} ${res.name}`);
-      return;
-    }
-    switch (res.reason) {
-      case "cancelled": toast(t("pickerCancelled")); break;
-      case "iframe-blocked": toast.error(t("iframeBlocked")); break;
-      case "unsupported": toast.error(t("browserUnsupported")); break;
-      default: toast.error(res.message || t("browserUnsupported"));
-    }
-  };
-  const handleResetFolder = async () => {
-    await clearExportDirectory();
-    setExportDir(null);
-  };
 
   const swatches = [
     { hue: "142", label: "Green" },
@@ -251,42 +225,6 @@ export default function AppLayout() {
               </div>
             </section>
 
-            <section className="space-y-3">
-              <div className="flex items-center gap-2 text-sm font-semibold">
-                <Folder className="h-4 w-4 text-primary" />
-                <h3>{t("exportFolder")}</h3>
-              </div>
-              <div className="rounded-lg border border-border bg-card px-3 py-2.5 text-sm">
-                <span className="text-muted-foreground">{exportDir ?? t("defaultDownloads")}</span>
-              </div>
-              {pickerSupported ? (
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={handlePickFolder} className="flex-1">
-                    {t("chooseFolder")}
-                  </Button>
-                  {exportDir && (
-                    <Button variant="ghost" size="sm" onClick={handleResetFolder}>
-                      {t("resetFolder")}
-                    </Button>
-                  )}
-                </div>
-              ) : (
-                <p className="text-xs text-muted-foreground">{t("folderNotSupported")}</p>
-              )}
-              {pickerSupported && inIframe && (
-                <p className="text-xs text-muted-foreground">
-                  {t("iframeBlocked")}{" "}
-                  <a
-                    href={window.location.href}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-primary underline underline-offset-2"
-                  >
-                    {t("openInNewTab")}
-                  </a>
-                </p>
-              )}
-            </section>
 
 
             <section className="space-y-3">

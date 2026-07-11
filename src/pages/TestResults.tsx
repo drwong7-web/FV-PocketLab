@@ -29,7 +29,9 @@ import { getJumpTarget, getSprintTarget, getSportTargets } from "@/lib/sportTarg
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { generateDOCX, downloadBlob, fileNameFor, saveLocalExport } from "@/lib/docxExport";
-import { saveBlobToTarget } from "@/lib/exportTarget";
+import { clearExportDirectory, getExportDirectoryLabel, isDirectoryPickerSupported, isInIframe, pickExportDirectory, saveBlobToTarget } from "@/lib/exportTarget";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Folder } from "lucide-react";
 import {
   getLocalTest, getLocalTests, markLocalTestSaved, saveLocalTest, setTestDraft,
 } from "@/lib/localHistory";
@@ -233,6 +235,40 @@ export default function TestResults() {
   const chartRef = useRef<HTMLDivElement>(null);
   const [exporting, setExporting] = useState(false);
   const [savedInHistory, setSavedInHistory] = useState(false);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [pendingFormat, setPendingFormat] = useState<"pdf" | "docx">("pdf");
+  const [exportDir, setExportDir] = useState<string | null>(null);
+  const pickerSupported = isDirectoryPickerSupported();
+  const inIframe = isInIframe();
+
+  const openExportDialog = (format: "pdf" | "docx") => {
+    setPendingFormat(format);
+    setExportDir(getExportDirectoryLabel());
+    setExportDialogOpen(true);
+  };
+
+  const handlePickFolder = async () => {
+    const res = await pickExportDirectory();
+    if (res.ok === true) {
+      setExportDir(res.name);
+      toast.success(`${t("savedTo")} ${res.name}`);
+      return;
+    }
+    switch (res.reason) {
+      case "cancelled": toast(t("pickerCancelled")); break;
+      case "iframe-blocked": toast.error(t("iframeBlocked")); break;
+      case "unsupported": toast.error(t("browserUnsupported")); break;
+      default: toast.error(res.message || t("browserUnsupported"));
+    }
+  };
+  const handleResetFolder = async () => {
+    await clearExportDirectory();
+    setExportDir(null);
+  };
+  const confirmExport = async () => {
+    setExportDialogOpen(false);
+    await doExport(pendingFormat);
+  };
 
   useEffect(() => {
     const local = getLocalTest(testId);
@@ -428,10 +464,10 @@ export default function TestResults() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => doExport("pdf")}>
+              <DropdownMenuItem onClick={() => openExportDialog("pdf")}>
                 <FileType className="mr-2 h-4 w-4" /> PDF
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => doExport("docx")}>
+              <DropdownMenuItem onClick={() => openExportDialog("docx")}>
                 <FileText className="mr-2 h-4 w-4" /> Word (.docx)
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -444,6 +480,62 @@ export default function TestResults() {
           ? <JumpReport test={test} results={test.results as JumpResults} chartRef={chartRef} />
           : <SprintReport test={test} results={test.results as SprintResults} chartRef={chartRef} />}
       </div>
+
+      <Dialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Folder className="h-4 w-4 text-primary" />
+              {t("exportFolder")}
+            </DialogTitle>
+            <DialogDescription>
+              {pendingFormat === "pdf" ? "PDF" : "Word (.docx)"}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 py-2">
+            <div className="rounded-lg border border-border bg-card px-3 py-2.5 text-sm">
+              <span className="text-muted-foreground">{exportDir ?? t("defaultDownloads")}</span>
+            </div>
+            {pickerSupported ? (
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={handlePickFolder} className="flex-1">
+                  {t("chooseFolder")}
+                </Button>
+                {exportDir && (
+                  <Button variant="ghost" size="sm" onClick={handleResetFolder}>
+                    {t("resetFolder")}
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">{t("folderNotSupported")}</p>
+            )}
+            {pickerSupported && inIframe && (
+              <p className="text-xs text-muted-foreground">
+                {t("iframeBlocked")}{" "}
+                <a
+                  href={window.location.href}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-primary underline underline-offset-2"
+                >
+                  {t("openInNewTab")}
+                </a>
+              </p>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setExportDialogOpen(false)}>
+              {t("cancel")}
+            </Button>
+            <Button onClick={confirmExport} disabled={exporting} className="bg-gradient-primary text-primary-foreground">
+              <Download className="h-4 w-4 mr-1" /> {exporting ? t("exporting") : t("export")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
