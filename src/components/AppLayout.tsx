@@ -419,7 +419,7 @@ export default function AppLayout() {
                       isActive && "scale-125 drop-shadow-[0_3px_6px_hsl(var(--primary)/0.6)]"
                     )}
                   />
-                  {label}
+                  {t(labelKey)}
                 </>
               )}
             </NavLink>
