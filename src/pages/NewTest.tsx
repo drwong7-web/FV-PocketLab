@@ -38,12 +38,8 @@ export default function NewTest() {
             <div className="flex-shrink-0 flex items-center justify-center h-28 w-28">
               <img src={logoSprint} alt="Linear sprint" className="engraved-logo h-full w-auto object-contain" />
             </div>
-            <div className="flex-1 space-y-2">
-              <h2 className="font-display text-lg font-bold uppercase">Linear sprint</h2>
-              <p className="text-xs text-muted-foreground mt-1">
-                {"\n"}
-              </p>
-              <div className="text-xs text-primary group-hover:underline">Start →</div>
+            <div className="flex-1 flex flex-col items-center justify-center">
+              <h2 className="font-display text-lg font-bold uppercase text-center">Linear sprint</h2>
             </div>
           </div>
         </Link>
