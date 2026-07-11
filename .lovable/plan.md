@@ -1,13 +1,11 @@
-## Plan : ajuster la taille des titres des sections Paramètres
+Le bouton **Sauvegarder sur Google Drive** (ligne 244) utilise actuellement le composant `<Button>` shadcn avec un dégradé plein (`bg-gradient-primary text-primary-foreground`).
 
-### Objectif
-Diminuer de 2 niveaux Tailwind la taille de police des titres des 3 sections du panneau Paramètres (`Langue`, `Thème`, `Synchronisation`), par rapport à leur taille actuelle `text-2xl`.
+Le bouton **English** (ligne 140) utilise un style "carte cliquable" : bordure arrondie, fond transparent/surface, taille text-sm, avec un état actif souligné par `border-primary bg-primary/10 text-primary shadow-glow`.
 
-### Changements prévus
-Dans `src/components/AppLayout.tsx` :
-- Ligne 134 : `<h3 className="text-2xl uppercase">{t("language")}</h3>` → `text-lg uppercase`
-- Ligne 159 : `<h3 className="text-2xl uppercase">{t("theme")}</h3>` → `text-lg uppercase`
-- Ligne 230 : `<h3 className="text-2xl uppercase">{t("cloudBackup")}</h3>` → `text-lg uppercase`
+Plan :
+1. Remplacer le `<Button>` shadcn du Google Drive par un `<button>` natif avec les mêmes classes que les boutons de langue : `rounded-lg border px-3 py-2.5 text-sm font-medium transition-all`.
+2. Appliquer la variante inactive (`border-border bg-background hover:border-primary/40`) puisque ce n'est pas un toggle actif.
+3. Conserver la largeur `w-full`, le gestionnaire `onClick`, l'état `disabled` et le texte `t("backupGDrive")`.
+4. Vérifier le build.
 
-### Vérification
-Lancer `bun run build` pour s’assurer qu’il n’y a pas d’erreur de compilation.
+Résultat attendu : le bouton Google Drive aura le même aspect visuel que le bouton English (bordure, fond, hover), sans changer son comportement.
