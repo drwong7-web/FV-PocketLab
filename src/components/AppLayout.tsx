@@ -390,7 +390,7 @@ export default function AppLayout() {
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
         <div className="container max-w-5xl grid grid-cols-3 [perspective:800px]">
-          {navItems.map(({ to, label, icon: Icon, end }) => (
+          {navItems.map(({ to, labelKey, icon: Icon, end }) => (
             <NavLink
               key={to}
               to={to}
