@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Camera, Plus, Trash2, TrendingUp, Sparkles, Video, MapPin, Loader2, RefreshCw, AlertTriangle, Wind } from "lucide-react";
+import { Camera, Plus, Trash2, Sparkles, Video, MapPin, Loader2, RefreshCw, AlertTriangle, Wind } from "lucide-react";
+import logoSprint from "@/assets/logo-sprint-neon.png";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { toast } from "sonner";
 import { fetchCurrentWeather, getBrowserPosition } from "@/lib/weather";
@@ -207,9 +208,7 @@ export default function SprintTest() {
     <div className="space-y-5">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary text-secondary-foreground">
-            <TrendingUp className="h-5 w-5" />
-          </div>
+          <img src={logoSprint} alt="Sprint" className="h-14 w-14 object-contain flex-shrink-0" />
           <div>
             <h1 className="font-display text-lg font-bold uppercase">{t("sprintTestTitle")}</h1>
             <p className="text-xs text-muted-foreground">{t("sprintTestSubtitle")}</p>
