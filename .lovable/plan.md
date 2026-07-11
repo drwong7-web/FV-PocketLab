@@ -1,39 +1,21 @@
-## Problème
+## Uniformiser les cartes de la page "Nouveau test"
 
-Le dictionnaire de traduction dans `src/lib/settings.tsx` (`TR`) ne contient que ~15 clés, toutes utilisées uniquement dans la page Paramètres. Les autres pages (Dashboard, TestList, NewTest, JumpTest, SprintTest, TestResults, Teams, TeamDetail, PlayerDetail, Auth, AppLayout, etc.) contiennent leurs libellés en dur (majoritairement en français), donc changer la langue n'a aucun effet visible ailleurs. Le `html.lang` / `html.dir` (RTL arabe) sont bien appliqués, mais les textes ne changent pas.
+**Contexte:** Les cartes "Vertical Jump" et "Linear Sprint" sur `/app/tests/new` utilisent `glass-card` mais sans le fond dégradé ni le style visuel du reste de l'app (Dashboard, TestList). Elles paraissent plates comparées aux cartes du Dashboard.
 
-## Objectif
+**Cartes de référence (Dashboard):**
+```
+glass-card p-6 bg-gradient-to-br from-primary/10 to-transparent
+hover:border-primary/40 transition-colors
+```
 
-Faire en sorte que le sélecteur de langue (fr / en / ar) traduise **toute** l'interface, pas seulement l'écran Paramètres.
+### Changements dans `src/pages/NewTest.tsx`
 
-## Approche
+Aligner les 2 cartes `<Link>` "Vertical Jump" et "Linear Sprint" sur le même langage visuel que les cartes du Dashboard:
 
-1. **Étendre le dictionnaire `TR`** dans `src/lib/settings.tsx` avec toutes les chaînes UI de l'app, regroupées par domaine :
-   - Navigation / layout : titres d'onglets, menu, boutons retour
-   - Auth : login, register, champs, erreurs
-   - Dashboard : titres, cartes de stats, actions rapides
-   - TestList / NewTest : noms de tests (Vertical Jump, Linear Sprint), descriptions, filtres
-   - JumpTest / SprintTest : étapes, instructions caméra, boutons (Start, Stop, Retry, Save), unités
-   - TestResults : métriques (hauteur, vitesse max, phase d'accélération, etc.), export
-   - Teams / TeamDetail / PlayerDetail : équipes, joueurs, ajout, champs formulaire
-   - Toasts / messages d'erreur communs
+1. Ajouter `bg-gradient-to-br from-primary/10 to-transparent` pour retrouver le halo vert néon des autres cartes.
+2. Conserver `hover:border-primary/40 transition-colors` (déjà présent).
+3. Ajouter `engraved-surface` pour que le relief matche les MetricCard et le reste du "cockpit" sombre.
+4. Garder la structure interne (logo à gauche, titre centré) — pas de changement de contenu.
+5. Titres: garder `font-display uppercase`, mais ajouter la classe `engraved` pour le rendu gravé cohérent avec les MetricCard.
 
-2. **Remplacer les chaînes en dur** dans chaque page/composant par des appels `t("cle")` via `useSettings()`.
-
-3. **Gérer les valeurs dynamiques** (nombres, unités) avec de petites fonctions de format qui respectent la locale (`toLocaleString(s.lang)`), en gardant les unités techniques (`cm`, `m/s`, `s`) universelles.
-
-4. **RTL arabe** : vérifier que `html.dir = "rtl"` (déjà en place) rend correctement les listes/cartes. Ajuster ponctuellement les classes Tailwind si besoin (`text-start` au lieu de `text-left`, `ms-*` / `me-*`).
-
-5. **Mettre à jour `SPEC.md`** : documenter que l'app est intégralement traduite (fr / en / ar) et que toute nouvelle chaîne UI doit passer par `TR` + `t()`.
-
-## Détails techniques
-
-- Le contexte `SettingsProvider` re-render tout l'arbre à chaque changement de `s.lang` (déjà le cas), donc pas besoin d'ajouter un mécanisme réactif supplémentaire.
-- `t(k)` retourne la clé si absente : utile en dev pour repérer les oublis.
-- Ordre de travail suggéré, page par page pour éviter un diff monstrueux : layout + nav → TestList/NewTest → Jump/Sprint/Results → Teams/Players → Auth → Dashboard.
-- Aucun changement de logique métier, uniquement présentation.
-
-## Questions
-
-- Ok pour que je traduise **toutes** les pages en une seule passe, ou tu préfères que je commence par un sous-ensemble (ex. les écrans de test + navigation) et qu'on itère ?
-- L'arabe doit-il être une traduction complète et soignée, ou une base fonctionnelle (traductions courtes, à raffiner ensuite) ?
+Rien d'autre ne change: pas de modif logo, pas de modif texte, pas de nouveaux tokens CSS, pas de SPEC.md (pur styling).
