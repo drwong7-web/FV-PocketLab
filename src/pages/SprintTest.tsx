@@ -438,7 +438,7 @@ export default function SprintTest() {
       </Card>
 
       <Card>
-        <CardHeader><CardTitle className="font-display text-base">{t("step5Notes")}</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="font-display text-lg">{t("step5Notes")}</CardTitle></CardHeader>
         <CardContent>
           <textarea
             value={notes}
