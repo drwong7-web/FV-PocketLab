@@ -1,6 +1,6 @@
 import { useEffect, useState, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { Activity, Loader2, ShieldCheck } from "lucide-react";
+import { Loader2, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,15 +37,12 @@ export default function Auth() {
   return (
     <div className="min-h-svh flex items-center justify-center px-4 py-10">
       <div className="w-full max-w-md">
-        <div className="flex items-center gap-3 mb-8 justify-center">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-primary shadow-glow flex items-center justify-center">
-            <Activity className="w-6 h-6 text-primary-foreground" />
+        <div className="flex items-center gap-2.5 mb-8 justify-center rounded-xl border border-border/60 bg-primary/5 px-3 py-2 w-fit mx-auto">
+          <div className="w-8 h-8 rounded-lg bg-gradient-primary shadow-glow flex items-center justify-center">
+            <span className="text-sm font-bold text-primary-foreground tracking-tighter">FV</span>
           </div>
           <div className="leading-tight">
-            <h1 className="text-xl font-bold tracking-tight">F V Pocket Lab</h1>
-            <p className="text-xs uppercase tracking-widest text-muted-foreground">
-              {t("localFirst")}
-            </p>
+            <h1 className="text-lg font-bold tracking-tight">F V Pocket Lab</h1>
           </div>
         </div>
 
