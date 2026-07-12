@@ -156,7 +156,7 @@ const TR = {
   selectTeam: { fr: "Sélectionner une équipe", en: "Select a team", ar: "اختر فريقاً" },
   athlete: { fr: "Athlète", en: "Athlete", ar: "الرياضي" },
   selectEllipsis: { fr: "Sélectionner…", en: "Select…", ar: "اختر…" },
-  bodyMass: { fr: "Masse corporelle (kg)", en: "Body mass (kg)", ar: "وزن الجسم (كغ)" },
+  bodyMass: { fr: "Masse\u00a0 (kg)", en: "Body mass (kg)", ar: "وزن الجسم (كغ)" },
   hpo: { fr: "hPO (m)", en: "hPO (m)", ar: "hPO (م)" },
   hpoHint: { fr: "hPO ≈ longueur de jambe × 0,4 (extension des membres inférieurs).", en: "hPO ≈ leg length × 0.4 (lower-limb extension distance).", ar: "hPO ≈ طول الساق × 0.4 (مسافة تمدد الأطراف السفلية)." },
   trials: { fr: "Essais", en: "Trials", ar: "المحاولات" },
