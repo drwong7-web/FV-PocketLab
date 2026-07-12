@@ -55,11 +55,11 @@ export default function Auth() {
           <form onSubmit={onEnroll} className="space-y-3">
             <div>
               <Label htmlFor="name">{t("yourName")}</Label>
-              <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Coach Smith" required />
+              <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required />
             </div>
             <div>
               <Label htmlFor="org">{t("team")}</Label>
-              <Input id="org" value={org} onChange={(e) => setOrg(e.target.value)} placeholder="FFA — Pôle Sprint" required />
+              <Input id="org" value={org} onChange={(e) => setOrg(e.target.value)} required />
             </div>
             <Button type="submit" className="w-full mt-2 bg-gradient-primary text-primary-foreground hover:opacity-90 shadow-glow font-semibold" disabled={loading}>
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : t("createMyProfile")}
