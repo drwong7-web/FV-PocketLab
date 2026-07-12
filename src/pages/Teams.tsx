@@ -33,7 +33,7 @@ export default function Teams() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-end justify-between">
+      <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{t("teams")}</h1>
           <p className="text-sm text-muted-foreground">{t("teamsSubtitle")}</p>
