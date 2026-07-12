@@ -366,15 +366,17 @@ export default function SprintTest() {
               type="single"
               value={windDir}
               onValueChange={(v) => v && setWindDir(v as "tail" | "head" | "none")}
-              className="justify-start gap-1"
+              className="grid grid-cols-3 gap-2"
+              variant="protocol"
+              size="default"
             >
-              <ToggleGroupItem value="tail" aria-label={t("tailwind")} className="h-8 px-2 text-xs">
+              <ToggleGroupItem value="tail" aria-label={t("tailwind")} className="w-full">
                 {t("tailwind")}
               </ToggleGroupItem>
-              <ToggleGroupItem value="none" aria-label={t("neutral")} className="h-8 px-2 text-xs">
+              <ToggleGroupItem value="none" aria-label={t("neutral")} className="w-full">
                 {t("neutral")}
               </ToggleGroupItem>
-              <ToggleGroupItem value="head" aria-label={t("headwind")} className="h-8 px-2 text-xs">
+              <ToggleGroupItem value="head" aria-label={t("headwind")} className="w-full">
                 {t("headwind")}
               </ToggleGroupItem>
             </ToggleGroup>
