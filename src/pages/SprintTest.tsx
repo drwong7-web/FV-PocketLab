@@ -220,7 +220,7 @@ export default function SprintTest() {
       </div>
 
       <Card>
-        <CardHeader><CardTitle className="font-display text-base">{t("step1Athlete")}</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="font-display text-lg">{t("step1Athlete")}</CardTitle></CardHeader>
         <CardContent className="space-y-3">
           <div className="space-y-1.5">
             <Label>{t("team")}</Label>
@@ -258,7 +258,7 @@ export default function SprintTest() {
       </Card>
 
       <Card>
-        <CardHeader><CardTitle className="font-display text-base">{t("step2Protocol")}</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="font-display text-lg">{t("step2Protocol")}</CardTitle></CardHeader>
         <CardContent className="space-y-3">
           <div className="space-y-1.5">
             <Label>{t("testDistance")}</Label>
@@ -325,7 +325,7 @@ export default function SprintTest() {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between gap-2">
-            <CardTitle className="font-display text-base">{t("step3Conditions")}</CardTitle>
+            <CardTitle className="font-display text-lg">{t("step3Conditions")}</CardTitle>
             <Button size="sm" onClick={autofillWeather} disabled={geoBusy} className="bg-gradient-primary text-primary-foreground font-semibold">
               {geoBusy ? (
                 <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
@@ -400,7 +400,7 @@ export default function SprintTest() {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle className="font-display text-base">{t("step4Splits")}</CardTitle>
+            <CardTitle className="font-display text-lg">{t("step4Splits")}</CardTitle>
             <div className="flex gap-1">
               <Button size="sm" variant="outline" onClick={() => setCameraOpen(true)} aria-label={t("camera")}>
                 <Camera className="h-4 w-4 text-primary" />
@@ -438,7 +438,7 @@ export default function SprintTest() {
       </Card>
 
       <Card>
-        <CardHeader><CardTitle className="font-display text-base">{t("step5Notes")}</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="font-display text-lg">{t("step5Notes")}</CardTitle></CardHeader>
         <CardContent>
           <textarea
             value={notes}
