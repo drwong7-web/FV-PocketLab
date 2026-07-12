@@ -42,7 +42,7 @@ export default function Auth() {
             <Activity className="w-6 h-6 text-primary-foreground" />
           </div>
           <div className="leading-tight">
-            <h1 className="text-xl font-bold tracking-tight">SprintLab FV Pro</h1>
+            <h1 className="text-xl font-bold tracking-tight">F V Pocket Lab</h1>
             <p className="text-xs uppercase tracking-widest text-muted-foreground">
               {t("localFirst")}
             </p>
