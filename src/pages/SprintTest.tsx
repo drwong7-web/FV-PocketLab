@@ -208,7 +208,7 @@ export default function SprintTest() {
     <div className="space-y-5">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div role="img" aria-label="Sprint" style={{ ["--logo-src" as string]: `url(${logoSprint})` }} className="themed-logo h-14 w-14 flex-shrink-0" />
+          <img src={logoSprint} alt="Sprint" loading="eager" decoding="async" fetchPriority="high" className="h-14 w-14 object-contain flex-shrink-0" />
           <div>
             <h1 className="font-display text-lg font-bold uppercase">{t("sprintTestTitle")}</h1>
             <p className="text-xs text-muted-foreground">{t("sprintTestSubtitle")}</p>
