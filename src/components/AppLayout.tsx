@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet } from "react-router-dom";
+import fvLogo from "@/assets/fv-logo.png.asset.json";
 import { Activity, Check, Download, Home, LogOut, Moon, RefreshCw, Settings as SettingsIcon, Sun, Upload, Users } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
@@ -98,15 +99,11 @@ export default function AppLayout() {
     <div className="min-h-svh flex flex-col">
       <header className="sticky top-0 z-30 border-b border-border bg-background/80 backdrop-blur-xl">
         <div className="container flex items-center justify-between h-14 max-w-5xl">
-          <Link
-            to="/app"
-            className="flex items-center gap-2.5 rounded-xl border border-border/60 bg-primary/5 px-2.5 py-1.5 transition-colors hover:bg-primary/10 hover:border-primary/30"
-          >
-            <div className="w-7 h-7 rounded-lg bg-gradient-primary shadow-glow flex items-center justify-center">
-              <span className="text-xs font-bold text-primary-foreground tracking-tighter">FV</span>
-            </div>
+          <Link to="/app" className="flex items-center gap-2">
+            <img src={fvLogo.url} alt="FV logo" className="w-8 h-8 object-contain" />
             <div className="leading-tight">
-              <div className="font-bold text-sm tracking-tight">F V Pocket Lab</div>
+              <div className="font-bold text-sm tracking-tight">PocketLab</div>
+              <div className="text-[10px] uppercase tracking-widest text-muted-foreground -mt-0.5">{"\n"}</div>
             </div>
           </Link>
           <div className="flex items-center gap-1">
