@@ -1,10 +1,11 @@
-Les boutons de direction du vent (Propulsion / Neutre / Résistance) dans la section Conditions du test Sprint utilisent actuellement le style par défaut du composant `ToggleGroupItem` (`bg-accent` à l'état actif). Les boutons de distance du protocole (30 m / 40 m / 60 m) ont un style distinct : bordure `border-primary` et fond `bg-primary/10` à l'état actif, bordure `border-input` au repos.
+Le bouton « Localiser » (autofillWeather) dans l'en-tête de la carte Conditions du test Sprint utilise actuellement `variant="outline"`, ce qui le distingue visuellement du bouton « Démo » situé dans le titre de la page qui utilise `bg-gradient-primary text-primary-foreground font-semibold`.
 
 Plan :
-1. Modifier les `ToggleGroupItem` de la direction du vent dans `src/pages/SprintTest.tsx` (lignes ~371-379) pour appliquer le même style visuel que les boutons de distance.
-2. Utiliser des classes conditionnelles ou une nouvelle variante `protocol` dans `src/components/ui/toggle.tsx` afin que l'état sélectionné (`data-[state=on]`) corresponde à `border-primary bg-primary/10 text-primary`, et l'état non sélectionné à `border border-input hover:border-primary/50`.
-3. Vérifier que le rendu visuel est cohérent avec les boutons de distance et que le comportement de sélection unique reste fonctionnel.
+1. Dans `src/pages/SprintTest.tsx`, remplacer le style du bouton Localiser (ligne ~329) pour qu'il ressemble au bouton Démo :
+   - Supprimer `variant="outline"`
+   - Appliquer `className="bg-gradient-primary text-primary-foreground font-semibold"`
+   - Conserver `size="sm"`, `onClick={autofillWeather}` et `disabled={geoBusy}`
+2. Vérifier que l'icône et le texte restent lisibles et que l'état désactivé reste fonctionnel.
+3. Lancer la vérification TypeScript et, si pertinent, un aperçu visuel rapide.
 
-Fichiers concernés :
-- `src/components/ui/toggle.tsx`
-- `src/pages/SprintTest.tsx`
+Fichier concerné : `src/pages/SprintTest.tsx`
