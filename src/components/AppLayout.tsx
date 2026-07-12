@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet } from "react-router-dom";
 import fvLogo from "@/assets/fv-logo.png.asset.json";
-import { Activity, Check, Download, Home, Moon, RefreshCw, Settings as SettingsIcon, Sun, Upload, Users } from "lucide-react";
+import { Activity, Check, Download, Home, LogOut, Moon, RefreshCw, Settings as SettingsIcon, Sun, Upload, Users } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -27,7 +27,7 @@ const navItems: { to: string; labelKey: TKey; icon: typeof Home; end?: boolean }
 ];
 
 export default function AppLayout() {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const { lang, theme, accent, setLang, setTheme, setAccent, t } = useSettings();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [exportDir, setExportDir] = useState<string | null>(null);
@@ -115,6 +115,14 @@ export default function AppLayout() {
               aria-label={t("settings")}
             >
               <SettingsIcon className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => signOut()}
+              aria-label={t("logout")}
+            >
+              <LogOut className="w-4 h-4" />
             </Button>
           </div>
         </div>
