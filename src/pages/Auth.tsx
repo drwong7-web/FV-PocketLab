@@ -51,7 +51,6 @@ export default function Auth() {
 
         <div className="glass-card p-6 shadow-elevated">
           <div className="flex items-center gap-2 mb-4 text-sm font-semibold">
-            <ShieldCheck className="w-4 h-4 text-primary" />
             <span>{t("createProfile")}</span>
           </div>
           <form onSubmit={onEnroll} className="space-y-3">
