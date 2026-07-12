@@ -143,7 +143,7 @@ export default function JumpTest() {
   return (
     <div className="space-y-5">
       <div className="flex items-center gap-3">
-        <img src={logoJump} alt={t("verticalJump")} loading="eager" decoding="async" fetchPriority="high" className="h-14 w-14 object-contain flex-shrink-0" />
+        <img src={logoJump} alt={t("verticalJump")} loading="eager" decoding="async" fetchPriority="high" className="logo-themed h-14 w-14 object-contain flex-shrink-0" />
         <div>
           <h1 className="font-display text-2xl font-bold uppercase">{t("jumpTestTitle")}</h1>
           <p className="text-xs text-muted-foreground">{t("jumpTestSubtitle")}</p>
