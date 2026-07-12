@@ -27,7 +27,7 @@ const navItems: { to: string; labelKey: TKey; icon: typeof Home; end?: boolean }
 ];
 
 export default function AppLayout() {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const { lang, theme, accent, setLang, setTheme, setAccent, t } = useSettings();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [exportDir, setExportDir] = useState<string | null>(null);
@@ -120,7 +120,7 @@ export default function AppLayout() {
               variant="ghost"
               size="icon"
               onClick={() => signOut()}
-              aria-label={t("signOut")}
+              aria-label={t("logout")}
             >
               <LogOut className="w-4 h-4" />
             </Button>
