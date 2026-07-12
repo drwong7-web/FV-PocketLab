@@ -39,7 +39,7 @@ export default function Auth() {
     <div className="min-h-svh flex items-center justify-center px-4 py-10">
       <div className="w-full max-w-md">
         <div className="flex items-center gap-3 mb-8 justify-center">
-          <img src={fvLogo.url} alt="FV logo" className="w-16 h-16 object-contain" />
+          <img src={fvLogo.url} alt="FV logo" className="w-32 h-32 object-contain" />
           <div className="leading-tight">
             <h1 className="text-xl font-bold tracking-tight">Pocket Lab</h1>
             <p className="text-xs uppercase tracking-widest text-muted-foreground">
