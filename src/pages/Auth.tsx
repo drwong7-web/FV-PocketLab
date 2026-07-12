@@ -1,6 +1,7 @@
 import { useEffect, useState, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { Activity, Loader2 } from "lucide-react";
+import fvLogo from "@/assets/fv-logo.png.asset.json";
+import { Loader2 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,9 +39,7 @@ export default function Auth() {
     <div className="min-h-svh flex items-center justify-center px-4 py-10">
       <div className="w-full max-w-md">
         <div className="flex items-center gap-3 mb-8 justify-center">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-primary shadow-glow flex items-center justify-center">
-            <Activity className="w-6 h-6 text-primary-foreground" />
-          </div>
+          <img src={fvLogo.url} alt="FV logo" className="w-8 h-8 object-contain" />
           <div className="leading-tight">
             <h1 className="text-xl font-bold tracking-tight">Pocket Lab</h1>
             <p className="text-xs uppercase tracking-widest text-muted-foreground">
