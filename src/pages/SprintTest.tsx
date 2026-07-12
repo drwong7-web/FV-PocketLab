@@ -326,7 +326,7 @@ export default function SprintTest() {
         <CardHeader>
           <div className="flex items-center justify-between gap-2">
             <CardTitle className="font-display text-base">{t("step3Conditions")}</CardTitle>
-            <Button size="sm" variant="outline" onClick={autofillWeather} disabled={geoBusy}>
+            <Button size="sm" onClick={autofillWeather} disabled={geoBusy} className="bg-gradient-primary text-primary-foreground font-semibold">
               {geoBusy ? (
                 <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
               ) : geoInfo ? (
