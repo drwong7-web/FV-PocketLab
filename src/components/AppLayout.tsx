@@ -103,7 +103,9 @@ export default function AppLayout() {
             to="/app"
             className="flex items-center gap-2.5 rounded-xl border border-border/60 bg-primary/5 px-2.5 py-1.5 transition-colors hover:bg-primary/10 hover:border-primary/30"
           >
-            <img src={fvLogo.url} alt="FV logo" className="w-7 h-7 object-contain" />
+            <div className="w-7 h-7 rounded-lg bg-gradient-primary shadow-glow flex items-center justify-center">
+              <span className="text-xs font-bold text-primary-foreground tracking-tighter">FV</span>
+            </div>
             <div className="leading-tight">
               <div className="font-bold text-sm tracking-tight">F V Pocket Lab</div>
             </div>
