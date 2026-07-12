@@ -1,26 +1,37 @@
-## Problème
+## Recolorer les 4 logos (sprint + saut vertical) selon le thème/accent
 
-Sur `/app/tests/new` (page `NewTest.tsx`), les deux logos mettent un instant à apparaître après le reste du contenu.
+### Approche
+Décalage de teinte CSS pur via `filter: hue-rotate()` calibré sur l'accent utilisateur. Chaque pixel voit sa teinte pivotée — les blancs des highlights, les gris des ombres et le glow néon restent intacts. Aucun `mask`, aucun aplat de couleur.
 
-Cause : les fichiers PNG sont volumineux et chargés en tant qu'`<img>` classique sans priorité :
-- `src/assets/logo-sprint-neon.png` → **663 KB**
-- `src/assets/logo-jump-neon.png` → **250 KB**
+### Modifs
 
-Le navigateur les fetch après le rendu du HTML, d'où le décalage visible.
+**1. `src/lib/settings.tsx`** (dans le `useEffect` qui pose les variables CSS, ~ligne 305)
+Ajouter :
+```ts
+const logoHueShift = ((H - 120) + 360) % 360;  // 120° = vert des PNG source
+html.style.setProperty("--logo-hue-shift", `${logoHueShift}deg`);
+html.style.setProperty("--logo-brightness", isDark ? "1" : "0.92");
+```
 
-## Plan
+**2. `src/index.css`** — ajouter une classe utilitaire :
+```css
+.logo-themed {
+  filter:
+    hue-rotate(var(--logo-hue-shift, 0deg))
+    saturate(1.05)
+    brightness(var(--logo-brightness, 1));
+}
+```
 
-1. **Optimiser les images** : recompresser les deux PNG (pngquant/oxipng) sans changer les dimensions, cible ~60–120 KB chacun. Fichiers remplacés au même chemin, aucun import à modifier.
-2. **Marquer les `<img>` comme prioritaires** dans `src/pages/NewTest.tsx`, `src/pages/JumpTest.tsx` et `src/pages/SprintTest.tsx` :
-   - `loading="eager"`
-   - `decoding="async"`
-   - `fetchPriority="high"`
-3. **Précharger** les deux logos depuis `NewTest.tsx` via des balises `<link rel="preload" as="image" href={logoJump} />` injectées (par ex. avec un petit effet `useEffect` ou directement dans le JSX en tête de page) pour que le navigateur les demande dès que la route est montée.
+**3. Ajouter `className="logo-themed"` sur les 4 `<img>`** :
+- `src/pages/NewTest.tsx` — les deux tuiles (logoJump, logoSprint)
+- `src/pages/SprintTest.tsx` ligne ~214
+- `src/pages/JumpTest.tsx` ligne ~146
 
-Aucune modification de la logique métier, uniquement présentation et actifs.
+### Résultat attendu
+- Thème dark + accent vert (défaut) → logos inchangés visuellement.
+- Thème dark + accent bleu/rouge/violet → silhouette du logo suit la teinte accent, glow et traînées conservés.
+- Thème light → légère baisse de brightness pour éviter que le blanc éclabousse sur fond clair.
 
-## Détails techniques
-
-- Fichiers touchés : `src/assets/logo-sprint-neon.png`, `src/assets/logo-jump-neon.png`, `src/pages/NewTest.tsx`, `src/pages/JumpTest.tsx`, `src/pages/SprintTest.tsx`.
-- Les imports Vite (`import logoSprint from "@/assets/..."`) restent inchangés — Vite régénère le hash automatiquement après compression.
-- Pas de changement de dimensions donc pas de régression visuelle attendue.
+### Note
+`hue-rotate` est un filter CSS (pas un mask). Si l'utilisateur veut zéro filter runtime, l'alternative est de régénérer des PNG par thème, mais ça ne peut pas suivre l'accent libre 0–360°.

@@ -332,6 +332,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       `radial-gradient(ellipse at top, hsl(${H} ${primaryS}% ${primaryL}% / ${heroA}), transparent 60%), radial-gradient(ellipse at bottom right, hsl(${H2} 90% 58% / ${heroB}), transparent 60%)`
     );
     html.style.setProperty("--shadow-glow", `0 0 40px hsl(${H} ${primaryS}% ${primaryL}% / 0.35)`);
+
+    const logoHueShift = ((H - 120) + 360) % 360;
+    html.style.setProperty("--logo-hue-shift", `${logoHueShift}deg`);
+    html.style.setProperty("--logo-brightness", isDark ? "1" : "0.92");
   }, [s]);
 
   const t = useCallback<Ctx["t"]>((k) => (TR[k]?.[s.lang] ?? (k as string)), [s.lang]);

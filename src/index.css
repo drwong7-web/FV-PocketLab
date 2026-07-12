@@ -209,3 +209,10 @@
   }
 }
 
+
+.logo-themed {
+  filter:
+    hue-rotate(var(--logo-hue-shift, 0deg))
+    saturate(1.05)
+    brightness(var(--logo-brightness, 1));
+}
