@@ -97,13 +97,13 @@ const TR = {
   dashboard: { fr: "Tableau de bord", en: "Dashboard", ar: "الرئيسية" },
 
   // ---- Auth ----
-  localFirst: { fr: "Local-first · Privé par défaut", en: "Local-first · Private by default", ar: "محلي أولاً · خاص افتراضياً" },
+  localFirst: { fr: "\n", en: "Local-first · Private by default", ar: "محلي أولاً · خاص افتراضياً" },
   createProfile: { fr: "Créer votre profil", en: "Create your profile", ar: "أنشئ ملفك الشخصي" },
   yourName: { fr: "Votre nom", en: "Your name", ar: "اسمك" },
   createMyProfile: { fr: "Créer mon profil", en: "Create my profile", ar: "أنشئ ملفي" },
   nameTeamRequired: { fr: "Nom et équipe requis.", en: "Name and team required.", ar: "الاسم والفريق مطلوبان." },
   profileCreated: { fr: "Profil créé.", en: "Profile created.", ar: "تم إنشاء الملف." },
-  storageNote: { fr: "Stockage 100% local · Aucune inscription en ligne", en: "100% local storage · No online sign-up", ar: "تخزين محلي 100% · بدون تسجيل عبر الإنترنت" },
+  storageNote: { fr: "\n", en: "100% local storage · No online sign-up", ar: "تخزين محلي 100% · بدون تسجيل عبر الإنترنت" },
 
   // ---- Teams page ----
   teamsSubtitle: { fr: "Regroupez les athlètes par équipe ou session.", en: "Group athletes by squad or session.", ar: "جمّع الرياضيين حسب الفريق أو الجلسة." },
