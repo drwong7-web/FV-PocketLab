@@ -160,7 +160,7 @@ const TR = {
   hpo: { fr: "hPO (m)", en: "hPO (m)", ar: "hPO (م)" },
   hpoHint: { fr: "hPO ≈ longueur de jambe × 0,4 (extension des membres inférieurs).", en: "hPO ≈ leg length × 0.4 (lower-limb extension distance).", ar: "hPO ≈ طول الساق × 0.4 (مسافة تمدد الأطراف السفلية)." },
   trials: { fr: "Essais", en: "Trials", ar: "المحاولات" },
-  loadKg: { fr: "Charge", en: "Load", ar: "الحمولة" },
+  loadKg: { fr: "\u00a0 \u00a0Charge", en: "\u00a0 \u00a0Load", ar: "\u00a0 \u00a0الحمولة" },
   jumpHeightCm: { fr: "Hauteur de saut\u00a0", en: "Jump height\u00a0", ar: "ارتفاع القفز\u00a0" },
   measureHpo: { fr: "Mesurer hPO — extension", en: "Measure hPO — extension", ar: "قياس hPO — التمدد" },
   aiAutoDetect: { fr: "Détection auto IA", en: "AI auto-detect", ar: "كشف تلقائي بالذكاء الاصطناعي" },
