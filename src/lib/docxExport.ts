@@ -76,7 +76,7 @@ export async function generateDOCX(test: ExportTest): Promise<Blob> {
       width: { size: 9000, type: WidthType.DXA },
       columnWidths: [3000, 3000, 3000],
       rows: [
-        row([t("interpretation"), t("measured"), ""], true, [3000, 3000, 3000]),
+        row([t("tblIndicator"), t("tblValue"), t("tblUnit")], true, [3000, 3000, 3000]),
         row(["F0", r.F0.toFixed(2), "N/kg"], false, [3000, 3000, 3000]),
         row(["V0", r.V0.toFixed(2), "m/s"], false, [3000, 3000, 3000]),
         row(["Pmax", r.Pmax.toFixed(1), "W/kg"], false, [3000, 3000, 3000]),
@@ -114,7 +114,7 @@ export async function generateDOCX(test: ExportTest): Promise<Blob> {
       width: { size: 9000, type: WidthType.DXA },
       columnWidths: [3000, 3000, 3000],
       rows: [
-        row([t("interpretation"), t("measured"), ""], true, [3000, 3000, 3000]),
+        row([t("tblIndicator"), t("tblValue"), t("tblUnit")], true, [3000, 3000, 3000]),
         row(["F0 horiz.", r.F0.toFixed(2), "N/kg"], false, [3000, 3000, 3000]),
         row(["V0 / Vmax", r.Vmax.toFixed(2), "m/s"], false, [3000, 3000, 3000]),
         row(["Pmax", r.Pmax.toFixed(1), "W/kg"], false, [3000, 3000, 3000]),
