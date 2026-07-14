@@ -380,7 +380,7 @@ export default function SprintTest() {
                 {t("headwind")}
               </ToggleGroupItem>
             </ToggleGroup>
-            <p className="text-[11px] text-muted-foreground">{t("windHint")}</p>
+            <p className="text-[11px] text-muted-foreground whitespace-pre-line">{t("windHint")}</p>
           </div>
           <ConditionsRecap
             tempC={parseFloat(airTemp)}
