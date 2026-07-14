@@ -288,6 +288,65 @@ const TR = {
   fvGraph: { fr: "Représentation graphique F-V", en: "Force-Velocity graph", ar: "المخطط البياني F-V" },
   hMaxTheo: { fr: "hMax théo.", en: "hMax theo.", ar: "hMax نظري" },
   medicalDisclaimer: { fr: "Ces résultats ne constituent pas un diagnostic médical. Ils doivent être interprétés par un professionnel qualifié en tenant compte du contexte sportif, médical et de l'historique de l'athlète.", en: "These results are not a medical diagnosis. They should be interpreted by a qualified professional considering sport context, medical history and the athlete's background.", ar: "هذه النتائج ليست تشخيصاً طبياً. يجب تفسيرها من قبل مختص مؤهل مع مراعاة السياق الرياضي والطبي وخلفية الرياضي." },
+
+  // ---- Method & references (jump) ----
+  methodLabel: { fr: "Méthode :", en: "Method:", ar: "المنهجية:" },
+  refsLabel: { fr: "Références :", en: "References:", ar: "المراجع:" },
+  methodJumpBody: { fr: "sauts verticaux à charges croissantes. Pour chaque essai, F = (m+ml)·g·(h/hPO + 1) / m et V = √(g·h/2). Régression linéaire F = F0 − Sfv·V donne F0, V0, Pmax = F0·V0/4.", en: "vertical jumps at increasing loads. For each trial, F = (m+ml)·g·(h/hPO + 1) / m and V = √(g·h/2). Linear regression F = F0 − Sfv·V gives F0, V0, Pmax = F0·V0/4.", ar: "قفزات عمودية بأحمال متزايدة. لكل محاولة F = (m+ml)·g·(h/hPO + 1) / m و V = √(g·h/2). الانحدار الخطي F = F0 − Sfv·V يعطي F0 وV0 وPmax = F0·V0/4." },
+  methodSfvOpt: { fr: "pente F-V théorique qui maximise la hauteur de saut à Pmax constant (iso-puissance). FVimb = (Sfv − Sfv,opt) / Sfv,opt × 100.", en: "theoretical F-V slope that maximises jump height at constant Pmax (iso-power). FVimb = (Sfv − Sfv,opt) / Sfv,opt × 100.", ar: "الانحدار النظري F-V الذي يعظّم ارتفاع القفز عند Pmax ثابت. FVimb = (Sfv − Sfv,opt) / Sfv,opt × 100." },
+  methodRefsJump: { fr: "Samozino et al. (2008, 2012, 2014); Jiménez-Reyes et al. (2017) pour l'individualisation par sport.", en: "Samozino et al. (2008, 2012, 2014); Jiménez-Reyes et al. (2017) for sport-specific individualisation.", ar: "سامودزينو وآخرون (2008، 2012، 2014)؛ خيمينيز-رييس وآخرون (2017) للتخصيص حسب الرياضة." },
+  methodSprintBody: { fr: "modèle exponentiel v(t) = Vmax·(1 − e^(−t/τ)) ajusté sur les splits. Force horizontale F_h = m·a + F_aero, puis régression F-V linéaire et Pmax = F0·V0/4.", en: "exponential model v(t) = Vmax·(1 − e^(−t/τ)) fitted on splits. Horizontal force F_h = m·a + F_aero, then linear F-V regression and Pmax = F0·V0/4.", ar: "النموذج الأسي v(t) = Vmax·(1 − e^(−t/τ)) موائم على الأزمنة الجزئية. القوة الأفقية F_h = m·a + F_aero، ثم انحدار F-V خطي وPmax = F0·V0/4." },
+  methodRfDrf: { fr: "ratio de force horizontale = F_h / √(F_h² + g²) × 100 ; DRF = pente de RF vs V (Morin & Samozino 2016).", en: "horizontal force ratio = F_h / √(F_h² + g²) × 100; DRF = slope of RF vs V (Morin & Samozino 2016).", ar: "نسبة القوة الأفقية = F_h / √(F_h² + g²) × 100 ؛ DRF = ميل RF بدلالة V (مورين وسامودزينو 2016)." },
+  methodRefsSprint: { fr: "Morin & Samozino (2016); Cross et al. (2017); Jiménez-Reyes et al. (2019).", en: "Morin & Samozino (2016); Cross et al. (2017); Jiménez-Reyes et al. (2019).", ar: "مورين وسامودزينو (2016)؛ كروس وآخرون (2017)؛ خيمينيز-رييس وآخرون (2019)." },
+
+  // ---- R² explanation ----
+  r2Explanation: { fr: "R² = coefficient de détermination : indique la fiabilité du test ( 1 = parfait ).", en: "R² = coefficient of determination: indicates test reliability (1 = perfect).", ar: "R² = معامل التحديد: يشير إلى موثوقية الاختبار (1 = مثالي)." },
+  r2Excellent: { fr: "Excellent ajustement : F0, V0 et Pmax sont fiables.", en: "Excellent fit: F0, V0 and Pmax are reliable.", ar: "ملاءمة ممتازة: F0 و V0 و Pmax موثوقة." },
+  r2Good: { fr: "Ajustement correct : interpréter avec une certaine prudence.", en: "Acceptable fit: interpret with some caution.", ar: "ملاءمة مقبولة: تُفسَّر بحذر." },
+  r2Poor: { fr: "Ajustement faible : vérifier la qualité des essais avant d'exploiter F0/V0/Pmax.", en: "Weak fit: check trial quality before relying on F0/V0/Pmax.", ar: "ملاءمة ضعيفة: تحقق من جودة المحاولات قبل استخدام F0/V0/Pmax." },
+
+  // ---- Target summary ----
+  targetPrefix: { fr: "Cible", en: "Target", ar: "المستهدف" },
+
+  // ---- Sprint report extras ----
+  footwearAdjLabel: { fr: "Correction adhérence appliquée", en: "Grip correction applied", ar: "تصحيح الاحتكاك مطبَّق" },
+  onMeasuredTimes: { fr: "sur les temps mesurés", en: "on measured times", ar: "على الأزمنة المقاسة" },
+  aeroDefaultsUsed: { fr: "Correction aérodynamique estimée avec valeurs par défaut.", en: "Aerodynamic correction estimated with default values.", ar: "تصحيح ديناميكي هوائي مُقدَّر بالقيم الافتراضية." },
+  aeroCorrection: { fr: "Correction aérodynamique", en: "Aerodynamic correction", ar: "التصحيح الديناميكي الهوائي" },
+  windEffect: { fr: "effet vent", en: "wind effect", ar: "تأثير الرياح" },
+  illegalWindNote: { fr: "vent > 2 m/s (non homologable IAAF)", en: "wind > 2 m/s (not IAAF-legal)", ar: "رياح > 2 م/ث (غير معتمد IAAF)" },
+  propulsion: { fr: "propulsion", en: "tailwind", ar: "دافعة" },
+  resistance: { fr: "résistance", en: "headwind", ar: "معاكسة" },
+  interpretationLabel: { fr: "Interprétation", en: "Interpretation", ar: "التفسير" },
+  jumpTargetSuffix: { fr: "(Jiménez-Reyes)", en: "(Jiménez-Reyes)", ar: "(خيمينيز-رييس)" },
+
+  // ---- Sprint interpretation titles ----
+  interp_force_deficit: { fr: "Déficit de FORCE horizontale", en: "Horizontal FORCE deficit", ar: "نقص القوة الأفقية" },
+  interp_velocity_deficit: { fr: "Déficit de VITESSE maximale", en: "Maximum VELOCITY deficit", ar: "نقص السرعة القصوى" },
+  interp_power_deficit: { fr: "Déficit de PUISSANCE globale", en: "Overall POWER deficit", ar: "نقص القدرة الإجمالية" },
+  interp_orientation_deficit: { fr: "Déficit d'ORIENTATION horizontale", en: "Horizontal ORIENTATION deficit", ar: "نقص التوجيه الأفقي" },
+  interp_balanced: { fr: "Profil sprint ÉQUILIBRÉ", en: "BALANCED sprint profile", ar: "ملف عدو متوازن" },
+  interp_force_deficit_desc: { fr: "F0 bas et accélération initiale limitée. Travailler la force maximale et l'expression de force horizontale.", en: "Low F0 and limited initial acceleration. Focus on maximal strength and horizontal force expression.", ar: "F0 منخفض وتسارع أولي محدود. اعمل على القوة القصوى وتعبير القوة الأفقية." },
+  interp_velocity_deficit_desc: { fr: "Vmax limitante alors que la force initiale est correcte. Exposer l'athlète à de hautes vitesses.", en: "Vmax is the limiter while initial force is fine. Expose the athlete to high velocities.", ar: "Vmax محدود بينما القوة الأولية مقبولة. عرّض الرياضي لسرعات عالية." },
+  interp_power_deficit_desc: { fr: "F0 et V0 corrects mais Pmax faible. Travail force-vitesse mixte.", en: "F0 and V0 are OK but Pmax is low. Mixed force-velocity work.", ar: "F0 وV0 جيدان لكن Pmax منخفض. عمل مختلط قوة-سرعة." },
+  interp_orientation_deficit_desc: { fr: "RF faible ou DRF très négatif : la force est mal orientée vers l'avant.", en: "Low RF or very negative DRF: force is poorly oriented forward.", ar: "RF منخفض أو DRF سالب جداً: القوة موجَّهة بشكل سيء للأمام." },
+  interp_balanced_desc: { fr: "Profil cohérent. Maintenir la qualité avec un travail mixte force/vitesse.", en: "Consistent profile. Maintain quality with mixed strength/speed work.", ar: "ملف متسق. حافظ على الجودة بعمل مختلط قوة/سرعة." },
+
+  // ---- Jump recommendation titles ----
+  reco_jump_force: { fr: "Déficit de FORCE détecté", en: "FORCE deficit detected", ar: "تم اكتشاف نقص في القوة" },
+  reco_jump_velocity: { fr: "Déficit de VITESSE détecté", en: "VELOCITY deficit detected", ar: "تم اكتشاف نقص في السرعة" },
+  reco_jump_balanced: { fr: "Profil ÉQUILIBRÉ ✓", en: "BALANCED profile ✓", ar: "ملف متوازن ✓" },
+  reco_jump_force_desc: { fr: "Priorisez le développement de la force maximale et de la force-puissance lourde pour rééquilibrer le profil.", en: "Prioritise maximal strength and heavy force-power to rebalance the profile.", ar: "أعطِ الأولوية لتطوير القوة القصوى والقوة-القدرة الثقيلة لإعادة توازن الملف." },
+  reco_jump_velocity_desc: { fr: "Priorisez la pliométrie, les mouvements explosifs et les sauts à faible charge pour développer la vitesse de contraction.", en: "Prioritise plyometrics, explosive movements and light-load jumps to develop contraction velocity.", ar: "أعطِ الأولوية للبلايومترية والحركات الانفجارية والقفزات بحمل خفيف لتطوير سرعة الانقباض." },
+  reco_jump_balanced_desc: { fr: "Maintenir le profil avec un travail mixte force-vitesse.", en: "Maintain the profile with mixed force-velocity work.", ar: "حافظ على الملف بعمل مختلط قوة-سرعة." },
+  imbalanceOf: { fr: "Imbalance de", en: "Imbalance of", ar: "عدم التوازن" },
+
+  // ---- Sprint recommendation titles ----
+  reco_sprint_force: { fr: "Déficit de FORCE HORIZONTALE", en: "HORIZONTAL FORCE deficit", ar: "نقص القوة الأفقية" },
+  reco_sprint_velocity: { fr: "Déficit de VITESSE MAX", en: "MAX VELOCITY deficit", ar: "نقص السرعة القصوى" },
+  reco_sprint_balanced: { fr: "Profil sprint ÉQUILIBRÉ ✓", en: "BALANCED sprint profile ✓", ar: "ملف عدو متوازن ✓" },
+  reco_sprint_force_desc: { fr: "La capacité à produire de la force orientée horizontalement est limitée. Travail de poussée et d'orientation prioritaire.", en: "Ability to produce horizontally oriented force is limited. Push and orientation work is the priority.", ar: "القدرة على إنتاج قوة أفقية محدودة. الأولوية لعمل الدفع والتوجيه." },
+  reco_sprint_velocity_desc: { fr: "Bonne application de force mais vitesse maximale limitante.", en: "Good force application but maximum velocity is the limiter.", ar: "تطبيق قوة جيد لكن السرعة القصوى هي المحدِّد." },
 } as const;
 
 export type TKey = keyof typeof TR;
