@@ -1,28 +1,25 @@
-## Problème
-Sur la page **Nouveau test de saut** (`/app/tests/new/jump`), l'en-tête de colonne **"Jump height (cm)"** (et probablement **"Load (kg)"**) n'est pas aligné avec le bord gauche des `<Input>` situés en dessous.
+## Problème constaté
 
-## Diagnostic
-Dans `src/pages/JumpTest.tsx` :
-- La ligne d'en-tête utilise `grid-cols-[1fr_1fr_auto]` (3 colonnes).
-- Les lignes de saisie utilisent `grid-cols-[1fr_1fr_auto_auto_auto]` (5 colonnes).
-- Les `<Input>` ont un padding horizontal `px-3`, mais les `<span>` d'en-tête n'ont aucun padding.
+Dans `src/pages/JumpTest.tsx`, la ligne d'en-tête des essais (`Load (kg)` / `Jump height (cm)`) et les lignes de saisie utilisent toutes deux `grid-cols-[1fr_1fr_auto_auto_auto]`.
 
-Résultat : le texte de l'en-tête démarre au bord de la colonne, alors que le contenu de l'input est décalé de `px-3`.
+Mais les trois colonnes `auto` de l'en-tête sont **vides** (simples `<span></span>`), tandis que dans les lignes de saisie elles contiennent des boutons d'action (icônes). En CSS Grid, une piste `auto` vide s'effondre à 0, alors que la même piste avec un bouton occupe ~2.5rem. Résultat : les deux premières pistes `1fr` n'ont pas la même largeur entre l'en-tête et les lignes, donc le titre `Load (kg)` déborde au-dessus de la zone de `Jump height (cm)`.
 
 ## Plan de correction
-1. **Uniformiser la grille d'en-tête** dans `src/pages/JumpTest.tsx` :
-   - Remplacer `grid-cols-[1fr_1fr_auto]` par `grid-cols-[1fr_1fr_auto_auto_auto]`.
-   - Placer les labels dans les deux premières colonnes.
-   - Ajouter trois `<span></span>` vides pour occuper les colonnes des boutons d'action (IA, caméra, suppression).
 
-2. **Aligner visuellement les labels avec les inputs** :
-   - Ajouter `px-3` aux `<span>` de labels `loadKg` et `jumpHeightCm` pour correspondre au padding intérieur des `<Input>`.
+1. **Unifier les largeurs de colonnes** dans `src/pages/JumpTest.tsx` :
+   - Remplacer `grid-cols-[1fr_1fr_auto_auto_auto]` par `grid-cols-[1fr_1fr_2.5rem_2.5rem_2.5rem]` à la fois sur la ligne d'en-tête et sur les lignes d'essais.
+   - `2.5rem` correspond exactement à la largeur des `<Button size="icon">` (`h-10 w-10`).
 
-3. **Vérification** :
-   - Vérifier le rendu desktop et mobile (viewport 768 px et 1280 px) pour s'assurer que les titres sont désormais alignés avec le début des cases.
-   - Ne pas toucher à la logique de calcul, aux types, ni au backend.
+2. **Conserver l'alignement du texte** :
+   - Garder `px-3` sur les `<span>` de l'en-tête pour que leur padding gauche/droit corresponde à celui des `<Input>`.
+   - Laisser les trois derniers `<span>` vides ; la grille fixe leur réservera l'espace des boutons.
+
+3. **Vérifier le rendu** :
+   - Lancer `bun run build` pour s'assurer qu'il n'y a pas d'erreur.
+   - Vérifier visuellement que les titres `Load (kg)` et `Jump height (cm)` s'alignent exactement au-dessus des cases de saisie correspondantes, sur desktop comme sur mobile.
 
 ## Fichier concerné
-- `src/pages/JumpTest.tsx`
 
-Aucune mise à jour de `SPEC.md` n'est nécessaire car il s'agit d'un ajustement visuel local sans impact sur l'architecture ou les comportements publics.
+- `src/pages/JumpTest.tsx` (lignes ~201 et ~209)
+
+Aucun autre fichier n'est nécessaire ; c'est un ajustement de grille purement visuel.
