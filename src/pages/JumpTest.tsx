@@ -63,17 +63,10 @@ export default function JumpTest() {
     const a = getPlayer(athleteId);
     if (a?.mass) {
       setBodyMass(String(a.mass));
-      setTrials(defaultTrials(a.mass));
     }
     if (a?.height) setPushOff(((a.height / 100) * 0.4).toFixed(2));
   }, [athleteId]);
 
-  useEffect(() => {
-    const mass = parseFloat(bodyMass);
-    if (!isNaN(mass) && mass > 0) {
-      setTrials(defaultTrials(mass));
-    }
-  }, [bodyMass]);
 
   useEffect(() => {
     if (!athleteId) return;
