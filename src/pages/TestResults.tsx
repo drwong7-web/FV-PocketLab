@@ -817,7 +817,7 @@ function SprintReport({ test, results, chartRef }: { test: TestRecord; results: 
         <Card>
           <CardHeader>
             <CardTitle className="font-display text-base flex items-center justify-between">
-              <span>Score de qualité</span>
+              <span>{t("qualityScore")}</span>
               <span className={`rounded-full px-3 py-0.5 text-sm font-bold ${
                 quality.globalScore >= 80 ? "bg-success/20 text-success" :
                 quality.globalScore >= 60 ? "bg-warning/20 text-warning" :
@@ -828,17 +828,17 @@ function SprintReport({ test, results, chartRef }: { test: TestRecord; results: 
           <CardContent className="space-y-2">
             <div className="grid grid-cols-3 gap-2 text-center text-xs">
               <div className="rounded-md bg-muted/40 p-2">
-                <p className="text-[10px] uppercase text-muted-foreground">Fit modèle (R²)</p>
+                <p className="text-[10px] uppercase text-muted-foreground">{t("modelFit")}</p>
                 <p className="font-display text-base font-bold">
                   {results.modelFitScore != null ? Math.round(results.modelFitScore * 100) : quality.modelFitScore}
                 </p>
               </div>
               <div className="rounded-md bg-muted/40 p-2">
-                <p className="text-[10px] uppercase text-muted-foreground">Cohérence splits</p>
+                <p className="text-[10px] uppercase text-muted-foreground">{t("splitCoherence")}</p>
                 <p className="font-display text-base font-bold">{quality.splitCoherenceScore}</p>
               </div>
               <div className="rounded-md bg-muted/40 p-2">
-                <p className="text-[10px] uppercase text-muted-foreground">FPS vidéo</p>
+                <p className="text-[10px] uppercase text-muted-foreground">{t("videoFps")}</p>
                 <p className="font-display text-base font-bold">
                   {results.videoFps ? `${results.videoFps} (${quality.fpsScore})` : "—"}
                 </p>
@@ -870,7 +870,7 @@ function SprintReport({ test, results, chartRef }: { test: TestRecord; results: 
       {series.length > 0 && (
         <>
           <Card>
-            <CardHeader><CardTitle className="font-display text-base">Distance — temps</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="font-display text-base">{t("distanceTime")}</CardTitle></CardHeader>
             <CardContent>
               <div style={{ width: "100%", height: 200 }}>
                 <ResponsiveContainer>
@@ -891,7 +891,7 @@ function SprintReport({ test, results, chartRef }: { test: TestRecord; results: 
           </Card>
 
           <Card>
-            <CardHeader><CardTitle className="font-display text-base">Vitesse — temps (phases)</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="font-display text-base">{t("velocityTimePhases")}</CardTitle></CardHeader>
             <CardContent>
               <div style={{ width: "100%", height: 200 }}>
                 <ResponsiveContainer>
@@ -918,7 +918,7 @@ function SprintReport({ test, results, chartRef }: { test: TestRecord; results: 
           </Card>
 
           <Card>
-            <CardHeader><CardTitle className="font-display text-base">Accélération — temps</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="font-display text-base">{t("accelTime")}</CardTitle></CardHeader>
             <CardContent>
               <div style={{ width: "100%", height: 180 }}>
                 <ResponsiveContainer>
@@ -937,7 +937,7 @@ function SprintReport({ test, results, chartRef }: { test: TestRecord; results: 
       )}
 
       <Card>
-        <CardHeader><CardTitle className="font-display text-base flex items-center gap-2"><Activity className="h-4 w-4 text-primary"/>Relation Force horizontale-Vitesse</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="font-display text-base flex items-center gap-2"><Activity className="h-4 w-4 text-primary"/>{t("fvRelation")}</CardTitle></CardHeader>
         <CardContent>
           <div ref={chartRef}>
             <FVChart
@@ -966,7 +966,7 @@ function SprintReport({ test, results, chartRef }: { test: TestRecord; results: 
       {series.length > 0 && (
         <>
           <Card>
-            <CardHeader><CardTitle className="font-display text-base">Puissance — vitesse</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="font-display text-base">{t("powerVelocity")}</CardTitle></CardHeader>
             <CardContent>
               <div style={{ width: "100%", height: 200 }}>
                 <ResponsiveContainer>
@@ -984,7 +984,7 @@ function SprintReport({ test, results, chartRef }: { test: TestRecord; results: 
           </Card>
 
           <Card>
-            <CardHeader><CardTitle className="font-display text-base">RF — vitesse</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="font-display text-base">{t("rfVelocity")}</CardTitle></CardHeader>
             <CardContent>
               <div style={{ width: "100%", height: 200 }}>
                 <ResponsiveContainer>
@@ -1006,11 +1006,11 @@ function SprintReport({ test, results, chartRef }: { test: TestRecord; results: 
       )}
 
       <Card>
-        <CardHeader><CardTitle className="font-display text-base">Splits</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="font-display text-base">{t("splits")}</CardTitle></CardHeader>
         <CardContent>
           <table className="w-full text-sm">
             <thead className="text-xs text-muted-foreground">
-              <tr><th className="text-left">Distance</th><th className="text-left">Mesuré</th><th className="text-left">Modèle</th><th className="text-left">Δ</th></tr>
+              <tr><th className="text-left">{t("distance")}</th><th className="text-left">{t("measured")}</th><th className="text-left">{t("model")}</th><th className="text-left">Δ</th></tr>
             </thead>
             <tbody>
               {results.splits.map((s, i) => {
@@ -1034,7 +1034,7 @@ function SprintReport({ test, results, chartRef }: { test: TestRecord; results: 
       <Card className="border-primary/30">
         <CardHeader>
           <CardTitle className="font-display text-base flex items-center gap-2">
-            <Gauge className="h-4 w-4 text-primary" /> Interprétation — {interp.title}
+            <Gauge className="h-4 w-4 text-primary" /> {t("interpretationLabel")} — {interp.title}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -1045,19 +1045,19 @@ function SprintReport({ test, results, chartRef }: { test: TestRecord; results: 
             ))}
           </div>
           <p className="text-[11px] italic text-muted-foreground">
-            Ces résultats ne constituent pas un diagnostic médical. Ils doivent être interprétés par un professionnel
-            qualifié en tenant compte du contexte sportif, médical et de l'historique de l'athlète.
+            {t("medicalDisclaimer")}
           </p>
         </CardContent>
       </Card>
 
       {raw.notes && (
         <Card>
-          <CardHeader><CardTitle className="font-display text-base">Notes du praticien</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="font-display text-base">{t("practitionerNotes")}</CardTitle></CardHeader>
           <CardContent>
             <p className="whitespace-pre-wrap text-sm">{raw.notes}</p>
           </CardContent>
         </Card>
+
       )}
 
       <RecommendationCard reco={reco} />
