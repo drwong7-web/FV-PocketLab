@@ -1,27 +1,26 @@
-# Remove load percentage labels and auto-calc logic
+## Objectif
+Supprimer partout dans l'app la saisie et l'affichage de la position/rôle de l'athlète.
 
-In `src/pages/JumpTest.tsx`, on the Jump Test page (Essais section), remove the preset load percentages displayed next to each trial row ("00 kg", "~ 20%", "~ 50%", "~ 70%") along with all the underlying logic that computes them from body mass.
+## Modifications
 
-## Changes in `src/pages/JumpTest.tsx`
+1. **`src/pages/TeamDetail.tsx`** — formulaire d'ajout d'un joueur
+   - Retirer le state `position` / `setPosition`.
+   - Retirer le champ `<Label>Position</Label>` + `<Input>` dans le dialog.
+   - Retirer `position` de l'appel `createPlayer(...)`.
+   - Retirer `p.position` de la ligne affichée dans la liste des joueurs (garder juste `{p.mass} kg`).
 
-1. **Delete helpers**
-   - Remove `roundTo5(n)` function.
-   - Remove `defaultTrials(mass)` function.
+2. **`src/pages/PlayerDetail.tsx`** — en-tête athlète
+   - Retirer la portion `${player.position ? ` · ${player.position}` : ""}` du sous-titre.
 
-2. **Simplify initial trials state**
-   - Keep the current initial 4 empty trials (`{ load: 0, jumpHeight: 0 }` × 4) — no change needed there since it's already empty.
+3. **`src/components/players/ImportPlayersDialog.tsx`** — import IA
+   - Retirer la colonne "Position" du récapitulatif (passer la grille de `grid-cols-3` à `grid-cols-2` : Masse + Taille).
+   - Retirer `position` du type `ParsedAthlete`/`Row` et de l'appel `createPlayer`.
 
-3. **Remove auto-population effects**
-   - In the effect that reacts to `athleteId`: keep setting `bodyMass` and `pushOff` from athlete data, but remove the `setTrials(defaultTrials(a.mass))` call.
-   - Remove the entire effect that watches `bodyMass` and calls `setTrials(defaultTrials(mass))`.
+4. **`src/lib/import/athletes.ts`** — parseur
+   - Retirer le champ `position` de l'interface exportée `ParsedAthlete`.
+   - Retirer le `Field` `"position"`, l'entrée du dictionnaire d'en-têtes (`poste|position|role`), et l'affectation `position: posRaw || undefined` dans l'objet retourné.
 
-4. **Remove the labels column in the Trials card**
-   - Remove the `const labels = ["00 kg", "~ 20%", "~ 50%", "~ 70%"];` line.
-   - Remove the `<span className="w-14 ...">{labels[i] ?? ""}</span>` cell inside each trial row.
-   - Remove the empty `<span className="w-14"></span>` header spacer.
-   - Adjust the grid template columns from `grid-cols-[auto_1fr_1fr_auto]` (header) and `grid-cols-[auto_1fr_1fr_auto_auto_auto]` (rows) to drop the leading `auto` column: `grid-cols-[1fr_1fr_auto]` (header) and `grid-cols-[1fr_1fr_auto_auto_auto]` (rows).
+5. **`src/lib/types.ts`** — laisser `position?: string` sur `Player` (rétro-compat des données existantes en localStorage). Aucune migration nécessaire ; le champ devient simplement inutilisé.
 
-## Out of scope
-
-- No changes to translations, calculations (`calculateJumpProfile`), camera/AI components, or any other page.
-- The "+" button to add trials, the load/height inputs, and the AI/Camera/Delete buttons per row remain unchanged.
+## Hors périmètre
+- Pas de changement de `SPEC.md` structurel (retrait UI mineur). Les autres occurrences de "position" dans le code (CSS `style.position`, labels de graphes recharts, `point1Label` du calibrage caméra) ne concernent pas le rôle de l'athlète et restent intactes.

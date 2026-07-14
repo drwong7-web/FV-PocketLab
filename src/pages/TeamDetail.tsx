@@ -21,7 +21,6 @@ export default function TeamDetail() {
   const [last, setLast] = useState("");
   const [mass, setMass] = useState("75");
   const [height, setHeight] = useState("");
-  const [position, setPosition] = useState("");
   const [, force] = useState(0);
 
   if (!team || !user) {
@@ -49,9 +48,8 @@ export default function TeamDetail() {
       lastName: last.trim(),
       mass: m,
       height: height ? parseFloat(height) : undefined,
-      position: position.trim() || undefined,
     });
-    setFirst(""); setLast(""); setMass("75"); setHeight(""); setPosition(""); setOpen(false);
+    setFirst(""); setLast(""); setMass("75"); setHeight(""); setOpen(false);
     force((n) => n + 1);
     toast.success(t("playerAdded"));
   };
@@ -102,10 +100,6 @@ export default function TeamDetail() {
                   <Input id="h" type="number" step="0.1" value={height} onChange={(e) => setHeight(e.target.value)} />
                 </div>
               </div>
-              <div>
-                <Label htmlFor="pos">{t("positionRole")}</Label>
-                <Input id="pos" value={position} onChange={(e) => setPosition(e.target.value)} placeholder={t("positionPlaceholder")} />
-              </div>
               <Button type="submit" className="w-full bg-gradient-primary text-primary-foreground font-semibold">{t("add")}</Button>
             </form>
           </DialogContent>
@@ -130,7 +124,7 @@ export default function TeamDetail() {
                   <div>
                     <div className="font-semibold">{p.firstName} {p.lastName}</div>
                     <div className="text-xs text-muted-foreground mt-0.5">
-                      {p.mass} kg{p.position ? " · " + p.position : ""}
+                      {p.mass} kg
                     </div>
                   </div>
                 </div>

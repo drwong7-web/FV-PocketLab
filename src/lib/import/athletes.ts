@@ -14,11 +14,10 @@ export interface ParsedAthlete {
   lastName: string;
   mass?: number;
   height?: number;
-  position?: string;
   birthDate?: string;
 }
 
-type Field = "lastName" | "firstName" | "mass" | "height" | "birthDate" | "bib" | "position";
+type Field = "lastName" | "firstName" | "mass" | "height" | "birthDate" | "bib";
 type Row = string[]; // cellules d'une ligne de tableau
 
 export class AthleteImportError extends Error {
@@ -443,7 +442,7 @@ const HEADER_MAP: Array<{ field: Field; re: RegExp }> = [
   { field: "height",    re: /^(taille|height|stature|cm)$/i },
   { field: "mass",      re: /^(poids|weight|masse|kg)$/i },
   { field: "bib",       re: /^(n[°ºo0\.\s]*|no\.?|num[eé]ro|dossard|#)$/i },
-  { field: "position",  re: /^(poste|position|role|r[oô]le)$/i },
+
 ];
 const TITLE_RE = /(liste\s+nominative|saison\s+sportive|pour\s+la\s+saison|équipe|equipe|club|effectif|asfar)/i;
 const DATE_RE = /\b(\d{4}-\d{2}-\d{2}|\d{1,2}[\/.\-]\d{1,2}[\/.\-]\d{2,4})\b/;
@@ -769,7 +768,6 @@ function parseWithMap(row: Row, map: Record<number, Field>): ParsedAthlete | nul
   const heightRaw = get("height");
   const massRaw = get("mass");
   const dateRaw = get("birthDate");
-  const posRaw = get("position");
   const fallback = parseHeuristic(row);
   return {
     lastName,
@@ -777,7 +775,6 @@ function parseWithMap(row: Row, map: Record<number, Field>): ParsedAthlete | nul
     height: (heightRaw ? parseHeight(heightRaw) : undefined) ?? fallback?.height,
     mass: (massRaw ? parseMass(massRaw) : undefined) ?? fallback?.mass,
     birthDate: (dateRaw ? normalizeDate(dateRaw) : undefined) ?? fallback?.birthDate,
-    position: posRaw || undefined,
   };
 }
 

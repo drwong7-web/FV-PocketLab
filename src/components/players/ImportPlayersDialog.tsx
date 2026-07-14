@@ -14,7 +14,6 @@ interface ParsedAthlete {
   lastName: string;
   mass?: number;
   height?: number;
-  position?: string;
   birthDate?: string;
 }
 
@@ -85,7 +84,6 @@ export default function ImportPlayersDialog({ teamId, organizationId, onImported
         lastName: r.lastName.trim(),
         mass: r.mass && r.mass > 0 ? r.mass : 75,
         height: r.height && r.height > 0 ? r.height : undefined,
-        position: r.position?.trim() || undefined,
         birthDate: r.birthDate?.trim() || undefined,
       });
       n++;
@@ -171,7 +169,7 @@ export default function ImportPlayersDialog({ teamId, organizationId, onImported
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
-                  <div className="grid grid-cols-3 gap-2 pl-8">
+                  <div className="grid grid-cols-2 gap-2 pl-8">
                     <div>
                       <Label className="text-xs">Masse (kg)</Label>
                       <Input
@@ -190,14 +188,6 @@ export default function ImportPlayersDialog({ teamId, organizationId, onImported
                         step="0.1"
                         value={r.height ?? ""}
                         onChange={(e) => updateRow(i, { height: e.target.value ? parseFloat(e.target.value) : undefined })}
-                        className="h-8"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs">Position</Label>
-                      <Input
-                        value={r.position ?? ""}
-                        onChange={(e) => updateRow(i, { position: e.target.value })}
                         className="h-8"
                       />
                     </div>
