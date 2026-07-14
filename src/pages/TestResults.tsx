@@ -609,7 +609,7 @@ function ReferencesCard({ kind }: { kind: "jump" | "sprint" }) {
         <CollapsibleTrigger className="w-full">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="font-display text-base flex items-center gap-2">
-              <BookOpen className="h-4 w-4 text-primary" /> Méthode et références
+              Méthode et références
             </CardTitle>
             <ChevronDown className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
@@ -678,7 +678,7 @@ function JumpReport({ test, results, chartRef }: { test: TestRecord; results: Ju
         <Metric label="hMax théo." value={(results.hMax * 100).toFixed(1)} unit="cm" />
       </div>
       <Card>
-        <CardHeader><CardTitle className="font-display text-base flex items-center gap-2"><Gauge className="h-4 w-4 text-primary"/>Profil F-V (Samozino)</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="font-display text-base flex items-center gap-2">Profil F-V (Samozino)</CardTitle></CardHeader>
         <CardContent className="space-y-2">
           <ProfileBar imbalance={results.FVimbalance} profile={results.profile} />
           <p className="text-center text-xs text-muted-foreground">
@@ -688,7 +688,7 @@ function JumpReport({ test, results, chartRef }: { test: TestRecord; results: Ju
         </CardContent>
       </Card>
       <Card>
-        <CardHeader><CardTitle className="font-display text-base flex items-center gap-2"><Activity className="h-4 w-4 text-primary"/>Représentation graphique F-V</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="font-display text-base flex items-center gap-2">Représentation graphique F-V</CardTitle></CardHeader>
         <CardContent>
           <div ref={chartRef}>
             <FVChart
@@ -1103,7 +1103,7 @@ function RecommendationCard({ reco }: { reco: ReturnType<typeof getJumpRecommend
     <Card className="border-primary/30">
       <CardHeader>
         <CardTitle className="font-display text-base flex items-center gap-2">
-          <Zap className="h-4 w-4 text-primary" />{reco.title}
+          {reco.title}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
