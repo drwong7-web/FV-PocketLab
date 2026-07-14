@@ -98,6 +98,7 @@ export default function JumpTest() {
       const results = calculateJumpProfile({ bodyMass: mass, pushOffDistance: hPO, trials: jumpsM });
       const rawData = { bodyMass: mass, pushOffDistance: hPO, trials: jumpsM };
       const athlete = players.find((p) => p.id === athleteId);
+      const athleteTeam = athlete ? teams.find((te) => te.id === athlete.teamId) : undefined;
       const local = saveLocalTest({
         type: "jump",
         test_date: new Date().toISOString(),
@@ -105,7 +106,7 @@ export default function JumpTest() {
         athlete_snapshot: {
           first_name: athlete?.firstName ?? "",
           last_name: athlete?.lastName ?? "",
-          sport: null,
+          sport: athleteTeam?.sport ?? null,
           body_mass: mass,
         },
         raw_data: rawData,

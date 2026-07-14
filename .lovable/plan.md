@@ -1,23 +1,23 @@
-## Plan
+Plan de correction :
 
-**Problème** : depuis l'ajout des profils cibles par sport, le graphique F-V du rapport saut vertical s'est encombré (zone cible rectangulaire + hyperbole iso-Pmax + double droite rouge/verte).
+1. Restaurer le comportement visuel du graphique F-V du saut vertical
+- Garder le tracé vert comme profil mesuré.
+- Garder un seul tracé rouge pointillé comme profil type de comparaison.
+- Ne pas remettre la zone cible, le marqueur cible, ni l’iso-Pmax sur le graphique du saut vertical.
 
-**Objectif** : restaurer exactement la représentation précédente (une droite bleue mesurée + une droite rouge pointillée en optimal), mais la droite rouge s'appuie désormais sur le profil type du sport choisi au lieu de l'optimal Samozino de l'athlète.
+2. Corriger la vraie cause du problème
+- Le sport de l’athlète n’est pas enregistré dans le snapshot du test : il est actuellement sauvegardé à `null` lors de la création du test.
+- Récupérer le sport depuis l’équipe de l’athlète au moment d’enregistrer un test saut vertical.
+- Appliquer la même correction au test sprint pour garder une logique cohérente.
 
-### Modification unique — `src/pages/TestResults.tsx` › `JumpReport` (lignes ~652-708)
+3. Sécuriser l’affichage des anciens tests déjà créés
+- Dans la page de résultats, si le test ancien contient `sport: null`, retrouver le joueur puis son équipe pour récupérer le sport actuel.
+- Utiliser ce sport résolu pour :
+  - le résumé de la cible sportive,
+  - le tracé rouge du graphique F-V du saut vertical,
+  - les références sportives côté sprint.
 
-Dans l'appel `<FVChart>` :
-- `optimalF0` ← `target?.F0` (sport)
-- `optimalV0` ← `target?.V0` (sport)
-- Retirer les props `targetF0`, `targetV0`, `targetF0Range`, `targetV0Range`, `targetLabel` → plus de rectangle cible.
-- Retirer la prop `Pmax` → plus d'hyperbole iso-Pmax.
-- Supprimer les variables locales `optimalV0` / `optimalF0` calculées via `results.FVoptimal` (devenues inutiles).
-
-Le résumé textuel `TargetSummary` (F0/V0/Pmax cible du sport) sous le profil Samozino reste tel quel.
-
-### Hors périmètre
-
-- `src/components/FVChart.tsx` : inchangé (encore utilisé par le rapport sprint avec ses props actuelles).
-- `SprintReport` : inchangé, la demande porte uniquement sur le saut vertical.
-- Calculs F0/V0/Pmax, `sportTargets`, moteurs : inchangés.
-- SPEC.md : pas de mise à jour (changement purement visuel d'une page).
+4. Résultat attendu
+- Sur la page résultats du test saut vertical, le graphique retrouve la même représentation qu’avant.
+- Le seul changement visible est que la ligne rouge pointillée correspond enfin au profil type du sport choisi.
+- Si aucun sport n’est disponible, aucun tracé rouge sportif n’est affiché plutôt qu’un tracé incorrect.
