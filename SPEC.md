@@ -109,6 +109,7 @@ Legacy alias: `/dashboard` → `/app`.
 - **Team** `{ id, name, organizationId, sport?, createdAt }`. `sport` is a canonical enum key from `SPORT_GROUPS` in `src/lib/sportTargets.ts` (team sports, athletics sub-disciplines, other F-V sports, or `"other"` balanced fallback). Legacy free-text values are still normalized by `getSportTargets`/`getSportLabel`.
 - **Player** `{ id, teamId, organizationId, firstName, lastName, birthDate?, mass, height?, position?, createdAt }`.
 - **TestSession** `{ id, playerId, organizationId, createdAt, notes?, conditions?, mass, inputMode: "splits"|"position_time", splits? | positionTime?, analysis: SprintAnalysis }`.
+- **Local jump/sprint tests** snapshot the athlete name, body mass and the current team sport at save time. Result pages also resolve the player/team sport as a fallback for older tests whose snapshot has `sport: null`, so sport-specific F-V targets remain available.
 - Jump results stored as a variant of TestSession (see `jumpDetection.ts` + `unifiedTests.ts`).
 
 Persistence keys: `slfv:users | slfv:orgs | slfv:teams | slfv:players | slfv:tests | slfv:session`. `uid()` uses `crypto.randomUUID`.
