@@ -198,7 +198,7 @@ export default function JumpTest() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-[1fr_1fr_auto_auto_auto] gap-2 text-xs font-medium text-muted-foreground">
+          <div className="grid grid-cols-[1fr_1fr_2.5rem_2.5rem_2.5rem] gap-2 text-xs font-medium text-muted-foreground">
             <span className="px-3">{t("loadKg")}</span>
             <span className="px-3">{t("jumpHeightCm")}</span>
             <span></span>
@@ -206,7 +206,7 @@ export default function JumpTest() {
             <span></span>
           </div>
           {trials.map((tr, i) => (
-            <div key={i} className="mt-2 grid grid-cols-[1fr_1fr_auto_auto_auto] gap-2 items-center">
+            <div key={i} className="mt-2 grid grid-cols-[1fr_1fr_2.5rem_2.5rem_2.5rem] gap-2 items-center">
               <Input type="number" step="0.5" placeholder="kg" value={tr.load || ""} onChange={(e) => updateTrial(i, "load", e.target.value)} />
               <Input type="number" step="0.1" placeholder="cm" value={tr.jumpHeight || ""} onChange={(e) => updateTrial(i, "jumpHeight", e.target.value)} />
               <Button size="icon" variant="outline" onClick={() => setAiIndex(i)} aria-label={t("aiAutoDetect")} title={t("aiAutoDetect")}>
