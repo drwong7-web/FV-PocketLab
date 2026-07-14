@@ -1082,6 +1082,7 @@ function AeroSummary({
   heightM?: number; bodyMassKg?: number;
   Vmax: number; tau: number; testDistance: number;
 }) {
+  const { t } = useSettings();
   if (tempC == null || pressureHpa == null || windMs == null || !heightM || !bodyMassKg) return null;
   const rho = airDensity(tempC, pressureHpa);
   const A = frontalArea(heightM, bodyMassKg);
@@ -1092,14 +1093,14 @@ function AeroSummary({
   const illegal = Math.abs(windMs) > 2;
   return (
     <p className="mt-2 text-[11px] italic text-muted-foreground">
-      Correction aérodynamique : ρ = <span className="font-mono not-italic">{rho.toFixed(3)} kg/m³</span>
+      {t("aeroCorrection")} : ρ = <span className="font-mono not-italic">{rho.toFixed(3)} kg/m³</span>
       {Math.abs(windMs) > 0.05 && (
         <>
-          {" · "}effet vent ({windMs > 0 ? "+" : ""}{windMs.toFixed(1)} m/s) sur {testDistance} m :{" "}
+          {" · "}{t("windEffect")} ({windMs > 0 ? "+" : ""}{windMs.toFixed(1)} m/s) · {testDistance} m :{" "}
           <span className="font-mono not-italic">{delta >= 0 ? "+" : ""}{delta.toFixed(3)} s</span>
         </>
       )}
-      {illegal && <span className="ml-1 text-amber-500 not-italic"> · vent &gt; 2 m/s (non homologable IAAF)</span>}
+      {illegal && <span className="ml-1 text-amber-500 not-italic"> · {t("illegalWindNote")}</span>}
     </p>
   );
 }
