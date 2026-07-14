@@ -133,13 +133,21 @@ Outputs → `TestSession.analysis` → `TestResults.tsx` (Recharts: distance-tim
 
 ## 7. Saut vertical — pipeline
 
-Source of truth: `src/lib/jumpDetection.ts`.
+Source of truth: `src/lib/jumpDetection.ts` (détection) + `src/lib/fvCalculations.ts` (`calculateJumpProfile`).
 
 Trials auto-populated from athlete mass: **0 %, 20 %, 50 %, 70 %** of body mass, rounded to nearest multiple of 5 kg. Height from either:
 - Manual: `CameraCalibration.tsx` (reference height, horizontal sliding markers) + `CameraDistance.tsx` (takeoff + apex, tap-to-place, hidden until touched).
 - Auto: `CameraAIJump.tsx` (MediaPipe pose → hip Y peak).
 
-FV jump profile computed and stored via `unifiedTests.ts`.
+FV jump profile (Samozino et al. 2008 / 2012), pour chaque essai i avec M = masse corporelle, Lᵢ = charge externe, hᵢ = hauteur de saut, hPO = distance de poussée, g = 9.81 :
+- `mᵢ = M + Lᵢ` ; `F̄ᵢ = mᵢ·g·(1 + hᵢ/hPO)` (N) ; `v̄ᵢ = √(g·hᵢ/2)` (m/s) ; `P̄ᵢ = F̄ᵢ·v̄ᵢ` (W).
+- Normalisation par la **masse corporelle M** : `F_rel = F̄ᵢ/M` (N/kg), `P_rel = P̄ᵢ/M` (W/kg).
+- Régression linéaire moindres carrés sur `(v̄ᵢ, F_rel,ᵢ)` → `F0` (N/kg) et pente `SFV`. Puis `V0 = −F0/SFV`, `Pmax = F0·V0/4`, `R²` reporté.
+- Pente optimale par forme fermée : avec `p = Pmax_rel`, `d = hPO`, `Δ = (pd/4)² + (gd/6)³`, `u = ∛(pd/4 + √Δ) + ∛(pd/4 − √Δ)` → `V0_opt = 2u`, `F0_opt = 2p/u`, `SFV_opt = −p/u²`, `h_opt = 2u²/g`.
+- `FVimbalance = 100·(SFV/SFV_opt − 1)` — négatif = déficit de force, positif = déficit de vitesse. Classification par bandes (95–105 % équilibré parfait, 90–110 % équilibré, sinon force/vitesse).
+
+Résultats stockés via `unifiedTests.ts`.
+
 
 ---
 
