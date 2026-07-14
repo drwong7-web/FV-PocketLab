@@ -327,6 +327,23 @@ export default function TestResults() {
     setSavedInHistory(getLocalTests().some((t) => t.id === test.id));
   }, [test]);
 
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(fvLogoAsset.url);
+        if (!res.ok) return;
+        const blob = await res.blob();
+        const reader = new FileReader();
+        reader.onload = () => {
+          if (!cancelled && typeof reader.result === "string") setLogoDataUrl(reader.result);
+        };
+        reader.readAsDataURL(blob);
+      } catch { /* ignore */ }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   const captureChartDataUrl = async (): Promise<string | undefined> => {
     if (!chartRef.current) return undefined;
     try {
