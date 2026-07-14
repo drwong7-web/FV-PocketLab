@@ -1,25 +1,28 @@
-## Problème constaté
+## Objectif
+En affichage smartphone, le titre "Jump height" du tableau des essais passe sur deux lignes. L'objectif est d'élargir légèrement les deux premières colonnes (Load / Jump height) pour que les titres restent sur une seule ligne.
 
-Dans `src/pages/JumpTest.tsx`, la ligne d'en-tête des essais (`Load (kg)` / `Jump height (cm)`) et les lignes de saisie utilisent toutes deux `grid-cols-[1fr_1fr_auto_auto_auto]`.
+## Contexte actuel
+Dans `src/pages/JumpTest.tsx`, la grille des essais utilise actuellement :
+```
+grid-cols-[1fr_1fr_2.5rem_2.5rem_2.5rem]
+```
+Les deux premières colonnes sont en `1fr` et partagent l'espace disponible. Les trois colonnes suivantes sont fixes à `2.5rem` (boutons d'action).
 
-Mais les trois colonnes `auto` de l'en-tête sont **vides** (simples `<span></span>`), tandis que dans les lignes de saisie elles contiennent des boutons d'action (icônes). En CSS Grid, une piste `auto` vide s'effondre à 0, alors que la même piste avec un bouton occupe ~2.5rem. Résultat : les deux premières pistes `1fr` n'ont pas la même largeur entre l'en-tête et les lignes, donc le titre `Load (kg)` déborde au-dessus de la zone de `Jump height (cm)`.
+## Plan
+1. **Augmenter l'espace disponible pour les deux champs**
+   - Passer les colonnes d'action de `2.5rem` à une valeur légèrement inférieure (par exemple `2.25rem`) si les icônes restent cliquables, OU
+   - Augmenter la largeur minimale des deux premières colonnes en remplaçant `1fr` par `minmax(0, 1fr)` ou en ajoutant une largeur minimale explicite.
 
-## Plan de correction
+2. **Privilégier une solution simple et robuste**
+   - Remplacer `grid-cols-[1fr_1fr_2.5rem_2.5rem_2.5rem]` par `grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_2.25rem_2.25rem_2.25rem]` pour donner un peu plus d'espace à la première colonne sans casser l'alignement avec les boutons.
+   - Alternative : réduire le `gap` de `gap-2` (0.5rem) à `gap-1` (0.25rem) pour gagner quelques pixels.
 
-1. **Unifier les largeurs de colonnes** dans `src/pages/JumpTest.tsx` :
-   - Remplacer `grid-cols-[1fr_1fr_auto_auto_auto]` par `grid-cols-[1fr_1fr_2.5rem_2.5rem_2.5rem]` à la fois sur la ligne d'en-tête et sur les lignes d'essais.
-   - `2.5rem` correspond exactement à la largeur des `<Button size="icon">` (`h-10 w-10`).
-
-2. **Conserver l'alignement du texte** :
-   - Garder `px-3` sur les `<span>` de l'en-tête pour que leur padding gauche/droit corresponde à celui des `<Input>`.
-   - Laisser les trois derniers `<span>` vides ; la grille fixe leur réservera l'espace des boutons.
-
-3. **Vérifier le rendu** :
-   - Lancer `bun run build` pour s'assurer qu'il n'y a pas d'erreur.
-   - Vérifier visuellement que les titres `Load (kg)` et `Jump height (cm)` s'alignent exactement au-dessus des cases de saisie correspondantes, sur desktop comme sur mobile.
+3. **Vérifier le rendu mobile**
+   - Tester en prévisualisation mobile (390×844) que "Jump height" et "Load" restent sur une ligne.
+   - Vérifier que les boutons d'action restent cliquables et bien alignés.
 
 ## Fichier concerné
+- `src/pages/JumpTest.tsx` (lignes 201 et 209)
 
-- `src/pages/JumpTest.tsx` (lignes ~201 et ~209)
-
-Aucun autre fichier n'est nécessaire ; c'est un ajustement de grille purement visuel.
+## Non concerné
+- Aucune modification de logique métier, de traduction, ou de calcul.
