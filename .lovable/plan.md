@@ -1,32 +1,11 @@
-## Problème
+Problème constaté : sur la page de test de saut, le titre d’en-tête « Jump height (cm) » n’est pas aligné avec les cases de saisie de la hauteur situées en dessous.
 
-Sur desktop, les champs `<Input type="number">` (masse, taille, hPO, charge kg, hauteur cm, etc.) affichent les flèches natives du navigateur (spinners) à droite, et l'utilisateur dit qu'il ne peut pas taper librement une valeur — il doit utiliser ces flèches. Sur mobile, le comportement est correct car iOS/Android n'affichent pas de spinners.
+Cause probable : la rangée d’en-têtes utilise la même grille que les rangées d’inputs (`grid-cols-[1fr_1fr_auto_auto_auto]`), mais les `<span>` d’en-tête n’ont pas le padding horizontal des `<Input>` (`px-3`). Le texte de l’en-tête démarre donc au bord gauche de la cellule, tandis que le texte dans l’input démarre 12 px plus à droite.
 
-## Solution
+Plan de correction :
 
-Masquer globalement les spinners des inputs numériques via CSS, tout en gardant `type="number"` (donc le clavier numérique sur mobile reste actif et la saisie clavier reste possible partout).
+1. Dans `src/pages/JumpTest.tsx`, ajouter `px-3` aux cinq `<span>` de la rangée d’en-tête des essais, de façon à ce que le texte de chaque en-tête démarre au même x que le texte contenu dans l’input correspondant.
+2. Conserver la grille `grid-cols-[1fr_1fr_auto_auto_auto]` déjà en place pour que les colonnes restent alignées.
+3. Vérifier visuellement en aperçu que « Jump height (cm) » est désormais aligné avec la case de saisie juste en dessous.
 
-### Fichier modifié
-
-**`src/index.css`** — ajouter une petite règle utilitaire globale :
-
-```css
-/* Hide number input spin buttons (desktop) — keep numeric keyboard on mobile */
-input[type="number"]::-webkit-outer-spin-button,
-input[type="number"]::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-input[type="number"] {
-  -moz-appearance: textfield;
-  appearance: textfield;
-}
-```
-
-Aucune modification des composants (`Input.tsx`, JumpTest, SprintTest, TeamDetail, ImportPlayersDialog, etc.) n'est nécessaire — la règle s'applique partout automatiquement.
-
-## Hors périmètre
-
-- Ne change pas la validation, ni les `step`, ni le type des champs.
-- Ne touche pas au comportement mobile (déjà correct selon l'utilisateur).
-- N'affecte aucune logique métier.
+Aucune autre page ni logique métier n’est concernée.

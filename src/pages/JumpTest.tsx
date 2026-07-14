@@ -199,11 +199,11 @@ export default function JumpTest() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-[1fr_1fr_auto_auto_auto] gap-2 text-xs font-medium text-muted-foreground">
-            <span>{t("loadKg")}</span>
-            <span>{t("jumpHeightCm")}</span>
-            <span></span>
-            <span></span>
-            <span></span>
+            <span className="px-3">{t("loadKg")}</span>
+            <span className="px-3">{t("jumpHeightCm")}</span>
+            <span className="px-3"></span>
+            <span className="px-3"></span>
+            <span className="px-3"></span>
           </div>
           {trials.map((tr, i) => (
             <div key={i} className="mt-2 grid grid-cols-[1fr_1fr_auto_auto_auto] gap-2 items-center">
