@@ -198,7 +198,7 @@ export default function JumpTest() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-[1fr_1fr_2.5rem_2.5rem_2.5rem] gap-2 text-xs font-medium text-muted-foreground">
+          <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_2.25rem_2.25rem_2.25rem] gap-1 text-xs font-medium text-muted-foreground">
             <span className="px-3">{t("loadKg")}</span>
             <span className="px-3">{t("jumpHeightCm")}</span>
             <span></span>
@@ -206,16 +206,16 @@ export default function JumpTest() {
             <span></span>
           </div>
           {trials.map((tr, i) => (
-            <div key={i} className="mt-2 grid grid-cols-[1fr_1fr_2.5rem_2.5rem_2.5rem] gap-2 items-center">
+            <div key={i} className="mt-2 grid grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_2.25rem_2.25rem_2.25rem] gap-1 items-center">
               <Input type="number" step="0.5" placeholder="kg" value={tr.load || ""} onChange={(e) => updateTrial(i, "load", e.target.value)} />
               <Input type="number" step="0.1" placeholder="cm" value={tr.jumpHeight || ""} onChange={(e) => updateTrial(i, "jumpHeight", e.target.value)} />
-              <Button size="icon" variant="outline" onClick={() => setAiIndex(i)} aria-label={t("aiAutoDetect")} title={t("aiAutoDetect")}>
+              <Button size="icon" className="h-9 w-9" variant="outline" onClick={() => setAiIndex(i)} aria-label={t("aiAutoDetect")} title={t("aiAutoDetect")}>
                 <Sparkles className="h-4 w-4 text-primary" />
               </Button>
-              <Button size="icon" variant="outline" onClick={() => setCameraIndex(i)} aria-label={t("camera")} disabled={!pxPerCm}>
+              <Button size="icon" className="h-9 w-9" variant="outline" onClick={() => setCameraIndex(i)} aria-label={t("camera")} disabled={!pxPerCm}>
                 <Camera className="h-4 w-4 text-primary" />
               </Button>
-              <Button size="icon" variant="ghost" onClick={() => setTrials(trials.filter((_, j) => j !== i))} aria-label={t("delete")}>
+              <Button size="icon" className="h-9 w-9" variant="ghost" onClick={() => setTrials(trials.filter((_, j) => j !== i))} aria-label={t("delete")}>
                 <Trash2 className="h-4 w-4 text-destructive" />
               </Button>
             </div>
