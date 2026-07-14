@@ -418,7 +418,7 @@ export default function SprintTest() {
           <div className="grid grid-cols-[1fr_1fr_70px_auto] gap-2 text-xs font-medium text-muted-foreground">
             <span>{t("distanceM")}</span>
             <span>{t("timeS")}</span>
-            <span className="text-center">{t("source")}</span>
+            <span className="text-center"></span>
             <span></span>
           </div>
           {splits.map((s, i) => (
