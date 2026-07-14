@@ -718,8 +718,9 @@ function JumpReport({ test, results, chartRef }: { test: TestRecord; results: Ju
 }
 
 function SprintReport({ test, results, chartRef }: { test: TestRecord; results: SprintResults; chartRef: React.RefObject<HTMLDivElement | null> }) {
-  const reco = getSprintRecommendations(results);
-  const interp = getSprintInterpretation(results);
+  const { t, lang } = useSettings();
+  const reco = getSprintRecommendations(results, lang);
+  const interp = getSprintInterpretation(results, lang);
   const raw = test.raw_data as {
     testDistance?: number; startType?: string; surface?: string;
     shoes?: string; shoeType?: "spikes" | "cleats" | "sprint";
@@ -744,15 +745,15 @@ function SprintReport({ test, results, chartRef }: { test: TestRecord; results: 
     deceleration: "hsl(0 70% 55%)",
   };
   const startLabels: Record<string, string> = {
-    standing: "Debout", three_point: "3 appuis", blocks: "Starting-blocks",
+    standing: t("standing"), three_point: t("threePoint"), blocks: t("blocks"),
   };
   const surfaceLabels: Record<string, string> = {
-    track: "Piste", grass: "Gazon", synthetic: "Synthétique", indoor: "Indoor",
+    track: t("track"), grass: t("grass"), synthetic: t("synthetic"), indoor: t("indoor"),
   };
   const shoeLabels: Record<string, string> = {
-    spikes: "Pointes (sprint spikes)",
-    cleats: "Crampons (foot / rugby)",
-    sprint: "Chaussures de sprint / training",
+    spikes: t("shoeSpikes"),
+    cleats: t("shoeCleats"),
+    sprint: t("shoeSprint"),
   };
   const shoeKey = raw.shoeType ?? results.shoeType;
   const fwAdj = results.footwearAdjustment;
@@ -764,33 +765,33 @@ function SprintReport({ test, results, chartRef }: { test: TestRecord; results: 
 
   return (
     <>
-      <HeaderCard test={test} label="Profil F-V — Sprint linéaire" />
+      <HeaderCard test={test} label={t("fvSprintLabel")} />
 
       <Card>
-        <CardHeader><CardTitle className="font-display text-base">Protocole & conditions</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="font-display text-base">{t("protocolConditions")}</CardTitle></CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-3">
-            <Info label="Distance" value={`${raw.testDistance ?? results.testDistance ?? "—"} m`} />
-            <Info label="Départ" value={startLabels[raw.startType ?? results.startType ?? ""] ?? "—"} />
-            <Info label="Surface" value={surfaceLabels[raw.surface ?? results.surface ?? ""] ?? "—"} />
+            <Info label={t("distance")} value={`${raw.testDistance ?? results.testDistance ?? "—"} m`} />
+            <Info label={t("start")} value={startLabels[raw.startType ?? results.startType ?? ""] ?? "—"} />
+            <Info label={t("surface")} value={surfaceLabels[raw.surface ?? results.surface ?? ""] ?? "—"} />
             <Info
-              label="Vent"
+              label={t("wind")}
               value={(() => {
                 const w = raw.windSpeed ?? 0;
-                if (Math.abs(w) < 0.05) return "Neutre";
-                return `${Math.abs(w).toFixed(1)} m/s ${w > 0 ? "propulsion" : "résistance"}`;
+                if (Math.abs(w) < 0.05) return t("neutral");
+                return `${Math.abs(w).toFixed(1)} m/s ${w > 0 ? t("propulsion") : t("resistance")}`;
               })()}
             />
-            <Info label="Température" value={`${raw.airTemperature ?? "—"} °C`} />
-            <Info label="Pression" value={`${raw.airPressure ?? "—"} hPa`} />
-            {shoeKey && <Info label="Chaussures" value={shoeLabels[shoeKey] ?? shoeKey} />}
-            {!shoeKey && raw.shoes && <Info label="Chaussures" value={raw.shoes} />}
-            {raw.videoFps && <Info label="FPS vidéo" value={String(raw.videoFps)} />}
+            <Info label={t("temp")} value={`${raw.airTemperature ?? "—"} °C`} />
+            <Info label={t("press")} value={`${raw.airPressure ?? "—"} hPa`} />
+            {shoeKey && <Info label={t("shoes")} value={shoeLabels[shoeKey] ?? shoeKey} />}
+            {!shoeKey && raw.shoes && <Info label={t("shoes")} value={raw.shoes} />}
+            {raw.videoFps && <Info label={t("videoFps")} value={String(raw.videoFps)} />}
           </div>
           {fwAdj && Math.abs(fwAdj.factor - 1) > 0.005 && (
             <p className="mt-2 text-[11px] italic text-muted-foreground">
-              Correction adhérence appliquée : {((fwAdj.factor - 1) * 100 >= 0 ? "+" : "")}
-              {((fwAdj.factor - 1) * 100).toFixed(1)} % sur les temps mesurés.
+              {t("footwearAdjLabel")} : {((fwAdj.factor - 1) * 100 >= 0 ? "+" : "")}
+              {((fwAdj.factor - 1) * 100).toFixed(1)} % {t("onMeasuredTimes")}.
             </p>
           )}
           <AeroSummary
@@ -805,11 +806,12 @@ function SprintReport({ test, results, chartRef }: { test: TestRecord; results: 
           />
           {results.aeroDefaults && (
             <p className="mt-2 text-[11px] italic text-muted-foreground">
-              Correction aérodynamique estimée avec valeurs par défaut.
+              {t("aeroDefaultsUsed")}
             </p>
           )}
         </CardContent>
       </Card>
+
 
       {quality && (
         <Card>
