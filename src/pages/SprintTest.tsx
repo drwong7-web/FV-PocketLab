@@ -426,7 +426,7 @@ export default function SprintTest() {
               <Input type="number" step="0.5" value={s.distance || ""} onChange={(e) => updateSplit(i, "distance", e.target.value)} />
               <Input type="number" step="0.01" value={s.time || ""} onChange={(e) => updateSplit(i, "time", e.target.value)} />
               <span className="text-center text-[10px] uppercase tracking-wide text-muted-foreground">
-                {s.source === "video" ? t("video") : s.source === "ai" ? t("ai") : t("manual")}
+                {s.source === "video" ? t("video") : s.source === "ai" ? t("ai") : ""}
               </span>
               <Button size="icon" variant="ghost" onClick={() => setSplits(splits.filter((_, j) => j !== i))} aria-label={t("delete")}>
                 <Trash2 className="h-4 w-4 text-destructive" />
