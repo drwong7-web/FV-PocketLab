@@ -29,6 +29,8 @@ import { getJumpTarget, getSprintTarget, getSportTargets } from "@/lib/sportTarg
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { generateDOCX, downloadBlob, fileNameFor, saveLocalExport } from "@/lib/docxExport";
+import fvLogoAsset from "@/assets/fv-logo.png.asset.json";
+import type { Lang, TKey } from "@/lib/settings";
 import { clearExportDirectory, getExportDirectoryLabel, isDirectoryPickerSupported, isInIframe, pickExportDirectory, saveBlobToTarget } from "@/lib/exportTarget";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Folder } from "lucide-react";
@@ -68,7 +70,16 @@ function resolveAthleteSnapshot(snapshot: AthleteSnapshot | null, athleteId: str
   };
 }
 
-async function generateStructuredPDF(test: TestRecord, chartDataUrl?: string): Promise<Blob> {
+type Tfn = (k: TKey) => string;
+
+async function generateStructuredPDF(
+  test: TestRecord,
+  chartDataUrl: string | undefined,
+  t: Tfn,
+  lang: Lang,
+  logoDataUrl?: string,
+): Promise<Blob> {
+  const localeFor = (l: Lang) => (l === "fr" ? "fr-FR" : l === "ar" ? "ar" : "en-US");
   const pdf = new jsPDF("p", "mm", "a4");
   const pageW = pdf.internal.pageSize.getWidth();
   const pageH = pdf.internal.pageSize.getHeight();
@@ -81,19 +92,27 @@ async function generateStructuredPDF(test: TestRecord, chartDataUrl?: string): P
 
   pdf.setFillColor(15, 23, 42);
   pdf.rect(0, 0, pageW, 28, "F");
+
+  // Logo (right side of header band)
+  if (logoDataUrl) {
+    try {
+      pdf.addImage(logoDataUrl, "PNG", pageW - margin - 20, 4, 20, 20);
+    } catch { /* ignore */ }
+  }
+
   pdf.setTextColor(132, 204, 22);
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(10);
-  pdf.text(test.type === "jump" ? "F-V PROFILE — VERTICAL JUMP" : "F-V PROFILE — LINEAR SPRINT", margin, 12);
+  pdf.text(test.type === "jump" ? t("exportBadgeJump") : t("exportBadgeSprint"), margin, 12);
   pdf.setTextColor(255, 255, 255);
   pdf.setFontSize(16);
-  const athleteName = test.athletes ? `${test.athletes.first_name} ${test.athletes.last_name}` : "Unknown athlete";
+  const athleteName = test.athletes ? `${test.athletes.first_name} ${test.athletes.last_name}` : t("unknownAthlete");
   pdf.text(athleteName, margin, 20);
   pdf.setFont("helvetica", "normal");
   pdf.setFontSize(9);
   const subline = [
     test.athletes?.sport ?? "",
-    new Date(test.test_date).toLocaleDateString(),
+    new Date(test.test_date).toLocaleDateString(localeFor(lang)),
     test.athletes?.body_mass ? `${test.athletes.body_mass} kg` : "",
   ].filter(Boolean).join(" · ");
   pdf.text(subline, margin, 25);
@@ -164,23 +183,23 @@ async function generateStructuredPDF(test: TestRecord, chartDataUrl?: string): P
   if (test.type === "jump") {
     const r = test.results as JumpResults;
     const raw = test.raw_data as { bodyMass?: number; pushOffDistance?: number; trials?: { load: number; jumpHeight: number }[] };
-    sectionTitle("Main indicators");
+    sectionTitle(t("mainIndicators"));
     drawMetricGrid([
       { label: "F0", value: r.F0.toFixed(2), unit: "N/kg" },
       { label: "V0", value: r.V0.toFixed(2), unit: "m/s" },
       { label: "Pmax", value: r.Pmax.toFixed(1), unit: "W/kg" },
-      { label: "F-V slope", value: r.slopeFV.toFixed(2), unit: "(N/kg)/(m/s)" },
-      { label: "Optimal slope", value: r.FVoptimal.toFixed(2), unit: "(N/kg)/(m/s)" },
-      { label: "FVimb", value: `${r.FVimbalance.toFixed(1)}`, unit: "% (imbalance)" },
-      { label: "R²", value: r.r2.toFixed(3), unit: "fit quality" },
-      { label: "h max", value: (r.hMax * 100).toFixed(1), unit: "cm (BW)" },
-      { label: "Profile", value: r.profile.replace("_", " "), unit: "" },
+      { label: t("fvSlope"), value: r.slopeFV.toFixed(2), unit: "(N/kg)/(m/s)" },
+      { label: t("optimalSlope"), value: r.FVoptimal.toFixed(2), unit: "(N/kg)/(m/s)" },
+      { label: "FVimb", value: `${r.FVimbalance.toFixed(1)}`, unit: t("imbalanceUnit") },
+      { label: "R²", value: r.r2.toFixed(3), unit: t("fitQualityUnit") },
+      { label: t("hMax"), value: (r.hMax * 100).toFixed(1), unit: t("cmBwUnit") },
+      { label: t("profileLabel"), value: r.profile.replace("_", " "), unit: "" },
     ]);
-    sectionTitle("Test conditions");
-    drawParagraph(`Body mass: ${raw.bodyMass ?? "—"} kg · Push-off (hPO): ${raw.pushOffDistance ?? "—"} m`);
-    sectionTitle("Trials");
+    sectionTitle(t("testConditions"));
+    drawParagraph(`${t("bodyMass")}: ${raw.bodyMass ?? "—"} kg · ${t("pushOff")}: ${raw.pushOffDistance ?? "—"} m`);
+    sectionTitle(t("trials"));
     drawTable(
-      ["#", "Add. load (kg)", "Height (cm)", "F (N/kg)", "V (m/s)"],
+      [t("colNum"), t("addLoadKg"), t("colHeightCm"), t("colForceRel"), t("colVelocityMs")],
       r.points.map((p, i) => [
         String(i + 1),
         (p.load ?? 0).toFixed(1),
@@ -192,21 +211,21 @@ async function generateStructuredPDF(test: TestRecord, chartDataUrl?: string): P
   } else {
     const r = test.results as SprintResults;
     const raw = test.raw_data as { bodyMass?: number; height?: number; splits?: { distance: number; time: number }[]; windSpeed?: number };
-    sectionTitle("Main indicators");
+    sectionTitle(t("mainIndicators"));
     drawMetricGrid([
       { label: "F0 horiz.", value: r.F0.toFixed(2), unit: "N/kg" },
       { label: "V0 / Vmax", value: r.Vmax.toFixed(2), unit: "m/s" },
       { label: "Pmax", value: r.Pmax.toFixed(1), unit: "W/kg" },
-      { label: "F-V slope", value: r.slopeFV.toFixed(2), unit: "(N/kg)/(m/s)" },
+      { label: t("fvSlope"), value: r.slopeFV.toFixed(2), unit: "(N/kg)/(m/s)" },
       { label: "RFmax", value: r.RFmax.toFixed(1), unit: "%" },
       { label: "DRF", value: r.DRF.toFixed(2), unit: "%/m·s⁻¹" },
       { label: "Tau", value: r.tau.toFixed(3), unit: "s" },
     ]);
-    sectionTitle("Test conditions");
-    drawParagraph(`Mass: ${raw.bodyMass ?? "—"} kg · Height: ${raw.height ?? "—"} m · Wind: ${raw.windSpeed ?? 0} m/s`);
-    sectionTitle("Splits");
+    sectionTitle(t("testConditions"));
+    drawParagraph(`${t("bodyMass")}: ${raw.bodyMass ?? "—"} kg · ${t("heightM")}: ${raw.height ?? "—"} m · ${t("wind")}: ${raw.windSpeed ?? 0} m/s`);
+    sectionTitle(t("splits"));
     drawTable(
-      ["Distance (m)", "Measured (s)", "Model (s)"],
+      [t("colDistanceM"), t("colMeasuredS"), t("colModelS")],
       r.splits.map((s) => [s.distance.toFixed(1), s.time.toFixed(3), ((s.distance / s.predicted) * s.time).toFixed(3)]),
     );
   }
@@ -217,32 +236,34 @@ async function generateStructuredPDF(test: TestRecord, chartDataUrl?: string): P
       const imgW = pageW - margin * 2;
       const imgH = (props.height * imgW) / props.width;
       ensureSpace(imgH + 8);
-      sectionTitle("Force-Velocity curve");
+      sectionTitle(t("fvCurveSection"));
       pdf.addImage(chartDataUrl, "PNG", margin, y, imgW, imgH);
       y += imgH + 4;
     } catch { /* */ }
   }
 
   const reco = test.type === "jump"
-    ? getJumpRecommendations((test.results as JumpResults).profile, (test.results as JumpResults).FVimbalance)
-    : getSprintRecommendations(test.results as SprintResults);
+    ? getJumpRecommendations((test.results as JumpResults).profile, (test.results as JumpResults).FVimbalance, lang)
+    : getSprintRecommendations(test.results as SprintResults, lang);
   sectionTitle(reco.title);
   drawParagraph(reco.description);
-  drawTable(["Exercise", "Sets × Reps", "Intensity"], reco.exercises.map((e) => [e.name, e.sets, e.intensity]));
+  drawTable([t("colExercise"), t("colSetsReps"), t("colIntensity")], reco.exercises.map((e) => [e.name, e.sets, e.intensity]));
 
   const pageCount = pdf.getNumberOfPages();
   for (let p = 1; p <= pageCount; p++) {
     pdf.setPage(p);
     pdf.setFont("helvetica", "normal"); pdf.setFontSize(7); pdf.setTextColor(150);
-    pdf.text(`SprintLab FV Pro · ${athleteName} · page ${p}/${pageCount}`, margin, pageH - 6);
+    pdf.text(`SprintLab FV Pro · ${athleteName} · ${t("pageLabel")} ${p}/${pageCount}`, margin, pageH - 6);
   }
   return pdf.output("blob");
 }
 
+
 export default function TestResults() {
   const { testId = "" } = useParams();
   const navigate = useNavigate();
-  const { t } = useSettings();
+  const { t, lang } = useSettings();
+  const [logoDataUrl, setLogoDataUrl] = useState<string | undefined>(undefined);
   const [test, setTest] = useState<TestRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const reportRef = useRef<HTMLDivElement>(null);
@@ -305,6 +326,23 @@ export default function TestResults() {
     if (!test) return;
     setSavedInHistory(getLocalTests().some((t) => t.id === test.id));
   }, [test]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(fvLogoAsset.url);
+        if (!res.ok) return;
+        const blob = await res.blob();
+        const reader = new FileReader();
+        reader.onload = () => {
+          if (!cancelled && typeof reader.result === "string") setLogoDataUrl(reader.result);
+        };
+        reader.readAsDataURL(blob);
+      } catch { /* ignore */ }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const captureChartDataUrl = async (): Promise<string | undefined> => {
     if (!chartRef.current) return undefined;
@@ -421,13 +459,14 @@ export default function TestResults() {
       const filename = fileNameFor(athlete, test.test_date, format);
       const chartDataUrl = await captureChartDataUrl();
       let blob: Blob;
-      if (format === "pdf") blob = await generateStructuredPDF(test, chartDataUrl);
+      if (format === "pdf") blob = await generateStructuredPDF(test, chartDataUrl, t, lang, logoDataUrl);
       else {
         const chartPng = dataUrlToBytes(chartDataUrl);
+        const logoPng = dataUrlToBytes(logoDataUrl);
         blob = await generateDOCX({
           type: test.type, test_date: test.test_date, results: test.results, raw_data: test.raw_data,
           athlete: { first_name: athlete.first_name, last_name: athlete.last_name, sport: athlete.sport, body_mass: athlete.body_mass },
-          chartPng,
+          chartPng, logoPng, t, lang,
         });
       }
       const dest = await saveBlobToTarget(blob, filename);
