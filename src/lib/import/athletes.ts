@@ -768,7 +768,6 @@ function parseWithMap(row: Row, map: Record<number, Field>): ParsedAthlete | nul
   const heightRaw = get("height");
   const massRaw = get("mass");
   const dateRaw = get("birthDate");
-  const posRaw = get("position");
   const fallback = parseHeuristic(row);
   return {
     lastName,
@@ -776,7 +775,6 @@ function parseWithMap(row: Row, map: Record<number, Field>): ParsedAthlete | nul
     height: (heightRaw ? parseHeight(heightRaw) : undefined) ?? fallback?.height,
     mass: (massRaw ? parseMass(massRaw) : undefined) ?? fallback?.mass,
     birthDate: (dateRaw ? normalizeDate(dateRaw) : undefined) ?? fallback?.birthDate,
-    position: posRaw || undefined,
   };
 }
 
