@@ -1,26 +1,32 @@
-## Objectif
-Supprimer partout dans l'app la saisie et l'affichage de la position/rôle de l'athlète.
+## Problème
 
-## Modifications
+Sur desktop, les champs `<Input type="number">` (masse, taille, hPO, charge kg, hauteur cm, etc.) affichent les flèches natives du navigateur (spinners) à droite, et l'utilisateur dit qu'il ne peut pas taper librement une valeur — il doit utiliser ces flèches. Sur mobile, le comportement est correct car iOS/Android n'affichent pas de spinners.
 
-1. **`src/pages/TeamDetail.tsx`** — formulaire d'ajout d'un joueur
-   - Retirer le state `position` / `setPosition`.
-   - Retirer le champ `<Label>Position</Label>` + `<Input>` dans le dialog.
-   - Retirer `position` de l'appel `createPlayer(...)`.
-   - Retirer `p.position` de la ligne affichée dans la liste des joueurs (garder juste `{p.mass} kg`).
+## Solution
 
-2. **`src/pages/PlayerDetail.tsx`** — en-tête athlète
-   - Retirer la portion `${player.position ? ` · ${player.position}` : ""}` du sous-titre.
+Masquer globalement les spinners des inputs numériques via CSS, tout en gardant `type="number"` (donc le clavier numérique sur mobile reste actif et la saisie clavier reste possible partout).
 
-3. **`src/components/players/ImportPlayersDialog.tsx`** — import IA
-   - Retirer la colonne "Position" du récapitulatif (passer la grille de `grid-cols-3` à `grid-cols-2` : Masse + Taille).
-   - Retirer `position` du type `ParsedAthlete`/`Row` et de l'appel `createPlayer`.
+### Fichier modifié
 
-4. **`src/lib/import/athletes.ts`** — parseur
-   - Retirer le champ `position` de l'interface exportée `ParsedAthlete`.
-   - Retirer le `Field` `"position"`, l'entrée du dictionnaire d'en-têtes (`poste|position|role`), et l'affectation `position: posRaw || undefined` dans l'objet retourné.
+**`src/index.css`** — ajouter une petite règle utilitaire globale :
 
-5. **`src/lib/types.ts`** — laisser `position?: string` sur `Player` (rétro-compat des données existantes en localStorage). Aucune migration nécessaire ; le champ devient simplement inutilisé.
+```css
+/* Hide number input spin buttons (desktop) — keep numeric keyboard on mobile */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+```
+
+Aucune modification des composants (`Input.tsx`, JumpTest, SprintTest, TeamDetail, ImportPlayersDialog, etc.) n'est nécessaire — la règle s'applique partout automatiquement.
 
 ## Hors périmètre
-- Pas de changement de `SPEC.md` structurel (retrait UI mineur). Les autres occurrences de "position" dans le code (CSS `style.position`, labels de graphes recharts, `point1Label` du calibrage caméra) ne concernent pas le rôle de l'athlète et restent intactes.
+
+- Ne change pas la validation, ni les `step`, ni le type des champs.
+- Ne touche pas au comportement mobile (déjà correct selon l'utilisateur).
+- N'affecte aucune logique métier.

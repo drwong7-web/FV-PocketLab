@@ -216,3 +216,14 @@
     saturate(1.05)
     brightness(var(--logo-brightness, 1));
 }
+
+/* Hide number input spin buttons (desktop) — keep numeric keyboard on mobile */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
