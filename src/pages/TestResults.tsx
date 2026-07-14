@@ -603,13 +603,14 @@ function ProfileBar({ imbalance, profile }: { imbalance: number; profile: string
 }
 
 function ReferencesCard({ kind }: { kind: "jump" | "sprint" }) {
+  const { t } = useSettings();
   return (
     <Collapsible>
       <Card>
         <CollapsibleTrigger className="w-full">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="font-display text-base flex items-center gap-2">
-              Méthode et références
+              {t("methodRefs")}
             </CardTitle>
             <ChevronDown className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
@@ -618,15 +619,15 @@ function ReferencesCard({ kind }: { kind: "jump" | "sprint" }) {
           <CardContent className="space-y-3 text-xs text-muted-foreground">
             {kind === "jump" ? (
               <>
-                <p><strong className="text-foreground">Méthode :</strong> sauts verticaux à charges croissantes. Pour chaque essai, F = (m+ml)·g·(h/hPO + 1) / m et V = √(g·h/2). Régression linéaire F = F0 − Sfv·V donne F0, V0, Pmax = F0·V0/4.</p>
-                <p><strong className="text-foreground">Sfv,opt :</strong> pente F-V théorique qui maximise la hauteur de saut à Pmax constant (iso-puissance). FVimb = (Sfv − Sfv,opt) / Sfv,opt × 100.</p>
-                <p><strong className="text-foreground">Références :</strong> Samozino et al. (2008, 2012, 2014); Jiménez-Reyes et al. (2017) pour l'individualisation par sport.</p>
+                <p><strong className="text-foreground">{t("methodLabel")}</strong> {t("methodJumpBody")}</p>
+                <p><strong className="text-foreground">Sfv,opt :</strong> {t("methodSfvOpt")}</p>
+                <p><strong className="text-foreground">{t("refsLabel")}</strong> {t("methodRefsJump")}</p>
               </>
             ) : (
               <>
-                <p><strong className="text-foreground">Méthode :</strong> modèle exponentiel v(t) = Vmax·(1 − e^(−t/τ)) ajusté sur les splits. Force horizontale F_h = m·a + F_aero, puis régression F-V linéaire et Pmax = F0·V0/4.</p>
-                <p><strong className="text-foreground">RFmax / DRF :</strong> ratio de force horizontale = F_h / √(F_h² + g²) × 100 ; DRF = pente de RF vs V (Morin & Samozino 2016).</p>
-                <p><strong className="text-foreground">Références :</strong> Morin & Samozino (2016); Cross et al. (2017); Jiménez-Reyes et al. (2019).</p>
+                <p><strong className="text-foreground">{t("methodLabel")}</strong> {t("methodSprintBody")}</p>
+                <p><strong className="text-foreground">RFmax / DRF :</strong> {t("methodRfDrf")}</p>
+                <p><strong className="text-foreground">{t("refsLabel")}</strong> {t("methodRefsSprint")}</p>
               </>
             )}
           </CardContent>
@@ -637,16 +638,17 @@ function ReferencesCard({ kind }: { kind: "jump" | "sprint" }) {
 }
 
 function R2Explanation({ r2 }: { r2: number }) {
+  const { t } = useSettings();
   const { text, color } =
     r2 >= 0.95
-      ? { text: "Excellent ajustement : F0, V0 et Pmax sont fiables.", color: "text-success" }
+      ? { text: t("r2Excellent"), color: "text-success" }
       : r2 >= 0.85
-      ? { text: "Ajustement correct : interpréter avec une certaine prudence.", color: "text-warning" }
-      : { text: "Ajustement faible : vérifier la qualité des essais avant d'exploiter F0/V0/Pmax.", color: "text-destructive" };
+      ? { text: t("r2Good"), color: "text-warning" }
+      : { text: t("r2Poor"), color: "text-destructive" };
   return (
     <div className="mt-1 text-center text-xs space-y-1">
       <p className="text-muted-foreground">
-        R² = coefficient de détermination : indique la fiabilité du test ( 1 = parfait ).
+        {t("r2Explanation")}
       </p>
       <p className={`font-medium ${color}`}>{text}</p>
     </div>
@@ -654,31 +656,33 @@ function R2Explanation({ r2 }: { r2: number }) {
 }
 
 function TargetSummary({ kind, sport }: { kind: "jump" | "sprint"; sport?: string | null }) {
+  const { t } = useSettings();
   const target = kind === "jump" ? getJumpTarget(sport) : getSprintTarget(sport);
   const label = getSportTargets(sport)?.label;
   if (!target || !label) return null;
   return (
     <p className="mt-2 text-center text-muted-foreground text-sm">
-      Cible {label} (Jiménez-Reyes) : F0 ≈ {target.F0} N/kg · V0 ≈ {target.V0} m/s · Pmax ≈ {target.Pmax} W/kg
+      {t("targetPrefix")} {label} {t("jumpTargetSuffix")} : F0 ≈ {target.F0} N/kg · V0 ≈ {target.V0} m/s · Pmax ≈ {target.Pmax} W/kg
     </p>
   );
 }
 
 function JumpReport({ test, results, chartRef }: { test: TestRecord; results: JumpResults; chartRef: React.RefObject<HTMLDivElement | null> }) {
-  const reco = getJumpRecommendations(results.profile, results.FVimbalance);
+  const { t, lang } = useSettings();
+  const reco = getJumpRecommendations(results.profile, results.FVimbalance, lang);
   const target = getJumpTarget(test.athletes?.sport);
 
   return (
     <>
-      <HeaderCard test={test} label="F-V profile — Vertical jump" />
+      <HeaderCard test={test} label={t("fvJumpLabel")} />
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         <Metric label="F0" value={results.F0.toFixed(2)} unit="N/kg" color="text-force" />
         <Metric label="V0" value={results.V0.toFixed(2)} unit="m/s" color="text-velocity" />
         <Metric label="Pmax" value={results.Pmax.toFixed(1)} unit="W/kg" color="text-primary" />
-        <Metric label="hMax théo." value={(results.hMax * 100).toFixed(1)} unit="cm" />
+        <Metric label={t("hMaxTheo")} value={(results.hMax * 100).toFixed(1)} unit="cm" />
       </div>
       <Card>
-        <CardHeader><CardTitle className="font-display text-base flex items-center gap-2">Profil F-V (Samozino)</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="font-display text-base flex items-center gap-2">{t("fvProfileSamozino")}</CardTitle></CardHeader>
         <CardContent className="space-y-2">
           <ProfileBar imbalance={results.FVimbalance} profile={results.profile} />
           <p className="text-center text-xs text-muted-foreground">
@@ -688,7 +692,7 @@ function JumpReport({ test, results, chartRef }: { test: TestRecord; results: Ju
         </CardContent>
       </Card>
       <Card>
-        <CardHeader><CardTitle className="font-display text-base flex items-center gap-2">Représentation graphique F-V</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="font-display text-base flex items-center gap-2">{t("fvGraph")}</CardTitle></CardHeader>
         <CardContent>
           <div ref={chartRef}>
             <FVChart
@@ -714,8 +718,9 @@ function JumpReport({ test, results, chartRef }: { test: TestRecord; results: Ju
 }
 
 function SprintReport({ test, results, chartRef }: { test: TestRecord; results: SprintResults; chartRef: React.RefObject<HTMLDivElement | null> }) {
-  const reco = getSprintRecommendations(results);
-  const interp = getSprintInterpretation(results);
+  const { t, lang } = useSettings();
+  const reco = getSprintRecommendations(results, lang);
+  const interp = getSprintInterpretation(results, lang);
   const raw = test.raw_data as {
     testDistance?: number; startType?: string; surface?: string;
     shoes?: string; shoeType?: "spikes" | "cleats" | "sprint";
@@ -740,15 +745,15 @@ function SprintReport({ test, results, chartRef }: { test: TestRecord; results: 
     deceleration: "hsl(0 70% 55%)",
   };
   const startLabels: Record<string, string> = {
-    standing: "Debout", three_point: "3 appuis", blocks: "Starting-blocks",
+    standing: t("standing"), three_point: t("threePoint"), blocks: t("blocks"),
   };
   const surfaceLabels: Record<string, string> = {
-    track: "Piste", grass: "Gazon", synthetic: "Synthétique", indoor: "Indoor",
+    track: t("track"), grass: t("grass"), synthetic: t("synthetic"), indoor: t("indoor"),
   };
   const shoeLabels: Record<string, string> = {
-    spikes: "Pointes (sprint spikes)",
-    cleats: "Crampons (foot / rugby)",
-    sprint: "Chaussures de sprint / training",
+    spikes: t("shoeSpikes"),
+    cleats: t("shoeCleats"),
+    sprint: t("shoeSprint"),
   };
   const shoeKey = raw.shoeType ?? results.shoeType;
   const fwAdj = results.footwearAdjustment;
@@ -760,33 +765,33 @@ function SprintReport({ test, results, chartRef }: { test: TestRecord; results: 
 
   return (
     <>
-      <HeaderCard test={test} label="Profil F-V — Sprint linéaire" />
+      <HeaderCard test={test} label={t("fvSprintLabel")} />
 
       <Card>
-        <CardHeader><CardTitle className="font-display text-base">Protocole & conditions</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="font-display text-base">{t("protocolConditions")}</CardTitle></CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-3">
-            <Info label="Distance" value={`${raw.testDistance ?? results.testDistance ?? "—"} m`} />
-            <Info label="Départ" value={startLabels[raw.startType ?? results.startType ?? ""] ?? "—"} />
-            <Info label="Surface" value={surfaceLabels[raw.surface ?? results.surface ?? ""] ?? "—"} />
+            <Info label={t("distance")} value={`${raw.testDistance ?? results.testDistance ?? "—"} m`} />
+            <Info label={t("start")} value={startLabels[raw.startType ?? results.startType ?? ""] ?? "—"} />
+            <Info label={t("surface")} value={surfaceLabels[raw.surface ?? results.surface ?? ""] ?? "—"} />
             <Info
-              label="Vent"
+              label={t("wind")}
               value={(() => {
                 const w = raw.windSpeed ?? 0;
-                if (Math.abs(w) < 0.05) return "Neutre";
-                return `${Math.abs(w).toFixed(1)} m/s ${w > 0 ? "propulsion" : "résistance"}`;
+                if (Math.abs(w) < 0.05) return t("neutral");
+                return `${Math.abs(w).toFixed(1)} m/s ${w > 0 ? t("propulsion") : t("resistance")}`;
               })()}
             />
-            <Info label="Température" value={`${raw.airTemperature ?? "—"} °C`} />
-            <Info label="Pression" value={`${raw.airPressure ?? "—"} hPa`} />
-            {shoeKey && <Info label="Chaussures" value={shoeLabels[shoeKey] ?? shoeKey} />}
-            {!shoeKey && raw.shoes && <Info label="Chaussures" value={raw.shoes} />}
-            {raw.videoFps && <Info label="FPS vidéo" value={String(raw.videoFps)} />}
+            <Info label={t("temp")} value={`${raw.airTemperature ?? "—"} °C`} />
+            <Info label={t("press")} value={`${raw.airPressure ?? "—"} hPa`} />
+            {shoeKey && <Info label={t("shoes")} value={shoeLabels[shoeKey] ?? shoeKey} />}
+            {!shoeKey && raw.shoes && <Info label={t("shoes")} value={raw.shoes} />}
+            {raw.videoFps && <Info label={t("videoFps")} value={String(raw.videoFps)} />}
           </div>
           {fwAdj && Math.abs(fwAdj.factor - 1) > 0.005 && (
             <p className="mt-2 text-[11px] italic text-muted-foreground">
-              Correction adhérence appliquée : {((fwAdj.factor - 1) * 100 >= 0 ? "+" : "")}
-              {((fwAdj.factor - 1) * 100).toFixed(1)} % sur les temps mesurés.
+              {t("footwearAdjLabel")} : {((fwAdj.factor - 1) * 100 >= 0 ? "+" : "")}
+              {((fwAdj.factor - 1) * 100).toFixed(1)} % {t("onMeasuredTimes")}.
             </p>
           )}
           <AeroSummary
@@ -801,17 +806,18 @@ function SprintReport({ test, results, chartRef }: { test: TestRecord; results: 
           />
           {results.aeroDefaults && (
             <p className="mt-2 text-[11px] italic text-muted-foreground">
-              Correction aérodynamique estimée avec valeurs par défaut.
+              {t("aeroDefaultsUsed")}
             </p>
           )}
         </CardContent>
       </Card>
 
+
       {quality && (
         <Card>
           <CardHeader>
             <CardTitle className="font-display text-base flex items-center justify-between">
-              <span>Score de qualité</span>
+              <span>{t("qualityScore")}</span>
               <span className={`rounded-full px-3 py-0.5 text-sm font-bold ${
                 quality.globalScore >= 80 ? "bg-success/20 text-success" :
                 quality.globalScore >= 60 ? "bg-warning/20 text-warning" :
@@ -822,17 +828,17 @@ function SprintReport({ test, results, chartRef }: { test: TestRecord; results: 
           <CardContent className="space-y-2">
             <div className="grid grid-cols-3 gap-2 text-center text-xs">
               <div className="rounded-md bg-muted/40 p-2">
-                <p className="text-[10px] uppercase text-muted-foreground">Fit modèle (R²)</p>
+                <p className="text-[10px] uppercase text-muted-foreground">{t("modelFit")}</p>
                 <p className="font-display text-base font-bold">
                   {results.modelFitScore != null ? Math.round(results.modelFitScore * 100) : quality.modelFitScore}
                 </p>
               </div>
               <div className="rounded-md bg-muted/40 p-2">
-                <p className="text-[10px] uppercase text-muted-foreground">Cohérence splits</p>
+                <p className="text-[10px] uppercase text-muted-foreground">{t("splitCoherence")}</p>
                 <p className="font-display text-base font-bold">{quality.splitCoherenceScore}</p>
               </div>
               <div className="rounded-md bg-muted/40 p-2">
-                <p className="text-[10px] uppercase text-muted-foreground">FPS vidéo</p>
+                <p className="text-[10px] uppercase text-muted-foreground">{t("videoFps")}</p>
                 <p className="font-display text-base font-bold">
                   {results.videoFps ? `${results.videoFps} (${quality.fpsScore})` : "—"}
                 </p>
@@ -864,7 +870,7 @@ function SprintReport({ test, results, chartRef }: { test: TestRecord; results: 
       {series.length > 0 && (
         <>
           <Card>
-            <CardHeader><CardTitle className="font-display text-base">Distance — temps</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="font-display text-base">{t("distanceTime")}</CardTitle></CardHeader>
             <CardContent>
               <div style={{ width: "100%", height: 200 }}>
                 <ResponsiveContainer>
@@ -885,7 +891,7 @@ function SprintReport({ test, results, chartRef }: { test: TestRecord; results: 
           </Card>
 
           <Card>
-            <CardHeader><CardTitle className="font-display text-base">Vitesse — temps (phases)</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="font-display text-base">{t("velocityTimePhases")}</CardTitle></CardHeader>
             <CardContent>
               <div style={{ width: "100%", height: 200 }}>
                 <ResponsiveContainer>
@@ -912,7 +918,7 @@ function SprintReport({ test, results, chartRef }: { test: TestRecord; results: 
           </Card>
 
           <Card>
-            <CardHeader><CardTitle className="font-display text-base">Accélération — temps</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="font-display text-base">{t("accelTime")}</CardTitle></CardHeader>
             <CardContent>
               <div style={{ width: "100%", height: 180 }}>
                 <ResponsiveContainer>
@@ -931,7 +937,7 @@ function SprintReport({ test, results, chartRef }: { test: TestRecord; results: 
       )}
 
       <Card>
-        <CardHeader><CardTitle className="font-display text-base flex items-center gap-2"><Activity className="h-4 w-4 text-primary"/>Relation Force horizontale-Vitesse</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="font-display text-base flex items-center gap-2"><Activity className="h-4 w-4 text-primary"/>{t("fvRelation")}</CardTitle></CardHeader>
         <CardContent>
           <div ref={chartRef}>
             <FVChart
@@ -960,7 +966,7 @@ function SprintReport({ test, results, chartRef }: { test: TestRecord; results: 
       {series.length > 0 && (
         <>
           <Card>
-            <CardHeader><CardTitle className="font-display text-base">Puissance — vitesse</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="font-display text-base">{t("powerVelocity")}</CardTitle></CardHeader>
             <CardContent>
               <div style={{ width: "100%", height: 200 }}>
                 <ResponsiveContainer>
@@ -978,7 +984,7 @@ function SprintReport({ test, results, chartRef }: { test: TestRecord; results: 
           </Card>
 
           <Card>
-            <CardHeader><CardTitle className="font-display text-base">RF — vitesse</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="font-display text-base">{t("rfVelocity")}</CardTitle></CardHeader>
             <CardContent>
               <div style={{ width: "100%", height: 200 }}>
                 <ResponsiveContainer>
@@ -1000,11 +1006,11 @@ function SprintReport({ test, results, chartRef }: { test: TestRecord; results: 
       )}
 
       <Card>
-        <CardHeader><CardTitle className="font-display text-base">Splits</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="font-display text-base">{t("splits")}</CardTitle></CardHeader>
         <CardContent>
           <table className="w-full text-sm">
             <thead className="text-xs text-muted-foreground">
-              <tr><th className="text-left">Distance</th><th className="text-left">Mesuré</th><th className="text-left">Modèle</th><th className="text-left">Δ</th></tr>
+              <tr><th className="text-left">{t("distance")}</th><th className="text-left">{t("measured")}</th><th className="text-left">{t("model")}</th><th className="text-left">Δ</th></tr>
             </thead>
             <tbody>
               {results.splits.map((s, i) => {
@@ -1028,7 +1034,7 @@ function SprintReport({ test, results, chartRef }: { test: TestRecord; results: 
       <Card className="border-primary/30">
         <CardHeader>
           <CardTitle className="font-display text-base flex items-center gap-2">
-            <Gauge className="h-4 w-4 text-primary" /> Interprétation — {interp.title}
+            <Gauge className="h-4 w-4 text-primary" /> {t("interpretationLabel")} — {interp.title}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -1039,19 +1045,19 @@ function SprintReport({ test, results, chartRef }: { test: TestRecord; results: 
             ))}
           </div>
           <p className="text-[11px] italic text-muted-foreground">
-            Ces résultats ne constituent pas un diagnostic médical. Ils doivent être interprétés par un professionnel
-            qualifié en tenant compte du contexte sportif, médical et de l'historique de l'athlète.
+            {t("medicalDisclaimer")}
           </p>
         </CardContent>
       </Card>
 
       {raw.notes && (
         <Card>
-          <CardHeader><CardTitle className="font-display text-base">Notes du praticien</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="font-display text-base">{t("practitionerNotes")}</CardTitle></CardHeader>
           <CardContent>
             <p className="whitespace-pre-wrap text-sm">{raw.notes}</p>
           </CardContent>
         </Card>
+
       )}
 
       <RecommendationCard reco={reco} />
@@ -1076,6 +1082,7 @@ function AeroSummary({
   heightM?: number; bodyMassKg?: number;
   Vmax: number; tau: number; testDistance: number;
 }) {
+  const { t } = useSettings();
   if (tempC == null || pressureHpa == null || windMs == null || !heightM || !bodyMassKg) return null;
   const rho = airDensity(tempC, pressureHpa);
   const A = frontalArea(heightM, bodyMassKg);
@@ -1086,14 +1093,14 @@ function AeroSummary({
   const illegal = Math.abs(windMs) > 2;
   return (
     <p className="mt-2 text-[11px] italic text-muted-foreground">
-      Correction aérodynamique : ρ = <span className="font-mono not-italic">{rho.toFixed(3)} kg/m³</span>
+      {t("aeroCorrection")} : ρ = <span className="font-mono not-italic">{rho.toFixed(3)} kg/m³</span>
       {Math.abs(windMs) > 0.05 && (
         <>
-          {" · "}effet vent ({windMs > 0 ? "+" : ""}{windMs.toFixed(1)} m/s) sur {testDistance} m :{" "}
+          {" · "}{t("windEffect")} ({windMs > 0 ? "+" : ""}{windMs.toFixed(1)} m/s) · {testDistance} m :{" "}
           <span className="font-mono not-italic">{delta >= 0 ? "+" : ""}{delta.toFixed(3)} s</span>
         </>
       )}
-      {illegal && <span className="ml-1 text-amber-500 not-italic"> · vent &gt; 2 m/s (non homologable IAAF)</span>}
+      {illegal && <span className="ml-1 text-amber-500 not-italic"> · {t("illegalWindNote")}</span>}
     </p>
   );
 }
