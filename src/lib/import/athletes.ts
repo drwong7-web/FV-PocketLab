@@ -442,7 +442,7 @@ const HEADER_MAP: Array<{ field: Field; re: RegExp }> = [
   { field: "height",    re: /^(taille|height|stature|cm)$/i },
   { field: "mass",      re: /^(poids|weight|masse|kg)$/i },
   { field: "bib",       re: /^(n[°ºo0\.\s]*|no\.?|num[eé]ro|dossard|#)$/i },
-  { field: "position",  re: /^(poste|position|role|r[oô]le)$/i },
+
 ];
 const TITLE_RE = /(liste\s+nominative|saison\s+sportive|pour\s+la\s+saison|équipe|equipe|club|effectif|asfar)/i;
 const DATE_RE = /\b(\d{4}-\d{2}-\d{2}|\d{1,2}[\/.\-]\d{1,2}[\/.\-]\d{2,4})\b/;
