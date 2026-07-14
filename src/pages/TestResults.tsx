@@ -668,20 +668,21 @@ function TargetSummary({ kind, sport }: { kind: "jump" | "sprint"; sport?: strin
 }
 
 function JumpReport({ test, results, chartRef }: { test: TestRecord; results: JumpResults; chartRef: React.RefObject<HTMLDivElement | null> }) {
-  const reco = getJumpRecommendations(results.profile, results.FVimbalance);
+  const { t, lang } = useSettings();
+  const reco = getJumpRecommendations(results.profile, results.FVimbalance, lang);
   const target = getJumpTarget(test.athletes?.sport);
 
   return (
     <>
-      <HeaderCard test={test} label="F-V profile — Vertical jump" />
+      <HeaderCard test={test} label={t("fvJumpLabel")} />
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         <Metric label="F0" value={results.F0.toFixed(2)} unit="N/kg" color="text-force" />
         <Metric label="V0" value={results.V0.toFixed(2)} unit="m/s" color="text-velocity" />
         <Metric label="Pmax" value={results.Pmax.toFixed(1)} unit="W/kg" color="text-primary" />
-        <Metric label="hMax théo." value={(results.hMax * 100).toFixed(1)} unit="cm" />
+        <Metric label={t("hMaxTheo")} value={(results.hMax * 100).toFixed(1)} unit="cm" />
       </div>
       <Card>
-        <CardHeader><CardTitle className="font-display text-base flex items-center gap-2">Profil F-V (Samozino)</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="font-display text-base flex items-center gap-2">{t("fvProfileSamozino")}</CardTitle></CardHeader>
         <CardContent className="space-y-2">
           <ProfileBar imbalance={results.FVimbalance} profile={results.profile} />
           <p className="text-center text-xs text-muted-foreground">
@@ -691,7 +692,7 @@ function JumpReport({ test, results, chartRef }: { test: TestRecord; results: Ju
         </CardContent>
       </Card>
       <Card>
-        <CardHeader><CardTitle className="font-display text-base flex items-center gap-2">Représentation graphique F-V</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="font-display text-base flex items-center gap-2">{t("fvGraph")}</CardTitle></CardHeader>
         <CardContent>
           <div ref={chartRef}>
             <FVChart
