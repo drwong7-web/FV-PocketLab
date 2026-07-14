@@ -14,11 +14,10 @@ export interface ParsedAthlete {
   lastName: string;
   mass?: number;
   height?: number;
-  position?: string;
   birthDate?: string;
 }
 
-type Field = "lastName" | "firstName" | "mass" | "height" | "birthDate" | "bib" | "position";
+type Field = "lastName" | "firstName" | "mass" | "height" | "birthDate" | "bib";
 type Row = string[]; // cellules d'une ligne de tableau
 
 export class AthleteImportError extends Error {
