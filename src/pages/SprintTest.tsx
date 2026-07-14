@@ -182,6 +182,7 @@ export default function SprintTest() {
       };
       const results = calculateSprintProfile(inputs);
       const athlete = players.find((p) => p.id === athleteId);
+      const athleteTeam = athlete ? teams.find((te) => te.id === athlete.teamId) : undefined;
       const local = saveLocalTest({
         type: "sprint",
         test_date: new Date().toISOString(),
@@ -189,7 +190,7 @@ export default function SprintTest() {
         athlete_snapshot: {
           first_name: athlete?.firstName ?? "",
           last_name: athlete?.lastName ?? "",
-          sport: null,
+          sport: athleteTeam?.sport ?? null,
           body_mass: mass,
         },
         raw_data: inputs,

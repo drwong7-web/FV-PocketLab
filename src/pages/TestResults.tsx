@@ -43,6 +43,7 @@ import {
 import {
   Collapsible, CollapsibleContent, CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { getPlayer, getTeam } from "@/lib/storage";
 
 interface TestRecord {
   id: string;
@@ -52,6 +53,19 @@ interface TestRecord {
   raw_data: Record<string, unknown>;
   athlete_id: string;
   athletes: { first_name: string; last_name: string; sport: string | null; body_mass: number | null } | null;
+}
+
+type AthleteSnapshot = NonNullable<TestRecord["athletes"]>;
+
+function resolveAthleteSnapshot(snapshot: AthleteSnapshot | null, athleteId: string): AthleteSnapshot {
+  const player = getPlayer(athleteId);
+  const team = player ? getTeam(player.teamId) : null;
+  return {
+    first_name: snapshot?.first_name || player?.firstName || "",
+    last_name: snapshot?.last_name || player?.lastName || "",
+    sport: snapshot?.sport ?? team?.sport ?? null,
+    body_mass: snapshot?.body_mass ?? player?.mass ?? null,
+  };
 }
 
 async function generateStructuredPDF(test: TestRecord, chartDataUrl?: string): Promise<Blob> {
@@ -273,6 +287,7 @@ export default function TestResults() {
   useEffect(() => {
     const local = getLocalTest(testId);
     if (local) {
+      const athletes = resolveAthleteSnapshot(local.athlete_snapshot, local.athlete_id);
       setTest({
         id: local.id,
         type: local.type,
@@ -280,7 +295,7 @@ export default function TestResults() {
         results: local.results,
         raw_data: local.raw_data,
         athlete_id: local.athlete_id,
-        athletes: local.athlete_snapshot,
+        athletes,
       });
     }
     setLoading(false);
