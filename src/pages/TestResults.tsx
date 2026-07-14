@@ -442,13 +442,14 @@ export default function TestResults() {
       const filename = fileNameFor(athlete, test.test_date, format);
       const chartDataUrl = await captureChartDataUrl();
       let blob: Blob;
-      if (format === "pdf") blob = await generateStructuredPDF(test, chartDataUrl);
+      if (format === "pdf") blob = await generateStructuredPDF(test, chartDataUrl, t, lang, logoDataUrl);
       else {
         const chartPng = dataUrlToBytes(chartDataUrl);
+        const logoPng = dataUrlToBytes(logoDataUrl);
         blob = await generateDOCX({
           type: test.type, test_date: test.test_date, results: test.results, raw_data: test.raw_data,
           athlete: { first_name: athlete.first_name, last_name: athlete.last_name, sport: athlete.sport, body_mass: athlete.body_mass },
-          chartPng,
+          chartPng, logoPng, t, lang,
         });
       }
       const dest = await saveBlobToTarget(blob, filename);
