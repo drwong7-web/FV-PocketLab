@@ -375,6 +375,9 @@ const TR = {
   colIntensity: { fr: "Intensité", en: "Intensity", ar: "الشدة" },
   pageLabel: { fr: "page", en: "page", ar: "صفحة" },
   unknownAthlete: { fr: "Athlète inconnu", en: "Unknown athlete", ar: "رياضي غير معروف" },
+  tblIndicator: { fr: "Indicateur", en: "Indicator", ar: "المؤشر" },
+  tblValue: { fr: "Valeur", en: "Value", ar: "القيمة" },
+  tblUnit: { fr: "Unité", en: "Unit", ar: "الوحدة" },
 } as const;
 
 export type TKey = keyof typeof TR;
