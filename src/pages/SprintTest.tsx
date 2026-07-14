@@ -314,7 +314,7 @@ export default function SprintTest() {
               className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
             >
               {(Object.keys(SHOE_LABELS) as ShoeType[]).map((k) => (
-                <option key={k} value={k}>{SHOE_LABELS[k]}</option>
+                <option key={k} value={k}>{t(k === "spikes" ? "shoeSpikes" : k === "cleats" ? "shoeCleats" : "shoeSprint")}</option>
               ))}
             </select>
             <p className="text-[11px] text-muted-foreground">{t("shoeCorrection")}</p>
