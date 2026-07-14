@@ -262,7 +262,8 @@ async function generateStructuredPDF(
 export default function TestResults() {
   const { testId = "" } = useParams();
   const navigate = useNavigate();
-  const { t } = useSettings();
+  const { t, lang } = useSettings();
+  const [logoDataUrl, setLogoDataUrl] = useState<string | undefined>(undefined);
   const [test, setTest] = useState<TestRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const reportRef = useRef<HTMLDivElement>(null);
