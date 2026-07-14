@@ -71,15 +71,28 @@ export default function Teams() {
               <div>
                 <Label htmlFor="tsport">{t("sport")}</Label>
                 <Select value={sport} onValueChange={setSport}>
-                  <SelectTrigger id="tsport">
+                  <SelectTrigger
+                    id="tsport"
+                    className="bg-secondary/50 border-border text-foreground focus:ring-primary focus:border-primary"
+                  >
                     <SelectValue placeholder={t("sportPlaceholder")} />
                   </SelectTrigger>
-                  <SelectContent>
-                    {SPORT_GROUPS.map((group) => (
+                  <SelectContent className="bg-popover border-border">
+                    {SPORT_GROUPS.map((group, idx) => (
                       <SelectGroup key={group.key}>
-                        <SelectLabel>{t(GROUP_LABEL_KEYS[group.key] as any)}</SelectLabel>
+                        <SelectLabel
+                          className={`text-primary font-bold text-xs uppercase tracking-wider ${
+                            idx > 0 ? "mt-1 border-t border-border/50 pt-2" : ""
+                          }`}
+                        >
+                          ▸ {t(GROUP_LABEL_KEYS[group.key] as any)}
+                        </SelectLabel>
                         {group.items.map((key) => (
-                          <SelectItem key={key} value={key}>
+                          <SelectItem
+                            key={key}
+                            value={key}
+                            className="focus:bg-primary/15 focus:text-foreground"
+                          >
                             {getSportLabel(key, t as any)}
                           </SelectItem>
                         ))}
