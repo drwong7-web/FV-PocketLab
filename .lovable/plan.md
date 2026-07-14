@@ -1,25 +1,21 @@
-## Problème
+## Problem
 
-Sur mobile, quand on tape sur un bouton (ex: les 2 boutons icônes du header), un flash **bleu ciel** apparaît. Ce n'est pas la couleur du thème mais le **highlight tactile par défaut du navigateur mobile** (`-webkit-tap-highlight-color`), qui est bleu translucide sur iOS/Android WebView, indépendamment du thème CSS.
+Dans l'étape 2 du test Sprint, le sélecteur "Type de chaussures" affiche trois options codées en dur en français (`Pointes (sprint spikes)`, `Crampons (foot / rugby)`, `Chaussures de sprint / training`). Elles proviennent de la constante `SHOE_LABELS` dans `src/lib/fvCalculations.ts` et ne passent pas par le système i18n (`t(...)` alimenté par `src/lib/settings.tsx`), donc elles ne changent pas quand on bascule en EN ou AR.
 
 ## Solution
 
-Neutraliser ce highlight globalement dans `src/index.css` afin que tous les éléments interactifs (boutons, liens, etc.) suivent uniquement les styles du thème (hover/active/focus déjà définis par shadcn + tokens HSL).
+Traduire ces trois libellés via le même mécanisme `t(key)` que le reste de la page.
 
-## Changement
+### Étapes
 
-Dans `src/index.css`, dans la couche `@layer base`, ajouter sur `html` (ou `*`) :
+1. **Ajouter 3 clés i18n** dans `src/lib/settings.tsx` (FR / EN / AR) :
+   - `shoeSpikes` → « Pointes (sprint) » / « Sprint spikes » / « أشواك العدو »
+   - `shoeCleats` → « Crampons (foot / rugby) » / « Cleats (football / rugby) » / « أحذية بمسامير (كرة قدم/ركبي) »
+   - `shoeSprint` → « Chaussures de sprint / training » / « Sprint / training shoes » / « أحذية سبرينت / تدريب »
 
-```css
-html {
-  -webkit-tap-highlight-color: transparent;
-}
-```
+2. **Modifier le rendu du `<select>`** dans `src/pages/SprintTest.tsx` (ligne 316-318) pour utiliser un mapping local `shoeType → clé i18n` au lieu de `SHOE_LABELS[k]`, afin de laisser `SHOE_LABELS` intact (encore utilisé côté calcul dans `fvCalculations.ts` pour le champ `shoeLabel` retourné).
 
-Aucune modification de composants, de tokens de couleur, ou de logique métier. Les états `hover`, `active` et `focus-visible` du thème restent intacts et continueront de rendre le retour visuel correct (variant `ghost` = `hover:bg-accent`).
+### Détails techniques
 
-## Vérification
-
-- Rebuild ok.
-- Sur viewport mobile (390×844), taper sur les 2 boutons icônes du header → plus de flash bleu, seulement le `hover:bg-accent` du thème.
-- Vérifier aussi un bouton `default` et un lien pour confirmer la cohérence globale.
+- `SHOE_LABELS` reste utilisé par `computeSprint` pour retourner `shoeLabel` dans les résultats ; on ne le touche pas pour éviter des régressions sur `TestResults`. Seul l'affichage du dropdown passe par `t()`.
+- Aucun autre appelant du dropdown ; le changement est purement UI/i18n.
