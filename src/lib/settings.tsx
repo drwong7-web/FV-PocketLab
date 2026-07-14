@@ -197,7 +197,7 @@ const TR = {
   shoeSpikes: { fr: "Pointes (sprint)", en: "Sprint spikes", ar: "أشواك العدو" },
   shoeCleats: { fr: "Crampons (foot / rugby)", en: "Cleats (football / rugby)", ar: "أحذية بمسامير (كرة قدم/ركبي)" },
   shoeSprint: { fr: "Chaussures de sprint / training", en: "Sprint / training shoes", ar: "أحذية سبرينت / تدريب" },
-  shoeCorrection: { fr: "Une correction est appliquée selon la combinaison chaussure × surface (réf. : pointes sur piste).", en: "A correction is applied per shoe × surface combination (ref: spikes on track).", ar: "يُطبَّق تصحيح حسب توليفة الحذاء × الأرضية (المرجع: مسامير على المضمار)." },
+  shoeCorrection: { fr: "Une correction est appliquée selon la combinaison chaussure × surface.", en: "A correction is applied per shoe × surface combination.", ar: "يُطبَّق تصحيح حسب توليفة الحذاء × الأرضية." },
   temperature: { fr: "Temp (°C)", en: "Temp (°C)", ar: "الحرارة (°م)" },
   pressure: { fr: "Pression (hPa)", en: "Pressure (hPa)", ar: "الضغط (hPa)" },
   windMs: { fr: "Vent (m/s)", en: "Wind (m/s)", ar: "الرياح (م/ث)" },
