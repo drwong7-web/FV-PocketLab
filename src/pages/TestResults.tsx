@@ -603,13 +603,14 @@ function ProfileBar({ imbalance, profile }: { imbalance: number; profile: string
 }
 
 function ReferencesCard({ kind }: { kind: "jump" | "sprint" }) {
+  const { t } = useSettings();
   return (
     <Collapsible>
       <Card>
         <CollapsibleTrigger className="w-full">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="font-display text-base flex items-center gap-2">
-              Méthode et références
+              {t("methodRefs")}
             </CardTitle>
             <ChevronDown className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
@@ -618,15 +619,15 @@ function ReferencesCard({ kind }: { kind: "jump" | "sprint" }) {
           <CardContent className="space-y-3 text-xs text-muted-foreground">
             {kind === "jump" ? (
               <>
-                <p><strong className="text-foreground">Méthode :</strong> sauts verticaux à charges croissantes. Pour chaque essai, F = (m+ml)·g·(h/hPO + 1) / m et V = √(g·h/2). Régression linéaire F = F0 − Sfv·V donne F0, V0, Pmax = F0·V0/4.</p>
-                <p><strong className="text-foreground">Sfv,opt :</strong> pente F-V théorique qui maximise la hauteur de saut à Pmax constant (iso-puissance). FVimb = (Sfv − Sfv,opt) / Sfv,opt × 100.</p>
-                <p><strong className="text-foreground">Références :</strong> Samozino et al. (2008, 2012, 2014); Jiménez-Reyes et al. (2017) pour l'individualisation par sport.</p>
+                <p><strong className="text-foreground">{t("methodLabel")}</strong> {t("methodJumpBody")}</p>
+                <p><strong className="text-foreground">Sfv,opt :</strong> {t("methodSfvOpt")}</p>
+                <p><strong className="text-foreground">{t("refsLabel")}</strong> {t("methodRefsJump")}</p>
               </>
             ) : (
               <>
-                <p><strong className="text-foreground">Méthode :</strong> modèle exponentiel v(t) = Vmax·(1 − e^(−t/τ)) ajusté sur les splits. Force horizontale F_h = m·a + F_aero, puis régression F-V linéaire et Pmax = F0·V0/4.</p>
-                <p><strong className="text-foreground">RFmax / DRF :</strong> ratio de force horizontale = F_h / √(F_h² + g²) × 100 ; DRF = pente de RF vs V (Morin & Samozino 2016).</p>
-                <p><strong className="text-foreground">Références :</strong> Morin & Samozino (2016); Cross et al. (2017); Jiménez-Reyes et al. (2019).</p>
+                <p><strong className="text-foreground">{t("methodLabel")}</strong> {t("methodSprintBody")}</p>
+                <p><strong className="text-foreground">RFmax / DRF :</strong> {t("methodRfDrf")}</p>
+                <p><strong className="text-foreground">{t("refsLabel")}</strong> {t("methodRefsSprint")}</p>
               </>
             )}
           </CardContent>
@@ -637,16 +638,17 @@ function ReferencesCard({ kind }: { kind: "jump" | "sprint" }) {
 }
 
 function R2Explanation({ r2 }: { r2: number }) {
+  const { t } = useSettings();
   const { text, color } =
     r2 >= 0.95
-      ? { text: "Excellent ajustement : F0, V0 et Pmax sont fiables.", color: "text-success" }
+      ? { text: t("r2Excellent"), color: "text-success" }
       : r2 >= 0.85
-      ? { text: "Ajustement correct : interpréter avec une certaine prudence.", color: "text-warning" }
-      : { text: "Ajustement faible : vérifier la qualité des essais avant d'exploiter F0/V0/Pmax.", color: "text-destructive" };
+      ? { text: t("r2Good"), color: "text-warning" }
+      : { text: t("r2Poor"), color: "text-destructive" };
   return (
     <div className="mt-1 text-center text-xs space-y-1">
       <p className="text-muted-foreground">
-        R² = coefficient de détermination : indique la fiabilité du test ( 1 = parfait ).
+        {t("r2Explanation")}
       </p>
       <p className={`font-medium ${color}`}>{text}</p>
     </div>
@@ -654,12 +656,13 @@ function R2Explanation({ r2 }: { r2: number }) {
 }
 
 function TargetSummary({ kind, sport }: { kind: "jump" | "sprint"; sport?: string | null }) {
+  const { t } = useSettings();
   const target = kind === "jump" ? getJumpTarget(sport) : getSprintTarget(sport);
   const label = getSportTargets(sport)?.label;
   if (!target || !label) return null;
   return (
     <p className="mt-2 text-center text-muted-foreground text-sm">
-      Cible {label} (Jiménez-Reyes) : F0 ≈ {target.F0} N/kg · V0 ≈ {target.V0} m/s · Pmax ≈ {target.Pmax} W/kg
+      {t("targetPrefix")} {label} {t("jumpTargetSuffix")} : F0 ≈ {target.F0} N/kg · V0 ≈ {target.V0} m/s · Pmax ≈ {target.Pmax} W/kg
     </p>
   );
 }
