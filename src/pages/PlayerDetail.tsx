@@ -40,7 +40,7 @@ export default function PlayerDetail() {
         <div className="flex-1">
           <h1 className="text-xl font-bold tracking-tight">{player.firstName} {player.lastName}</h1>
           <p className="text-xs text-muted-foreground">
-            {player.mass} kg{player.height ? ` · ${player.height} cm` : ""}{player.position ? ` · ${player.position}` : ""}
+            {player.mass} kg{player.height ? ` · ${player.height} cm` : ""}
           </p>
         </div>
         <Link to={`/app/tests/new?playerId=${player.id}`}>
