@@ -7,8 +7,25 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import { useSettings } from "@/lib/settings";
+import { SPORT_GROUPS, getSportLabel } from "@/lib/sportTargets";
+
+const GROUP_LABEL_KEYS: Record<(typeof SPORT_GROUPS)[number]["key"], string> = {
+  team: "sportGroupTeam",
+  athletics: "sportGroupAthletics",
+  other_sports: "sportGroupOther",
+  fallback: "sportGroupFallback",
+};
 
 export default function Teams() {
   const { user } = useAuth();
@@ -25,7 +42,7 @@ export default function Teams() {
   const onCreate = (e: FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
-    createTeam(user.organizationId, name.trim(), sport.trim() || undefined);
+    createTeam(user.organizationId, name.trim(), sport || undefined);
     setName(""); setSport(""); setOpen(false);
     force((n) => n + 1);
     toast.success(t("teamCreated"));
@@ -53,7 +70,23 @@ export default function Teams() {
               </div>
               <div>
                 <Label htmlFor="tsport">{t("sport")}</Label>
-                <Input id="tsport" value={sport} onChange={(e) => setSport(e.target.value)} placeholder={t("sportPlaceholder")} />
+                <Select value={sport} onValueChange={setSport}>
+                  <SelectTrigger id="tsport">
+                    <SelectValue placeholder={t("sportPlaceholder")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SPORT_GROUPS.map((group) => (
+                      <SelectGroup key={group.key}>
+                        <SelectLabel>{t(GROUP_LABEL_KEYS[group.key] as any)}</SelectLabel>
+                        {group.items.map((key) => (
+                          <SelectItem key={key} value={key}>
+                            {getSportLabel(key, t as any)}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <Button type="submit" className="w-full bg-gradient-primary text-primary-foreground font-semibold">{t("create")}</Button>
             </form>
@@ -70,6 +103,7 @@ export default function Teams() {
         <div className="space-y-3">
           {teams.map((tm) => {
             const count = allPlayers.filter((p) => p.teamId === tm.id).length;
+            const sportLabel = getSportLabel(tm.sport, t as any);
             return (
               <Link
                 key={tm.id}
@@ -79,7 +113,7 @@ export default function Teams() {
                 <div>
                   <div className="font-semibold">{tm.name}</div>
                   <div className="text-xs text-muted-foreground mt-0.5">
-                    {tm.sport ? tm.sport + " · " : ""}{count} {count === 1 ? t("player").toLowerCase() : t("players").toLowerCase()}
+                    {sportLabel ? sportLabel + " · " : ""}{count} {count === 1 ? t("player").toLowerCase() : t("players").toLowerCase()}
                   </div>
                 </div>
                 <div className="flex items-center gap-1">

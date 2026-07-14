@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import ImportPlayersDialog from "@/components/players/ImportPlayersDialog";
 import { toast } from "sonner";
 import { useSettings } from "@/lib/settings";
+import { getSportLabel } from "@/lib/sportTargets";
 
 export default function TeamDetail() {
   const { teamId = "" } = useParams();
@@ -63,7 +64,7 @@ export default function TeamDetail() {
       <div className="flex items-end justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{team.name}</h1>
-          <p className="text-sm text-muted-foreground">{team.sport ?? t("sportNotSet")}</p>
+          <p className="text-sm text-muted-foreground">{getSportLabel(team.sport, t as any) || t("sportNotSet")}</p>
         </div>
         <div className="flex items-center gap-2">
           <ImportPlayersDialog
