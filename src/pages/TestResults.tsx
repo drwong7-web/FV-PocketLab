@@ -651,11 +651,6 @@ function TargetSummary({ kind, sport }: { kind: "jump" | "sprint"; sport?: strin
 
 function JumpReport({ test, results, chartRef }: { test: TestRecord; results: JumpResults; chartRef: React.RefObject<HTMLDivElement | null> }) {
   const reco = getJumpRecommendations(results.profile, results.FVimbalance);
-  const optimalV0 = results.Pmax > 0 && results.FVoptimal < 0
-    ? Math.sqrt((-4 * results.Pmax) / results.FVoptimal)
-    : undefined;
-  const optimalF0 = optimalV0 ? (4 * results.Pmax) / optimalV0 : undefined;
-  const sportLabel = getSportTargets(test.athletes?.sport)?.label;
   const target = getJumpTarget(test.athletes?.sport);
 
   return (
@@ -685,16 +680,11 @@ function JumpReport({ test, results, chartRef }: { test: TestRecord; results: Ju
               points={results.points}
               F0={results.F0}
               V0={results.V0}
-              optimalF0={optimalF0}
-              optimalV0={optimalV0}
-              targetF0={target?.F0}
-              targetV0={target?.V0}
-              targetF0Range={target?.F0Range}
-              targetV0Range={target?.V0Range}
-              targetLabel={sportLabel}
-              Pmax={results.Pmax}
+              optimalF0={target?.F0}
+              optimalV0={target?.V0}
             />
           </div>
+
           <p className="mt-2 text-center text-muted-foreground text-sm">
             R² = {results.r2.toFixed(3)}{" "}
           </p>
