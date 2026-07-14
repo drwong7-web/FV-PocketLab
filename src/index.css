@@ -129,6 +129,8 @@
 
 @layer base {
   * { @apply border-border; }
+  html { -webkit-tap-highlight-color: transparent; }
+  button, a, [role="button"] { -webkit-tap-highlight-color: transparent; }
   html, body, #root { min-height: 100svh; }
   body {
     @apply bg-background text-foreground antialiased;
