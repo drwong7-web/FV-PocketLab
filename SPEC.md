@@ -2,7 +2,7 @@
 
 > **Living specification.** Update this file in the SAME turn as any change to architecture, routes, data model, libraries, calculation protocols, or product behavior. If a change doesn't affect any of those, no update needed. Kept so another agent (Cursor, Claude Code, Codex, etc.) can continue the work with the exact same architecture and plan.
 
-**Last updated:** 2026-07-07
+**Last updated:** 2026-07-14
 **Owner:** Lovable agent (auto-maintained)
 **Related docs:** `.lovable/plan.md` (ephemeral per-task plans), `mem://index.md` (agent memory rules)
 
@@ -106,7 +106,7 @@ Legacy alias: `/dashboard` → `/app`.
 
 - **Organization** `{ id, name }` — 1 per user account (local).
 - **User** `{ id, email, name, passwordHash, organizationId }` — prototype-only hash.
-- **Team** `{ id, name, organizationId, sport?, createdAt }`.
+- **Team** `{ id, name, organizationId, sport?, createdAt }`. `sport` is a canonical enum key from `SPORT_GROUPS` in `src/lib/sportTargets.ts` (team sports, athletics sub-disciplines, other F-V sports, or `"other"` balanced fallback). Legacy free-text values are still normalized by `getSportTargets`/`getSportLabel`.
 - **Player** `{ id, teamId, organizationId, firstName, lastName, birthDate?, mass, height?, position?, createdAt }`.
 - **TestSession** `{ id, playerId, organizationId, createdAt, notes?, conditions?, mass, inputMode: "splits"|"position_time", splits? | positionTime?, analysis: SprintAnalysis }`.
 - Jump results stored as a variant of TestSession (see `jumpDetection.ts` + `unifiedTests.ts`).
