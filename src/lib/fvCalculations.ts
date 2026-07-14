@@ -785,11 +785,17 @@ export interface Recommendation {
   exercises: { name: string; sets: string; intensity: string }[];
 }
 
-export function getJumpRecommendations(profile: JumpResults["profile"], imbalance: number): Recommendation {
+export function getJumpRecommendations(profile: JumpResults["profile"], imbalance: number, lang?: Lang): Recommendation {
+  const imb = Math.abs(imbalance).toFixed(1);
+  const imbLabel = pick(lang, { fr: "Imbalance de", en: "Imbalance of", ar: "عدم التوازن" });
   if (profile === "force_deficit") {
     return {
-      title: "Déficit de FORCE détecté",
-      description: `Imbalance de ${Math.abs(imbalance).toFixed(1)}%. Priorisez le développement de la force maximale et de la force-puissance lourde pour rééquilibrer le profil.`,
+      title: pick(lang, { fr: "Déficit de FORCE détecté", en: "FORCE deficit detected", ar: "تم اكتشاف نقص في القوة" }),
+      description: `${imbLabel} ${imb}%. ` + pick(lang, {
+        fr: "Priorisez le développement de la force maximale et de la force-puissance lourde pour rééquilibrer le profil.",
+        en: "Prioritise maximal strength and heavy force-power to rebalance the profile.",
+        ar: "أعطِ الأولوية لتطوير القوة القصوى والقوة-القدرة الثقيلة لإعادة توازن الملف.",
+      }),
       exercises: [
         { name: "Back squat lourd", sets: "4×3-5", intensity: "85-95% 1RM" },
         { name: "Front squat", sets: "4×4-6", intensity: "80-90% 1RM" },
@@ -801,8 +807,12 @@ export function getJumpRecommendations(profile: JumpResults["profile"], imbalanc
   }
   if (profile === "velocity_deficit") {
     return {
-      title: "Déficit de VITESSE détecté",
-      description: `Imbalance de ${Math.abs(imbalance).toFixed(1)}%. Priorisez la pliométrie, les mouvements explosifs et les sauts à faible charge pour développer la vitesse de contraction.`,
+      title: pick(lang, { fr: "Déficit de VITESSE détecté", en: "VELOCITY deficit detected", ar: "تم اكتشاف نقص في السرعة" }),
+      description: `${imbLabel} ${imb}%. ` + pick(lang, {
+        fr: "Priorisez la pliométrie, les mouvements explosifs et les sauts à faible charge pour développer la vitesse de contraction.",
+        en: "Prioritise plyometrics, explosive movements and light-load jumps to develop contraction velocity.",
+        ar: "أعطِ الأولوية للبلايومترية والحركات الانفجارية والقفزات بحمل خفيف لتطوير سرعة الانقباض.",
+      }),
       exercises: [
         { name: "Squat jump léger", sets: "5×5", intensity: "0-20% PC" },
         { name: "Drop jump (40-60cm)", sets: "5×5", intensity: "max intent" },
@@ -813,8 +823,12 @@ export function getJumpRecommendations(profile: JumpResults["profile"], imbalanc
     };
   }
   return {
-    title: "Profil ÉQUILIBRÉ ✓",
-    description: `Imbalance de ${Math.abs(imbalance).toFixed(1)}%. Maintenir le profil avec un travail mixte force-vitesse.`,
+    title: pick(lang, { fr: "Profil ÉQUILIBRÉ ✓", en: "BALANCED profile ✓", ar: "ملف متوازن ✓" }),
+    description: `${imbLabel} ${imb}%. ` + pick(lang, {
+      fr: "Maintenir le profil avec un travail mixte force-vitesse.",
+      en: "Maintain the profile with mixed force-velocity work.",
+      ar: "حافظ على الملف بعمل مختلط قوة-سرعة.",
+    }),
     exercises: [
       { name: "Squat 1/2 lourd", sets: "3×5", intensity: "80% 1RM" },
       { name: "Squat jump léger", sets: "3×5", intensity: "20-30% 1RM" },
@@ -824,11 +838,15 @@ export function getJumpRecommendations(profile: JumpResults["profile"], imbalanc
   };
 }
 
-export function getSprintRecommendations(results: SprintResults): Recommendation {
+export function getSprintRecommendations(results: SprintResults, lang?: Lang): Recommendation {
   if (results.RFmax < 35) {
     return {
-      title: "Déficit de FORCE HORIZONTALE",
-      description: `RFmax de ${results.RFmax.toFixed(1)}%. La capacité à produire de la force orientée horizontalement est limitée. Travail de poussée et d'orientation prioritaire.`,
+      title: pick(lang, { fr: "Déficit de FORCE HORIZONTALE", en: "HORIZONTAL FORCE deficit", ar: "نقص القوة الأفقية" }),
+      description: `RFmax ${results.RFmax.toFixed(1)}%. ` + pick(lang, {
+        fr: "La capacité à produire de la force orientée horizontalement est limitée. Travail de poussée et d'orientation prioritaire.",
+        en: "Ability to produce horizontally oriented force is limited. Push and orientation work is the priority.",
+        ar: "القدرة على إنتاج قوة أفقية محدودة. الأولوية لعمل الدفع والتوجيه.",
+      }),
       exercises: [
         { name: "Sprints en côte (10-30m)", sets: "6×30m", intensity: "max, pente 10-20%" },
         { name: "Sleds heavy push", sets: "5×20m", intensity: "75-100% PC" },
@@ -840,8 +858,12 @@ export function getSprintRecommendations(results: SprintResults): Recommendation
   }
   if (Math.abs(results.DRF) < 5) {
     return {
-      title: "Déficit de VITESSE MAX",
-      description: `Vmax de ${results.Vmax.toFixed(2)} m/s. Bonne application de force mais vitesse maximale limitante.`,
+      title: pick(lang, { fr: "Déficit de VITESSE MAX", en: "MAX VELOCITY deficit", ar: "نقص السرعة القصوى" }),
+      description: `Vmax ${results.Vmax.toFixed(2)} m/s. ` + pick(lang, {
+        fr: "Bonne application de force mais vitesse maximale limitante.",
+        en: "Good force application but maximum velocity is the limiter.",
+        ar: "تطبيق قوة جيد لكن السرعة القصوى هي المحدِّد.",
+      }),
       exercises: [
         { name: "Sprint volant 30m", sets: "5×30m", intensity: "lancé sur 20m" },
         { name: "Sprint 40-60m", sets: "5×50m", intensity: "max" },
@@ -851,7 +873,7 @@ export function getSprintRecommendations(results: SprintResults): Recommendation
     };
   }
   return {
-    title: "Profil sprint ÉQUILIBRÉ ✓",
+    title: pick(lang, { fr: "Profil sprint ÉQUILIBRÉ ✓", en: "BALANCED sprint profile ✓", ar: "ملف عدو متوازن ✓" }),
     description: `Vmax ${results.Vmax.toFixed(2)} m/s, RFmax ${results.RFmax.toFixed(1)}%, Pmax ${results.Pmax.toFixed(1)} W/kg.`,
     exercises: [
       { name: "Sprint 20-30m", sets: "6×25m", intensity: "max" },
@@ -861,3 +883,4 @@ export function getSprintRecommendations(results: SprintResults): Recommendation
     ],
   };
 }
+
