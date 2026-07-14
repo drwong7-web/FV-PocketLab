@@ -205,7 +205,7 @@ const TR = {
   tailwind: { fr: "Propulsion", en: "Tailwind", ar: "دافعة" },
   neutral: { fr: "Neutre", en: "Neutral", ar: "محايدة" },
   headwind: { fr: "Résistance", en: "Headwind", ar: "معاكسة" },
-  windHint: { fr: "Propulsion = vent qui pousse l'athlète · Résistance = vent qui freine · Neutre = aucun effet.", en: "Tailwind = wind pushes the athlete · Headwind = wind slows down · Neutral = no effect.", ar: "دافعة = رياح تدفع الرياضي · معاكسة = رياح تعيقه · محايدة = لا تأثير." },
+  windHint: { fr: "Propulsion = vent qui pousse l'athlète ·\nRésistance = vent qui freine l'athlète · ", en: "Tailwind = wind pushes the athlete ·\nHeadwind = wind slows down the athlete · ", ar: "دافعة = رياح تدفع الرياضي ·\nمعاكسة = رياح تعيق الرياضي · " },
   locate: { fr: "Localiser", en: "Locate", ar: "تحديد الموقع" },
   refresh: { fr: "Actualiser", en: "Refresh", ar: "تحديث" },
   weatherImported: { fr: "Conditions météo importées", en: "Weather imported", ar: "تم استيراد الأحوال الجوية" },
