@@ -18,19 +18,6 @@ import {
 import { toast } from "sonner";
 import { useSettings } from "@/lib/settings";
 
-function roundTo5(n: number) {
-  return Math.round(n / 5) * 5;
-}
-
-function defaultTrials(mass: number): JumpTrial[] {
-  return [
-    { load: 0, jumpHeight: 0 },
-    { load: roundTo5(mass * 0.20), jumpHeight: 0 },
-    { load: roundTo5(mass * 0.50), jumpHeight: 0 },
-    { load: roundTo5(mass * 0.70), jumpHeight: 0 },
-  ];
-}
-
 export default function JumpTest() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -76,17 +63,10 @@ export default function JumpTest() {
     const a = getPlayer(athleteId);
     if (a?.mass) {
       setBodyMass(String(a.mass));
-      setTrials(defaultTrials(a.mass));
     }
     if (a?.height) setPushOff(((a.height / 100) * 0.4).toFixed(2));
   }, [athleteId]);
 
-  useEffect(() => {
-    const mass = parseFloat(bodyMass);
-    if (!isNaN(mass) && mass > 0) {
-      setTrials(defaultTrials(mass));
-    }
-  }, [bodyMass]);
 
   useEffect(() => {
     if (!athleteId) return;
@@ -218,17 +198,13 @@ export default function JumpTest() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-[auto_1fr_1fr_auto] gap-2 text-xs font-medium text-muted-foreground">
-            <span className="w-14"></span>
+          <div className="grid grid-cols-[1fr_1fr_auto] gap-2 text-xs font-medium text-muted-foreground">
             <span>{t("loadKg")}</span>
             <span>{t("jumpHeightCm")}</span>
             <span></span>
           </div>
-          {trials.map((tr, i) => {
-            const labels = ["00 kg", "~ 20%", "~ 50%", "~ 70%"];
-            return (
-            <div key={i} className="mt-2 grid grid-cols-[auto_1fr_1fr_auto_auto_auto] gap-2 items-center">
-              <span className="w-14 text-xs font-mono text-muted-foreground">{labels[i] ?? ""}</span>
+          {trials.map((tr, i) => (
+            <div key={i} className="mt-2 grid grid-cols-[1fr_1fr_auto_auto_auto] gap-2 items-center">
               <Input type="number" step="0.5" placeholder="kg" value={tr.load || ""} onChange={(e) => updateTrial(i, "load", e.target.value)} />
               <Input type="number" step="0.1" placeholder="cm" value={tr.jumpHeight || ""} onChange={(e) => updateTrial(i, "jumpHeight", e.target.value)} />
               <Button size="icon" variant="outline" onClick={() => setAiIndex(i)} aria-label={t("aiAutoDetect")} title={t("aiAutoDetect")}>
@@ -241,7 +217,7 @@ export default function JumpTest() {
                 <Trash2 className="h-4 w-4 text-destructive" />
               </Button>
             </div>
-          );})}
+          ))}
           <p className="mt-2 text-xs text-muted-foreground">{t("aiHint")}</p>
         </CardContent>
       </Card>
