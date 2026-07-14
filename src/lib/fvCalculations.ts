@@ -51,19 +51,23 @@ export interface JumpResults {
 }
 
 export function calculateJumpProfile(inputs: JumpInputs): JumpResults {
-  const { bodyMass, pushOffDistance, trials } = inputs;
-  const valid = trials.filter((t) => t.jumpHeight > 0 && bodyMass > 0 && pushOffDistance > 0);
+  const { bodyMass: M, pushOffDistance: hPO, trials } = inputs;
+  const valid = trials.filter((t) => t.jumpHeight > 0 && M > 0 && hPO > 0);
 
-  // Samozino 2008: for an additional load ml, force per kg of TOTAL system mass is
-  //   F/m_tot = g · (h/hPO + 1)
-  // and take-off velocity is v = √(g·h/2). The F0/V0/Pmax are then expressed
-  // per kg of TOTAL system mass. We normalize back to body mass for inter-load
-  // comparison so all points lie on the SAME F-V line of the lower limbs.
+  // Samozino et al. (2008) — per-trial mechanics.
+  //   m_i    = M + L_i                        (system mass, kg)
+  //   F̄_i   = m_i · g · (1 + h_i / hPO)      (mean force, N)
+  //   v̄_i   = √(g · h_i / 2)                 (mean push-off velocity, m/s)
+  //   P̄_i   = F̄_i · v̄_i                     (mean power, W)
+  // Normalize force and power by BODY mass M (not by system mass) to build
+  // the athlete's lower-limb F–V profile:
+  //   F̄_rel,i = F̄_i / M     (N/kg)
+  //   P̄_rel,i = P̄_i / M     (W/kg)
   const points: FVPoint[] = valid.map((t) => {
-    const totalMass = bodyMass + (t.load ?? 0);
-    const ratio = totalMass / bodyMass;
-    const force = G * (t.jumpHeight / pushOffDistance + 1) * ratio;
+    const mi = M + (t.load ?? 0);
+    const Fabs = mi * G * (1 + t.jumpHeight / hPO);
     const velocity = Math.sqrt((G * t.jumpHeight) / 2);
+    const force = Fabs / M; // N/kg, relative to body mass
     return { force, velocity, load: t.load };
   });
 
@@ -72,22 +76,23 @@ export function calculateJumpProfile(inputs: JumpInputs): JumpResults {
     points.map((p) => p.force),
   );
 
-  const slopeFV = b;
-  const V0 = -F0 / slopeFV;
-  const Pmax = (F0 * V0) / 4;
+  const slopeFV = b;                     // N·s·m⁻¹·kg⁻¹
+  const V0 = -F0 / slopeFV;              // m/s
+  const Pmax = (F0 * V0) / 4;            // W/kg (relative)
 
-  const { slope: SFVopt, hMaxOpt } = computeOptimalSlope(Pmax, pushOffDistance);
-  // Signed FVimb (Samozino 2014) — sign keeps the deficit direction.
-  const FVimbalance = ((slopeFV - SFVopt) / SFVopt) * 100;
+  const { slope: SFVopt, hMaxOpt } = computeOptimalFVProfile(Pmax, hPO);
 
+  // Signed F–V imbalance (Samozino) — negative = force deficit, positive = velocity deficit.
+  const FVimbalance = (slopeFV / SFVopt - 1) * 100;
+
+  const profilePercent = (slopeFV / SFVopt) * 100;
   let profile: JumpResults["profile"];
-  const absImb = Math.abs(FVimbalance);
-  if (absImb < 5) profile = "well_balanced";
-  else if (absImb < 10) profile = "balanced";
-  else if (slopeFV < SFVopt) profile = "velocity_deficit";
+  if (profilePercent >= 95 && profilePercent <= 105) profile = "well_balanced";
+  else if (profilePercent >= 90 && profilePercent <= 110) profile = "balanced";
+  else if (profilePercent > 110) profile = "velocity_deficit";
   else profile = "force_deficit";
 
-  // Theoretical jump height from current profile (Samozino simulator):
+  // Theoretical jump height reached with the CURRENT profile (Samozino simulator):
   //   h = ((V0/2)² · (1 − g/F0)) / (2g)   with F0 in N/kg.
   const hMax = F0 > G ? ((V0 / 2) ** 2 * (1 - G / F0)) / (2 * G) : 0;
 
@@ -103,29 +108,47 @@ export function calculateJumpProfile(inputs: JumpInputs): JumpResults {
     r2,
     hMax: Math.max(0, hMax),
     hMaxOptimal: Math.max(0, hMaxOpt),
-    pushOffDistance,
+    pushOffDistance: hPO,
   };
 }
 
 /**
- * Search the optimal F-V slope that maximizes jump height for a given Pmax,
- * iso-power constraint F0·V0 = 4·Pmax (Samozino 2012).
+ * Closed-form optimal F–V profile for vertical ballistic push-off
+ * (algebraic transform of Samozino 2012 / Morin & Samozino models).
+ *
+ * With p = Pmax_rel (W/kg) and d = hPO (m):
+ *   Δ = (p·d/4)² + (g·d/6)³
+ *   u = ∛((p·d/4) + √Δ) + ∛((p·d/4) − √Δ)
+ *   V0_opt = 2u
+ *   F0_opt_rel = 2p / u
+ *   SFV_opt = −p / u²
+ *   h_opt = 2u² / g
+ *
+ * Validation (from the reference document): for Pmax_rel = 25 W/kg and
+ * hPO = 0.40 m, the formula yields u ≈ 1.3352, SFV_opt ≈ −14.023,
+ * V0_opt ≈ 2.670, F0_opt ≈ 37.448 N/kg, h_opt ≈ 0.3635 m.
  */
-function computeOptimalSlope(Pmax: number, hPO: number): { slope: number; hMaxOpt: number } {
-  void hPO;
-  let bestH = -Infinity;
-  let bestSlope = -10;
-  for (let v0 = 1; v0 <= 6; v0 += 0.005) {
-    const f0 = (4 * Pmax) / v0;
-    if (f0 <= G) continue;
-    const slope = -f0 / v0;
-    // Take-off velocity for an unloaded squat-jump (Samozino 2008).
-    const vto = (v0 / 2) * Math.sqrt(1 - G / f0);
-    if (!isFinite(vto)) continue;
-    const h = (vto * vto) / (2 * G);
-    if (h > bestH) { bestH = h; bestSlope = slope; }
+function computeOptimalFVProfile(
+  pmaxRel: number,
+  hPO: number,
+): { slope: number; hMaxOpt: number; V0opt: number; F0optRel: number } {
+  if (!(pmaxRel > 0) || !(hPO > 0)) {
+    return { slope: -1, hMaxOpt: 0, V0opt: 0, F0optRel: 0 };
   }
-  return { slope: bestSlope, hMaxOpt: Math.max(0, bestH) };
+  const p = pmaxRel;
+  const d = hPO;
+  const a = (p * d) / 4;
+  const delta = a * a + Math.pow((G * d) / 6, 3);
+  const sqrtDelta = Math.sqrt(Math.max(0, delta));
+  const u = Math.cbrt(a + sqrtDelta) + Math.cbrt(a - sqrtDelta);
+  if (!Number.isFinite(u) || u <= 0) {
+    return { slope: -1, hMaxOpt: 0, V0opt: 0, F0optRel: 0 };
+  }
+  const V0opt = 2 * u;
+  const F0optRel = (2 * p) / u;
+  const slope = -p / (u * u);
+  const hMaxOpt = (2 * u * u) / G;
+  return { slope, hMaxOpt, V0opt, F0optRel };
 }
 
 // ============================================================
