@@ -543,7 +543,7 @@ export default function TestResults() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <button onClick={goBackToTest} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary">
-          <ChevronLeft className="h-4 w-4" /> {t("backToTest")}
+          <ChevronLeft className="h-4 w-4" /> {t("back")}
         </button>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={saveToHistory} disabled={savedInHistory}>
