@@ -86,120 +86,109 @@ async function generateStructuredPDF(
   const margin = 15;
   let y = margin;
 
+  const BLUE: [number, number, number] = [31, 124, 199];
+  const GREEN: [number, number, number] = [132, 204, 22];
+  const GREY_LINE: [number, number, number] = [210, 210, 210];
+
   const ensureSpace = (h: number) => {
     if (y + h > pageH - margin) { pdf.addPage(); y = margin; }
   };
 
-  pdf.setFillColor(15, 23, 42);
-  pdf.rect(0, 0, pageW, 28, "F");
-
-  // Logo (right side of header band)
+  // ===== HEADER: logo (left) + title (blue, centered) + date (right) =====
   if (logoDataUrl) {
-    try {
-      pdf.addImage(logoDataUrl, "PNG", pageW - margin - 20, 4, 20, 20);
-    } catch { /* ignore */ }
+    try { pdf.addImage(logoDataUrl, "PNG", margin, y, 24, 24); } catch { /* */ }
   }
-
-  pdf.setTextColor(132, 204, 22);
+  const title = test.type === "jump" ? t("reportTitleJump") : t("reportTitleSprint");
   pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(10);
-  pdf.text(test.type === "jump" ? t("exportBadgeJump") : t("exportBadgeSprint"), margin, 12);
-  pdf.setTextColor(255, 255, 255);
   pdf.setFontSize(16);
-  const athleteName = test.athletes ? `${test.athletes.first_name} ${test.athletes.last_name}` : t("unknownAthlete");
-  pdf.text(athleteName, margin, 20);
-  pdf.setFont("helvetica", "normal");
-  pdf.setFontSize(9);
-  const subline = [
-    test.athletes?.sport ?? "",
-    new Date(test.test_date).toLocaleDateString(localeFor(lang)),
-    test.athletes?.body_mass ? `${test.athletes.body_mass} kg` : "",
-  ].filter(Boolean).join(" · ");
-  pdf.text(subline, margin, 25);
+  pdf.setTextColor(...BLUE);
+  pdf.text(title, pageW / 2, y + 15, { align: "center" });
+
+  pdf.setFont("helvetica", "italic");
+  pdf.setFontSize(10);
+  pdf.setTextColor(60, 60, 60);
+  const dateStr = new Date(test.test_date).toLocaleDateString(localeFor(lang));
+  pdf.text(dateStr, pageW - margin, y + 8, { align: "right" });
   pdf.setTextColor(0, 0, 0);
-  y = 36;
+  y += 30;
+
+  // ===== ATHLETE BLOCK =====
+  const athleteName = test.athletes
+    ? `${test.athletes.first_name} ${test.athletes.last_name}`.trim().toUpperCase()
+    : t("unknownAthlete");
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(13);
+  pdf.text(`${t("nameLabel")}: ${athleteName}`, margin, y);
+  y += 6;
+  pdf.setFont("helvetica", "italic");
+  pdf.setFontSize(10);
+  pdf.text(`${t("sportLabel")}: ${test.athletes?.sport ?? "—"} ·`, margin, y);
+  y += 5;
+  pdf.text(`${t("massLabelUp")}: ${test.athletes?.body_mass ?? "—"} kg`, margin, y);
+  y += 8;
+  pdf.setFont("helvetica", "normal");
 
   const sectionTitle = (title: string) => {
     ensureSpace(10);
-    pdf.setFont("helvetica", "bold"); pdf.setFontSize(11); pdf.setTextColor(15, 23, 42);
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(13);
+    pdf.setTextColor(...BLUE);
     pdf.text(title, margin, y);
-    pdf.setDrawColor(132, 204, 22); pdf.setLineWidth(0.6);
-    pdf.line(margin, y + 1.5, pageW - margin, y + 1.5);
-    y += 7; pdf.setTextColor(0, 0, 0);
-  };
-
-  const drawMetricGrid = (metrics: Array<{ label: string; value: string; unit: string }>) => {
-    const cols = 3;
-    const colW = (pageW - margin * 2) / cols;
-    const rowH = 18;
-    metrics.forEach((m, i) => {
-      const col = i % cols, row = Math.floor(i / cols);
-      if (col === 0 && row > 0) ensureSpace(rowH);
-      const x = margin + col * colW;
-      const cy = y + row * rowH;
-      pdf.setDrawColor(220); pdf.setFillColor(248, 250, 252);
-      pdf.roundedRect(x + 1, cy, colW - 2, rowH - 2, 2, 2, "FD");
-      pdf.setFont("helvetica", "normal"); pdf.setFontSize(7); pdf.setTextColor(100);
-      pdf.text(m.label.toUpperCase(), x + 3, cy + 4);
-      pdf.setFont("helvetica", "bold"); pdf.setFontSize(13); pdf.setTextColor(15, 23, 42);
-      pdf.text(m.value, x + 3, cy + 11);
-      pdf.setFont("helvetica", "normal"); pdf.setFontSize(7); pdf.setTextColor(100);
-      pdf.text(m.unit, x + 3, cy + 15);
-    });
-    const rows = Math.ceil(metrics.length / cols);
-    y += rows * rowH + 2; pdf.setTextColor(0, 0, 0);
+    y += 6;
+    pdf.setTextColor(0, 0, 0);
+    pdf.setFont("helvetica", "normal");
   };
 
   const drawTable = (headers: string[], rows: string[][]) => {
     const colW = (pageW - margin * 2) / headers.length;
     const rowH = 7;
     ensureSpace(rowH);
-    pdf.setFillColor(132, 204, 22);
+    pdf.setFillColor(...GREEN);
     pdf.rect(margin, y, pageW - margin * 2, rowH, "F");
-    pdf.setFont("helvetica", "bold"); pdf.setFontSize(9); pdf.setTextColor(15, 23, 42);
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(9);
+    pdf.setTextColor(15, 23, 42);
     headers.forEach((h, i) => pdf.text(h, margin + i * colW + 2, y + 5));
     y += rowH;
-    pdf.setFont("helvetica", "normal"); pdf.setTextColor(0, 0, 0);
-    rows.forEach((r, idx) => {
+    pdf.setFont("helvetica", "normal");
+    pdf.setTextColor(0, 0, 0);
+    pdf.setDrawColor(...GREY_LINE);
+    pdf.setLineWidth(0.1);
+    rows.forEach((r) => {
       ensureSpace(rowH);
-      if (idx % 2 === 0) { pdf.setFillColor(248, 250, 252); pdf.rect(margin, y, pageW - margin * 2, rowH, "F"); }
       r.forEach((cell, i) => pdf.text(cell, margin + i * colW + 2, y + 5));
+      pdf.line(margin, y + rowH, pageW - margin, y + rowH);
       y += rowH;
+    });
+    y += 4;
+  };
+
+  const drawParagraph = (text: string, size = 10) => {
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(size);
+    const lines = pdf.splitTextToSize(text, pageW - margin * 2);
+    lines.forEach((ln: string) => {
+      ensureSpace(size * 0.5);
+      pdf.text(ln, margin, y);
+      y += size * 0.5;
     });
     y += 2;
   };
 
-  const drawParagraph = (text: string, size = 9) => {
-    pdf.setFont("helvetica", "normal"); pdf.setFontSize(size);
-    const lines = pdf.splitTextToSize(text, pageW - margin * 2);
-    lines.forEach((ln: string) => {
-      ensureSpace(size * 0.45);
-      pdf.text(ln, margin, y);
-      y += size * 0.45;
-    });
-    y += 2;
-  };
+  const fitQualityKey = (r2: number): TKey =>
+    r2 >= 0.95 ? "fitQualityGood" : r2 >= 0.85 ? "fitQualityModerate" : "fitQualityWeak";
 
   if (test.type === "jump") {
     const r = test.results as JumpResults;
     const raw = test.raw_data as { bodyMass?: number; pushOffDistance?: number; trials?: { load: number; jumpHeight: number }[] };
-    sectionTitle(t("mainIndicators"));
-    drawMetricGrid([
-      { label: "F0", value: r.F0.toFixed(2), unit: "N/kg" },
-      { label: "V0", value: r.V0.toFixed(2), unit: "m/s" },
-      { label: "Pmax", value: r.Pmax.toFixed(1), unit: "W/kg" },
-      { label: t("fvSlope"), value: r.slopeFV.toFixed(2), unit: "(N/kg)/(m/s)" },
-      { label: t("optimalSlope"), value: r.FVoptimal.toFixed(2), unit: "(N/kg)/(m/s)" },
-      { label: "FVimb", value: `${r.FVimbalance.toFixed(1)}`, unit: t("imbalanceUnit") },
-      { label: "R²", value: r.r2.toFixed(3), unit: t("fitQualityUnit") },
-      { label: t("hMax"), value: (r.hMax * 100).toFixed(1), unit: t("cmBwUnit") },
-      { label: t("profileLabel"), value: r.profile.replace("_", " "), unit: "" },
-    ]);
+
     sectionTitle(t("testConditions"));
-    drawParagraph(`${t("bodyMass")}: ${raw.bodyMass ?? "—"} kg · ${t("pushOff")}: ${raw.pushOffDistance ?? "—"} m`);
+    drawParagraph(`${t("bodyMass")}: ${raw.bodyMass ?? "—"} kg ·`);
+    drawParagraph(`${t("pushOff")}: ${raw.pushOffDistance ?? "—"} m`);
+
     sectionTitle(t("trials"));
     drawTable(
-      [t("colNum"), t("addLoadKg"), t("colHeightCm"), t("colForceRel"), t("colVelocityMs")],
+      [t("colNum"), t("loadsKg"), t("jumpHeightCm"), t("forceNkg"), t("velocityMs")],
       r.points.map((p, i) => [
         String(i + 1),
         (p.load ?? 0).toFixed(1),
@@ -208,55 +197,104 @@ async function generateStructuredPDF(
         p.velocity.toFixed(2),
       ]),
     );
+
+    sectionTitle(t("mainIndicators"));
+    drawTable(
+      [t("tblIndicator"), t("tblValue"), t("tblUnit")],
+      [
+        ["F0", r.F0.toFixed(2), "N/kg"],
+        ["V0", r.V0.toFixed(2), "m/s"],
+        ["Pmax", r.Pmax.toFixed(1), "W/kg"],
+        [t("fvSlope"), r.slopeFV.toFixed(2), "(N/kg)/(m/s)"],
+        [t("optimalSlope"), r.FVoptimal.toFixed(2), "(N/kg)/(m/s)"],
+        ["FVimb", r.FVimbalance.toFixed(1), "%"],
+        [t("hMax"), (r.hMax * 100).toFixed(1), "cm"],
+        [t("profileLabel"), r.profile.replace("_", " "), ""],
+      ],
+    );
+
+    // R² line
+    ensureSpace(8);
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(11);
+    pdf.setTextColor(...BLUE);
+    const r2Text = `R² = ${r.r2.toFixed(3)}`;
+    pdf.text(r2Text, margin, y);
+    const r2Width = pdf.getTextWidth(r2Text);
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(10);
+    pdf.setTextColor(0, 0, 0);
+    pdf.text(t(fitQualityKey(r.r2)), margin + r2Width + 4, y);
+    y += 8;
   } else {
     const r = test.results as SprintResults;
     const raw = test.raw_data as { bodyMass?: number; height?: number; splits?: { distance: number; time: number }[]; windSpeed?: number };
-    sectionTitle(t("mainIndicators"));
-    drawMetricGrid([
-      { label: "F0 horiz.", value: r.F0.toFixed(2), unit: "N/kg" },
-      { label: "V0 / Vmax", value: r.Vmax.toFixed(2), unit: "m/s" },
-      { label: "Pmax", value: r.Pmax.toFixed(1), unit: "W/kg" },
-      { label: t("fvSlope"), value: r.slopeFV.toFixed(2), unit: "(N/kg)/(m/s)" },
-      { label: "RFmax", value: r.RFmax.toFixed(1), unit: "%" },
-      { label: "DRF", value: r.DRF.toFixed(2), unit: "%/m·s⁻¹" },
-      { label: "Tau", value: r.tau.toFixed(3), unit: "s" },
-    ]);
+
     sectionTitle(t("testConditions"));
-    drawParagraph(`${t("bodyMass")}: ${raw.bodyMass ?? "—"} kg · ${t("heightM")}: ${raw.height ?? "—"} m · ${t("wind")}: ${raw.windSpeed ?? 0} m/s`);
+    drawParagraph(`${t("bodyMass")}: ${raw.bodyMass ?? "—"} kg ·`);
+    drawParagraph(`${t("heightM")}: ${raw.height ?? "—"} m ·`);
+    drawParagraph(`${t("wind")}: ${raw.windSpeed ?? 0} m/s`);
+
     sectionTitle(t("splits"));
     drawTable(
       [t("colDistanceM"), t("colMeasuredS"), t("colModelS")],
       r.splits.map((s) => [s.distance.toFixed(1), s.time.toFixed(3), ((s.distance / s.predicted) * s.time).toFixed(3)]),
     );
+
+    sectionTitle(t("mainIndicators"));
+    drawTable(
+      [t("tblIndicator"), t("tblValue"), t("tblUnit")],
+      [
+        ["F0 horiz.", r.F0.toFixed(2), "N/kg"],
+        ["V0 / Vmax", r.Vmax.toFixed(2), "m/s"],
+        ["Pmax", r.Pmax.toFixed(1), "W/kg"],
+        [t("fvSlope"), r.slopeFV.toFixed(2), "(N/kg)/(m/s)"],
+        ["RFmax", r.RFmax.toFixed(1), "%"],
+        ["DRF", r.DRF.toFixed(2), "%/m·s⁻¹"],
+        ["Tau", r.tau.toFixed(3), "s"],
+      ],
+    );
   }
 
+  // FV curve on new page
   if (chartDataUrl) {
     try {
+      pdf.addPage();
+      y = margin;
+      sectionTitle(t("fvCurveSection"));
       const props = pdf.getImageProperties(chartDataUrl);
       const imgW = pageW - margin * 2;
       const imgH = (props.height * imgW) / props.width;
-      ensureSpace(imgH + 8);
-      sectionTitle(t("fvCurveSection"));
       pdf.addImage(chartDataUrl, "PNG", margin, y, imgW, imgH);
-      y += imgH + 4;
+      y += imgH + 6;
     } catch { /* */ }
   }
 
+  // Interpretation
   const reco = test.type === "jump"
     ? getJumpRecommendations((test.results as JumpResults).profile, (test.results as JumpResults).FVimbalance, lang)
     : getSprintRecommendations(test.results as SprintResults, lang);
-  sectionTitle(reco.title);
-  drawParagraph(reco.description);
-  drawTable([t("colExercise"), t("colSetsReps"), t("colIntensity")], reco.exercises.map((e) => [e.name, e.sets, e.intensity]));
 
-  const pageCount = pdf.getNumberOfPages();
-  for (let p = 1; p <= pageCount; p++) {
-    pdf.setPage(p);
-    pdf.setFont("helvetica", "normal"); pdf.setFontSize(7); pdf.setTextColor(150);
-    pdf.text(`SprintLab FV Pro · ${athleteName} · ${t("pageLabel")} ${p}/${pageCount}`, margin, pageH - 6);
-  }
+  ensureSpace(10);
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(13);
+  pdf.setTextColor(...BLUE);
+  const prefix = `${t("interpretationPrefix")} `;
+  pdf.text(prefix, margin, y);
+  const prefixWidth = pdf.getTextWidth(prefix);
+  pdf.setTextColor(0, 0, 0);
+  pdf.text(reco.title, margin + prefixWidth, y);
+  y += 7;
+
+  drawParagraph(reco.description);
+  drawTable(
+    [t("colExercise"), t("colSetsReps"), t("colIntensity")],
+    reco.exercises.map((e) => [e.name, e.sets, e.intensity]),
+  );
+
   return pdf.output("blob");
 }
+
 
 
 export default function TestResults() {
