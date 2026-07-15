@@ -383,19 +383,13 @@ const TR = {
   nameLabel: { fr: "NOM", en: "NAME", ar: "الاسم" },
   sportLabel: { fr: "SPORT", en: "SPORT", ar: "الرياضة" },
   massLabelUp: { fr: "MASSE", en: "MASS", ar: "الكتلة" },
-  trials: { fr: "Essais", en: "Trials", ar: "المحاولات" },
-  splits: { fr: "Splits", en: "Splits", ar: "التوقيتات" },
   loadsKg: { fr: "Charges (kg)", en: "Loads (kg)", ar: "الأحمال (كغ)" },
-  jumpHeightCm: { fr: "Hauteur de saut (cm)", en: "Jump Height (cm)", ar: "ارتفاع القفزة (سم)" },
   forceNkg: { fr: "Force (N/kg)", en: "Force (N/kg)", ar: "القوة (ن/كغ)" },
   velocityMs: { fr: "Vitesse (m/s)", en: "Velocity (m/s)", ar: "السرعة (م/ث)" },
   fitQualityWeak: { fr: "Ajustement faible : vérifier la qualité des essais avant de se fier à F0/V0/Pmax.", en: "Weak fit: check trial quality before relying on F0/V0/Pmax.", ar: "ملاءمة ضعيفة: تحقق من جودة المحاولات قبل الاعتماد على F0/V0/Pmax." },
   fitQualityModerate: { fr: "Ajustement modéré : F0/V0/Pmax utilisables avec précaution.", en: "Moderate fit: F0/V0/Pmax usable with caution.", ar: "ملاءمة متوسطة: يمكن استخدام F0/V0/Pmax بحذر." },
   fitQualityGood: { fr: "Bon ajustement : F0/V0/Pmax fiables.", en: "Good fit: F0/V0/Pmax are reliable.", ar: "ملاءمة جيدة: قيم F0/V0/Pmax موثوقة." },
   interpretationPrefix: { fr: "INTERPRÉTATION :", en: "INTERPRETATION:", ar: "التفسير:" },
-  bodyMass: { fr: "Masse corporelle", en: "Body mass", ar: "كتلة الجسم" },
-  heightM: { fr: "Taille", en: "Height", ar: "الطول" },
-  wind: { fr: "Vent", en: "Wind", ar: "الرياح" },
 } as const;
 
 export type TKey = keyof typeof TR;
