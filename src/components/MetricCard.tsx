@@ -23,22 +23,22 @@ export function MetricCard({ label, value, unit, hint, accent = "primary", icon,
   return (
     <div
       className={cn(
-        "engraved-surface relative overflow-hidden rounded-2xl border bg-gradient-to-br p-4",
+        "engraved-surface relative overflow-hidden rounded-2xl border bg-gradient-to-br p-5 transition-colors hover:border-primary/40",
         accentStyles[accent],
         className
       )}
     >
-      <div className="flex items-start justify-between">
-        <span className="engraved text-[11px] font-semibold uppercase tracking-widest">
+      <div className="flex items-start justify-between gap-2">
+        <span className="engraved text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
           {label}
         </span>
-        {icon && <div className="engraved opacity-70">{icon}</div>}
+        {icon && <div className="engraved opacity-70 [&_svg]:h-4 [&_svg]:w-4">{icon}</div>}
       </div>
-      <div className="mt-2 flex items-baseline gap-1">
-        <span className="engraved metric-value">{value}</span>
-        {unit && <span className="engraved text-sm font-medium">{unit}</span>}
+      <div className="mt-3 flex items-baseline gap-1.5">
+        <span className="engraved metric-value mono-num">{value}</span>
+        {unit && <span className="engraved text-sm font-medium text-muted-foreground">{unit}</span>}
       </div>
-      {hint && <div className="engraved mt-1 text-xs">{hint}</div>}
+      {hint && <div className="engraved mt-1.5 text-xs text-muted-foreground">{hint}</div>}
     </div>
   );
 }
