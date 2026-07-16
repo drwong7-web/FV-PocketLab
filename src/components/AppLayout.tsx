@@ -97,24 +97,28 @@ export default function AppLayout() {
 
   return (
     <div className="min-h-svh flex flex-col">
-      <header className="sticky top-0 z-30 border-b border-border bg-background/80 backdrop-blur-xl">
+      <header className="sticky top-0 z-30 border-b border-border/60 bg-background/80 backdrop-blur-xl">
         <div className="container flex items-center justify-between h-14 max-w-5xl">
-          <Link to="/app" className="flex items-center gap-2">
-            <img src={fvLogo.url} alt="FV logo" className="w-8 h-8 object-contain" />
+          <Link to="/app" className="group flex items-center gap-2.5">
+            <img
+              src={fvLogo.url}
+              alt="FV logo"
+              className="engraved-logo w-7 h-7 object-contain transition-transform duration-300 group-hover:scale-105"
+            />
             <div className="leading-tight">
-              <div className="font-bold text-sm tracking-tight">PocketLab</div>
-              <div className="text-[10px] uppercase tracking-widest text-muted-foreground -mt-0.5">{"\n"}</div>
+              <div className="font-display text-sm tracking-tight">PocketLab</div>
+              <div className="text-[9px] uppercase tracking-[0.2em] text-muted-foreground -mt-0.5">F–V Profile</div>
             </div>
           </Link>
           <div className="flex items-center gap-1">
-            <span className="text-xs text-muted-foreground hidden sm:block mr-1">{user?.name}</span>
+            <span className="text-xs text-muted-foreground hidden sm:block mr-2">{user?.name}</span>
             <Button
               variant="ghost"
               size="icon"
               onClick={() => setSettingsOpen(true)}
               aria-label={t("settings")}
             >
-              <SettingsIcon className="w-4 h-4" />
+              <SettingsIcon className="h-[18px] w-[18px]" strokeWidth={1.75} />
             </Button>
             <Button
               variant="ghost"
@@ -122,7 +126,7 @@ export default function AppLayout() {
               onClick={() => signOut()}
               aria-label={t("logout")}
             >
-              <LogOut className="w-4 h-4" />
+              <LogOut className="h-[18px] w-[18px]" strokeWidth={1.75} />
             </Button>
           </div>
         </div>
