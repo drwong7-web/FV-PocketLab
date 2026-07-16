@@ -143,8 +143,20 @@
 @layer components {
   .glass-card {
     background: var(--gradient-surface);
-    @apply border border-border rounded-2xl;
+    @apply border border-border/60 rounded-2xl;
     box-shadow: var(--shadow-card);
+  }
+  .section-label {
+    @apply text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground;
+  }
+  .page-title {
+    @apply text-2xl font-display tracking-tight;
+  }
+  .page-subtitle {
+    @apply text-sm text-muted-foreground mt-1;
+  }
+  .lucide {
+    stroke-width: 1.75;
   }
   .metric-value {
     @apply text-3xl font-bold tracking-tight;
