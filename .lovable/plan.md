@@ -1,49 +1,31 @@
+## Constat
+En thème clair, les 2 logos ne se comportent pas pareil :
+- **Vertical Jump** = néon vert pur avec halo blanc/clair → se dilue sur fond clair, semble flou/pâle.
+- **Linear Sprint** = trait crayon gris + accents verts → reste lisible et net sur fond clair.
 
-## Contexte
-Le déséquilibre vient du PNG **Vertical Jump** : néon vert avec halo blanc/clair qui se dilue sur fond clair. Le PNG **Linear Sprint** est un trait crayon gris + accents verts, qui tient sur les 2 thèmes. Sans médaillon sombre, il faut soit **normaliser les PNG**, soit **appliquer un traitement CSS unifiant** au rendu.
+Le déséquilibre vient des PNG eux-mêmes (styles graphiques différents), pas des filtres CSS. En thème sombre les deux marchent car le halo clair du jump ressort sur fond noir.
 
-## Alternatives (sans médaillon)
+## Solution
+Donner à **chaque conteneur logo** (sur les 2 cartes de `NewTest.tsx`) un **médaillon interne sombre** — un petit fond arrondi contrasté à l'intérieur de la carte — pour que les 2 logos soient toujours vus sur le même fond, indépendamment du thème global.
 
-### Option A — Regénérer le logo Jump dans le même style que Sprint (recommandée)
-Refaire `src/assets/logo-jump-neon.png` en style **trait crayon gris + accents lime**, cohérent avec `logo-sprint-neon.png`. Les 2 logos deviennent visuellement une paire, pas besoin de fond spécial, ils rendent identiquement en light et dark.
+Effet : en light theme, la carte reste claire mais l'aire du logo passe sur un fond sombre discret → les 2 logos rendent de façon identique et nette.
 
-- Portée : 1 fichier image régénéré via `imagegen--edit_image` (référence = sprint logo).
-- Effets de bord : le logo Jump change AUSSI dans le header, `JumpTest.tsx`, et les rapports PDF/DOCX. À valider avec toi.
+### Changements
 
-### Option B — Silhouette monochrome via CSS mask (uniforme, thémé)
-Utiliser les PNG comme **masque alpha** et remplir avec `currentColor` / une couleur sémantique. Les deux logos deviennent des silhouettes de la même couleur (ex. `text-primary` ou `text-foreground`), quel que soit leur PNG source.
+1. **`src/pages/NewTest.tsx`** (cartes jump + sprint uniquement)
+   - Envelopper l'`<img>` dans un médaillon : `rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 ring-1 ring-primary/20 shadow-inner p-2` (via tokens sémantiques, pas de couleurs hardcodées — j'utiliserai `bg-foreground/90` ou un nouveau token `--logo-well`).
+   - Ajouter un token CSS `--logo-well` dans `src/index.css` : sombre en light ET en dark, pour un rendu constant.
 
-- Changements : `NewTest.tsx` remplace `<img>` par un `<div>` avec `mask-image: url(...)`, `background-color: hsl(var(--primary))`.
-- Résultat : rendu strictement identique en light et dark, mais on **perd les nuances internes** des logos (ils deviennent des aplats de couleur).
-- Portée : uniquement les 2 cartes de `/app/tests/new`.
+2. **`src/index.css`**
+   - Ajouter classe utilitaire `.logo-well` avec ce fond sombre unifié + ring subtil primary + `overflow-hidden`.
+   - Ajuster `.engraved-logo` pour retirer le drop-shadow "haut sombre" quand posé sur un fond déjà sombre (garder juste un léger glow néon).
 
-### Option C — Normalisation CSS agressive (garde les PNG tels quels)
-Appliquer aux 2 logos un pipeline de filtres qui écrase leurs différences :
-```
-filter: grayscale(1) contrast(1.4) brightness(0.9);
-```
-puis un léger `drop-shadow` néon primary. Les deux deviennent gris + halo lime discret.
+### Alternative (rejetée)
+Régénérer le PNG jump dans le style crayon/gris du sprint — plus lourd, casse l'identité néon actuelle sur toutes les autres pages (header, JumpTest, exports Word/PDF).
 
-- Portée : classe `.logo-normalized` dans `src/index.css`, appliquée aux 2 `<img>` de `NewTest.tsx`.
-- Simple, aucune régénération, aucun changement de layout.
-- Limite : le vert vif du Jump disparaît totalement (devient gris).
+## Portée
+- Uniquement les 2 cartes de `/app/tests/new`.
+- Les logos sur `JumpTest.tsx`, `SprintTest.tsx`, header et rapports exportés restent inchangés.
 
-### Option D — Cadre clair avec liseré primary (l'inverse du médaillon)
-Poser les 2 logos sur un **médaillon clair** unifié (`bg-background` + `ring-primary/30`) au lieu de sombre. Sur thème dark ça crée une "vignette lumineuse", sur thème light ça se fond dans la carte. Rend le Jump lisible car son halo blanc n'a plus à lutter contre le fond.
-
-- Similaire au médaillon sombre mais inversé — même quantité de travail.
-
-## Comparatif rapide
-
-| Option | Fidélité au néon | Effort | Effets ailleurs |
-|---|---|---|---|
-| A — Régénérer Jump | Perdu (nouveau style) | Moyen | Oui, partout |
-| B — Mask silhouette | Perdu (aplat) | Faible | Non, isolé |
-| C — Filtre grayscale | Vert perdu | Très faible | Non, isolé |
-| D — Médaillon clair | Conservé | Faible | Non, isolé |
-
-## Recommandation
-**Option A** si tu veux une vraie cohérence de marque (les 2 cartes forment une paire graphique).
-**Option B** si tu veux la solution la plus propre techniquement sans toucher aux assets.
-
-Dis-moi laquelle tu retiens (ou si on garde finalement le médaillon sombre) et je l'implémente.
+## Vérification
+Playwright screenshot `/app/tests/new` en dark **et** light, confirmation visuelle que les 2 logos ont le même rendu et la même lisibilité.
