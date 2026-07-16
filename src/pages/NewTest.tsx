@@ -36,7 +36,7 @@ export default function NewTest() {
       <div className="grid gap-4 sm:grid-cols-2">
         <Link to={`/app/tests/new/jump${qs}`} className="glass-card engraved-surface overflow-hidden group hover:border-primary/40 transition-colors bg-gradient-to-br from-primary/10 to-transparent">
           <div className="p-4 flex items-center gap-4">
-            <div className="logo-well flex-shrink-0 flex items-center justify-center h-28 w-28 p-2">
+            <div className="flex-shrink-0 flex items-center justify-center h-28 w-28">
               <img src={logoJump} alt={t("verticalJump")} loading="eager" decoding="async" fetchPriority="high" className="engraved-logo h-full w-full object-contain" />
             </div>
 
