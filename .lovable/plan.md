@@ -1,61 +1,27 @@
-# UI Polish Pass — Refine Current Direction
+## Objectif
+Rendre les logos "Vertical Jump" et "Linear Sprint" sur la page **Nouveau test** plus nets, avec moins de halo/flou, tout en gardant l'esprit néon gravé.
 
-Goal: sharpen what's already there. Same electric-lime dark cockpit aesthetic, more consistent and considered. No new visual language.
+## Diagnostic
+Le flou vient principalement de la classe `.engraved-logo` dans `src/index.css` (lignes 209-223), qui empile 3 `drop-shadow` — dont un glow de 12px — appliqués aux logos des cartes dans `src/pages/NewTest.tsx`. La classe `.logo-themed` ajoute aussi une saturation/hue-rotate qui peut adoucir les bords.
 
-## 1. Icons (Lucide) — consistency
+## Changements
 
-- Standardize sizes: `h-4 w-4` inline, `h-5 w-5` in buttons, `h-6 w-6` in section headers/nav. Ban ad-hoc `h-3.5`, `h-7`.
-- Uniform `strokeWidth={1.75}` for a lighter, modern feel (vs default 2).
-- Color: always `text-muted-foreground` at rest, `text-primary` on active/hover — never hardcoded colors.
-- Wrap common icon usages (nav item, metric badge, section title) in small helper classes so they can't drift.
-- Sweep: `NavLink`, `AppLayout`, `TestResults`, `NewTest`, `JumpTest`, `SprintTest`, `TestList`, `Teams`, dialogs.
+### 1. `src/index.css` — resserrer l'effet gravé
+- `.engraved-logo` (dark) : remplacer le glow 12px par un glow 4-6px plus discret, garder les 2 drop-shadow d'edge à 1px (haut sombre / bas néon) pour l'effet debossé net.
+- `.light .engraved-logo` : réduire pareillement le glow (10px → 4px) et remonter légèrement l'opacité à 1.
+- Ajouter `image-rendering: -webkit-optimize-contrast` sur `.engraved-logo` pour un rendu plus piqué sur écrans HiDPI.
 
-## 2. Logo treatment
+### 2. `src/pages/NewTest.tsx` — agrandir la zone d'affichage
+- Passer le conteneur logo de `h-28 w-28` à un carré un peu plus grand ou garder la taille mais s'assurer que l'image utilise `h-full w-full object-contain` (le PNG source est déjà HD, donc afficher moins petit = moins de "bavure" perçue).
+- Retirer `logo-themed` sur ces 2 cartes (le hue-rotate + saturation adoucit les bords des PNG néon) — ils gardent `engraved-logo` seul.
 
-- Single source: `src/assets/fv-logo.png` referenced consistently.
-- Header/nav: smaller (28px), engraved-logo effect kept, tighter alignment with app title, subtle primary glow on hover only.
-- Auth / landing: larger (72px) with existing glow.
-- Report exports (PDF/DOCX): already implemented — verify sizing (70px) and left-align against blue title.
-- Favicon: keep as-is (already branded).
+### 3. Portée
+Uniquement la page `/app/tests/new` (cartes Vertical Jump + Linear Sprint). Les logos ailleurs (`JumpTest.tsx`, `SprintTest.tsx`, header) restent inchangés — leur `h-14 w-14` sans `engraved-logo` est déjà net.
 
-## 3. Buttons & cards
+## Hors périmètre
+- Aucune régénération des assets PNG.
+- Aucun changement de tokens de couleur, de layout, ou de logique.
+- Pas de touche au thème clair global — seulement le tuning du filtre `.light .engraved-logo`.
 
-- Buttons:
-  - Unify height to `h-10` (default) / `h-9` (sm) / `h-11` (lg).
-  - Consistent radius `rounded-xl` (matches `--radius`).
-  - Icon-left spacing: `gap-2`, icon `h-4 w-4`.
-  - Primary: subtle `shadow-glow` on hover, not always-on.
-  - Ghost/outline hover uses `bg-secondary/60` instead of full `bg-secondary`.
-- Cards (`glass-card` + shadcn `Card`):
-  - Consistent inner padding `p-5` (was mixed p-4/p-6).
-  - Border `border-border/60` for softer edges.
-  - Metric cards: tabular nums, label uppercase tracking-wide muted, value `metric-value`, delta chip with subtle bg.
-  - Active/selected state: 1px primary ring instead of thick border.
-
-## 4. Typography & hierarchy
-
-- Page title: `text-2xl font-display` + short muted subtitle underneath — apply uniformly across pages that currently mix h1/h2 sizes.
-- Section headings inside pages: `text-sm font-semibold uppercase tracking-wide text-muted-foreground`.
-- Numbers everywhere: `.mono-num` (already defined) on all metric values, table cells with numbers, times, forces.
-- Body: keep Inter, add `text-[15px] leading-relaxed` for long-form paragraphs (recommendations, interpretations).
-- RTL check: keep AR alignment correct after spacing changes.
-
-## Files to touch
-
-- `src/index.css` — small additions: `.icon-nav`, `.icon-inline`, `.section-label`, tweak `glass-card` padding var.
-- `src/components/AppLayout.tsx`, `src/components/NavLink.tsx` — nav icon/logo sizing + hover.
-- `src/components/MetricCard.tsx` — final metric card spec.
-- `src/pages/*.tsx` — apply page title pattern, section labels, icon sizes, button variants. No logic changes.
-- `src/components/ui/button.tsx` — verify variant heights/radius match spec (small tweak only if needed).
-
-## Out of scope
-
-- No changes to color tokens, gradient palette, or dark/light theme values.
-- No changes to F-V calculations, report content, routing, data model, or SPEC-tracked behavior.
-- No new dependencies.
-
-## Verification
-
-- Visual: Playwright screenshots of Dashboard, NewTest, JumpTest, SprintTest, TestResults, TestList, Teams — before/after in FR + AR (RTL sanity).
-- Build passes; no TS errors.
-- SPEC.md: no update needed (pure UI/presentation).
+## Vérification
+Playwright screenshot de `/app/tests/new` en dark + light pour confirmer que les logos apparaissent plus piqués et sans halo diffus.
