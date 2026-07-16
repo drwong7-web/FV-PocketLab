@@ -355,10 +355,10 @@ export default function AppLayout() {
                     />
                   )}
                   <Icon
-                    strokeWidth={2.5}
+                    strokeWidth={2}
                     className={cn(
-                      "w-5 h-5 transition-all duration-300",
-                      isActive && "scale-125 drop-shadow-[0_3px_6px_hsl(var(--primary)/0.6)]"
+                      "h-[22px] w-[22px] transition-all duration-300",
+                      isActive && "scale-110 drop-shadow-[0_3px_6px_hsl(var(--primary)/0.6)]"
                     )}
                   />
                   {t(labelKey)}
