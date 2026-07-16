@@ -1,27 +1,31 @@
-## Objectif
-Rendre les logos "Vertical Jump" et "Linear Sprint" sur la page **Nouveau test** plus nets, avec moins de halo/flou, tout en gardant l'esprit néon gravé.
+## Constat
+En thème clair, les 2 logos ne se comportent pas pareil :
+- **Vertical Jump** = néon vert pur avec halo blanc/clair → se dilue sur fond clair, semble flou/pâle.
+- **Linear Sprint** = trait crayon gris + accents verts → reste lisible et net sur fond clair.
 
-## Diagnostic
-Le flou vient principalement de la classe `.engraved-logo` dans `src/index.css` (lignes 209-223), qui empile 3 `drop-shadow` — dont un glow de 12px — appliqués aux logos des cartes dans `src/pages/NewTest.tsx`. La classe `.logo-themed` ajoute aussi une saturation/hue-rotate qui peut adoucir les bords.
+Le déséquilibre vient des PNG eux-mêmes (styles graphiques différents), pas des filtres CSS. En thème sombre les deux marchent car le halo clair du jump ressort sur fond noir.
 
-## Changements
+## Solution
+Donner à **chaque conteneur logo** (sur les 2 cartes de `NewTest.tsx`) un **médaillon interne sombre** — un petit fond arrondi contrasté à l'intérieur de la carte — pour que les 2 logos soient toujours vus sur le même fond, indépendamment du thème global.
 
-### 1. `src/index.css` — resserrer l'effet gravé
-- `.engraved-logo` (dark) : remplacer le glow 12px par un glow 4-6px plus discret, garder les 2 drop-shadow d'edge à 1px (haut sombre / bas néon) pour l'effet debossé net.
-- `.light .engraved-logo` : réduire pareillement le glow (10px → 4px) et remonter légèrement l'opacité à 1.
-- Ajouter `image-rendering: -webkit-optimize-contrast` sur `.engraved-logo` pour un rendu plus piqué sur écrans HiDPI.
+Effet : en light theme, la carte reste claire mais l'aire du logo passe sur un fond sombre discret → les 2 logos rendent de façon identique et nette.
 
-### 2. `src/pages/NewTest.tsx` — agrandir la zone d'affichage
-- Passer le conteneur logo de `h-28 w-28` à un carré un peu plus grand ou garder la taille mais s'assurer que l'image utilise `h-full w-full object-contain` (le PNG source est déjà HD, donc afficher moins petit = moins de "bavure" perçue).
-- Retirer `logo-themed` sur ces 2 cartes (le hue-rotate + saturation adoucit les bords des PNG néon) — ils gardent `engraved-logo` seul.
+### Changements
 
-### 3. Portée
-Uniquement la page `/app/tests/new` (cartes Vertical Jump + Linear Sprint). Les logos ailleurs (`JumpTest.tsx`, `SprintTest.tsx`, header) restent inchangés — leur `h-14 w-14` sans `engraved-logo` est déjà net.
+1. **`src/pages/NewTest.tsx`** (cartes jump + sprint uniquement)
+   - Envelopper l'`<img>` dans un médaillon : `rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 ring-1 ring-primary/20 shadow-inner p-2` (via tokens sémantiques, pas de couleurs hardcodées — j'utiliserai `bg-foreground/90` ou un nouveau token `--logo-well`).
+   - Ajouter un token CSS `--logo-well` dans `src/index.css` : sombre en light ET en dark, pour un rendu constant.
 
-## Hors périmètre
-- Aucune régénération des assets PNG.
-- Aucun changement de tokens de couleur, de layout, ou de logique.
-- Pas de touche au thème clair global — seulement le tuning du filtre `.light .engraved-logo`.
+2. **`src/index.css`**
+   - Ajouter classe utilitaire `.logo-well` avec ce fond sombre unifié + ring subtil primary + `overflow-hidden`.
+   - Ajuster `.engraved-logo` pour retirer le drop-shadow "haut sombre" quand posé sur un fond déjà sombre (garder juste un léger glow néon).
+
+### Alternative (rejetée)
+Régénérer le PNG jump dans le style crayon/gris du sprint — plus lourd, casse l'identité néon actuelle sur toutes les autres pages (header, JumpTest, exports Word/PDF).
+
+## Portée
+- Uniquement les 2 cartes de `/app/tests/new`.
+- Les logos sur `JumpTest.tsx`, `SprintTest.tsx`, header et rapports exportés restent inchangés.
 
 ## Vérification
-Playwright screenshot de `/app/tests/new` en dark + light pour confirmer que les logos apparaissent plus piqués et sans halo diffus.
+Playwright screenshot `/app/tests/new` en dark **et** light, confirmation visuelle que les 2 logos ont le même rendu et la même lisibilité.
