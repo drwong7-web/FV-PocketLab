@@ -927,6 +927,10 @@ function SprintReport({ test, results, chartRef }: { test: TestRecord; results: 
                 {quality.warnings.map((w, i) => <li key={i}>{w}</li>)}
               </ul>
             )}
+            <div className="rounded-md bg-muted/40 p-3 text-center">
+              <p className="font-display text-base font-bold">R² = {results.r2.toFixed(3)}</p>
+              <R2Explanation r2={results.r2} />
+            </div>
           </CardContent>
         </Card>
       )}
@@ -986,13 +990,10 @@ function SprintReport({ test, results, chartRef }: { test: TestRecord; results: 
                     <RLine type="monotone" dataKey="x" stroke="hsl(var(--primary))" dot={false} name="x (m)" />
                     <Scatter data={results.splits.map((s) => ({ t: s.time, x: s.distance }))} fill="hsl(var(--destructive))" />
                   </LineChart>
-                </ResponsiveContainer>
-              </div>
-              <p className="mt-1 text-center text-xs text-muted-foreground">
-                R² = {results.r2.toFixed(3)} · RMSE = {(results.rmse ?? 0).toFixed(3)} m
-              </p>
-            </CardContent>
-          </Card>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
 
           <Card>
             <CardHeader><CardTitle className="font-display text-base">{t("velocityTimePhases")}</CardTitle></CardHeader>
@@ -1060,9 +1061,8 @@ function SprintReport({ test, results, chartRef }: { test: TestRecord; results: 
             />
           </div>
           <p className="mt-2 text-center text-muted-foreground text-sm">
-            R² = {results.r2.toFixed(3)} · τ = {results.tau.toFixed(3)} s · Sfv = {(results.Sfv ?? results.slopeFV).toFixed(2)}
+            τ = {results.tau.toFixed(3)} s · Sfv = {(results.Sfv ?? results.slopeFV).toFixed(2)}
           </p>
-          <R2Explanation r2={results.r2} />
           <TargetSummary kind="sprint" sport={test.athletes?.sport} />
         </CardContent>
       </Card>
