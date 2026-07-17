@@ -775,7 +775,6 @@ function JumpReport({ test, results, chartRef }: { test: TestRecord; results: Ju
           <table className="w-full text-sm">
             <thead className="text-xs text-muted-foreground">
               <tr>
-                <th className="text-left">{t("colNum")}</th>
                 <th className="text-left">{t("loadsKg")}</th>
                 <th className="text-left">{t("jumpHeightCm")}</th>
                 <th className="text-left">{t("forceNkg")}</th>
