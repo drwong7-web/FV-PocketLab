@@ -748,6 +748,7 @@ function JumpReport({ test, results, chartRef }: { test: TestRecord; results: Ju
   const { t, lang } = useSettings();
   const reco = getJumpRecommendations(results.profile, results.FVimbalance, lang);
   const target = getJumpTarget(test.athletes?.sport);
+  const raw = (test.raw_data ?? {}) as { trials?: { load: number; jumpHeight: number }[] };
 
   return (
     <>
@@ -766,6 +767,33 @@ function JumpReport({ test, results, chartRef }: { test: TestRecord; results: Ju
             Sfv = {results.slopeFV.toFixed(2)} · Sfv,opt = {results.FVoptimal.toFixed(2)} · hMax,opt = {(results.hMaxOptimal * 100).toFixed(1)} cm
           </p>
           <TargetSummary kind="jump" sport={test.athletes?.sport} />
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader><CardTitle className="font-display text-base">{t("trials")}</CardTitle></CardHeader>
+        <CardContent>
+          <table className="w-full text-sm">
+            <thead className="text-xs text-muted-foreground">
+              <tr>
+                <th className="text-left">{t("colNum")}</th>
+                <th className="text-left">{t("loadsKg")}</th>
+                <th className="text-left">{t("jumpHeightCm")}</th>
+                <th className="text-left">{t("forceNkg")}</th>
+                <th className="text-left">{t("velocityMs")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {results.points.map((p, i) => (
+                <tr key={i} className="border-t">
+                  <td className="py-1.5">{i + 1}</td>
+                  <td>{(p.load ?? 0).toFixed(1)}</td>
+                  <td>{((raw.trials?.[i]?.jumpHeight ?? 0) * 100).toFixed(1)}</td>
+                  <td>{p.force.toFixed(2)}</td>
+                  <td>{p.velocity.toFixed(2)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </CardContent>
       </Card>
       <Card>
