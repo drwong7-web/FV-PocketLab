@@ -1,26 +1,30 @@
-## Objective
+## Objectif
 
-Consolidate the R² value and its interpretation inside the quality score card on test result pages.
+Ajouter une carte "Essais" sur la page de résultat du saut vertical (elle est présente dans l'export Word/PDF mais absente à l'écran, contrairement à la carte "Splits" du sprint).
 
-## Current state
+## Changement
 
-- **Sprint results**: a "Score de qualité" card already exists, showing `globalScore`, `modelFitScore`, `splitCoherenceScore`, `fpsScore`, a message and warnings. The actual R² value and its interpretation (`R2Explanation`) are currently displayed under the distance-time chart and again under the F-V relation card.
-- **Jump results**: there is no quality card. The R² value and `R2Explanation` are shown under the F-V graph only.
+Dans `src/pages/TestResults.tsx`, dans `JumpReport`, insérer une nouvelle `<Card>` intitulée `t("trials")` avant la carte du graphique F-V (juste après la carte "Profil FV Samozino").
 
-## Proposed change
+Contenu du tableau, une ligne par essai (`results.points` + `raw_data.trials`) :
 
-1. **Sprint report (`SprintReport` in `src/pages/TestResults.tsx`)**
-  - Add a dedicated row inside the existing quality score `<Card>` that displays:
-    - `R² = {results.r2.toFixed(3)}`
-    - `<R2Explanation r2={results.r2} />`
-  - Remove the redundant R² line and `<R2Explanation>` from the F-V relation card to avoid duplication.
-  - Remove the R²/RMSE caption from the distance-time chart card so the quality card becomes the single source for R² interpretation.
-2. **Jump report : pas de changement** 
-3. **Translations**
-  - No new keys needed. Reuse existing keys: `qualityScore`, `r2Explanation`, `r2Excellent`, `r2Good`, `r2Poor`.
+| # | Charge (kg) | Hauteur (cm) | Force (N/kg) | Vitesse (m/s) |
+|---|-------------|--------------|--------------|---------------|
 
-## Acceptance criteria
+Source des valeurs :
+- Charge : `results.points[i].load`
+- Hauteur : `raw_data.trials[i].jumpHeight * 100`
+- Force : `results.points[i].force`
+- Vitesse : `results.points[i].velocity`
 
-- On a sprint result page, the quality score card is the only place showing the R² value and its interpretation.
-- Existing cards remain present and functional.
-- Build passes without errors.
+Style aligné sur la carte "Splits" existante (mêmes classes tableau/typographie/thead muted).
+
+## Traductions
+
+Réutiliser les clés déjà présentes : `trials`, `loadsKg` (ou `loadKg`), `jumpHeightCm`, `forceNkg`, `velocityMs`. Ajouter uniquement les clés manquantes dans `src/lib/settings.tsx` (FR/EN/AR) si l'audit du fichier montre qu'elles n'existent pas.
+
+## Non concerné
+
+- Sprint (déjà OK)
+- Export Word/PDF (déjà OK)
+- Aucune logique de calcul modifiée
