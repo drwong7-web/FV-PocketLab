@@ -184,7 +184,7 @@ const TR = {
   hpoHint: { fr: "hPO ≈ longueur de jambe × 0,4 (extension des membres inférieurs).", en: "hPO ≈ leg length × 0.4 (lower-limb extension distance).", ar: "hPO ≈ طول الساق × 0.4 (مسافة تمدد الأطراف السفلية)." },
   trials: { fr: "Essais", en: "Trials", ar: "المحاولات" },
   loadKg: { fr: "\u00a0 \u00a0Charge", en: "Load", ar: "\u00a0 \u00a0الحمولة" },
-  jumpHeightCm: { fr: "Hauteur de saut\u00a0", en: "Jump", ar: "ارتفاع القفز\u00a0" },
+  jumpHeightCm: { fr: "Hauteur de saut (cm)", en: "Jump (cm)", ar: "ارتفاع القفز (سم)" },
   measureHpo: { fr: "Mesurer hPO — extension", en: "Measure hPO — extension", ar: "قياس hPO — التمدد" },
   aiAutoDetect: { fr: "Détection auto IA", en: "AI auto-detect", ar: "كشف تلقائي بالذكاء الاصطناعي" },
   aiHint: { fr: "✨ L'IA détecte automatiquement décollage & atterrissage depuis la vidéo. 📷 le marqueur manuel utilise l'étalonnage px/cm.", en: "✨ AI auto-detects takeoff & landing from video. 📷 manual marker uses px/cm calibration.", ar: "✨ الذكاء الاصطناعي يكتشف الإقلاع والهبوط من الفيديو. 📷 العلامة اليدوية تستخدم معايرة px/cm." },
