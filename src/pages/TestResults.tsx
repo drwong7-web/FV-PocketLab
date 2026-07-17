@@ -775,7 +775,6 @@ function JumpReport({ test, results, chartRef }: { test: TestRecord; results: Ju
           <table className="w-full text-sm">
             <thead className="text-xs text-muted-foreground">
               <tr>
-                <th className="text-left">{t("colNum")}</th>
                 <th className="text-left">{t("loadsKg")}</th>
                 <th className="text-left">{t("jumpHeightCm")}</th>
                 <th className="text-left">{t("forceNkg")}</th>
@@ -785,8 +784,7 @@ function JumpReport({ test, results, chartRef }: { test: TestRecord; results: Ju
             <tbody>
               {results.points.map((p, i) => (
                 <tr key={i} className="border-t">
-                  <td className="py-1.5">{i + 1}</td>
-                  <td>{(p.load ?? 0).toFixed(1)}</td>
+                  <td className="py-1.5">{(p.load ?? 0).toFixed(1)}</td>
                   <td>{((raw.trials?.[i]?.jumpHeight ?? 0) * 100).toFixed(1)}</td>
                   <td>{p.force.toFixed(2)}</td>
                   <td>{p.velocity.toFixed(2)}</td>
