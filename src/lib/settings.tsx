@@ -161,7 +161,7 @@ const TR = {
   // ---- Player detail ----
   playerNotFound: { fr: "Joueur introuvable.", en: "Player not found.", ar: "اللاعب غير موجود." },
   testHistory: { fr: "Historique des tests", en: "Test history", ar: "سجل الاختبارات" },
-  noTestsYet: { fr: "Aucun test enregistré. Lancez le premier", en: "No tests recorded. Launch the first", ar: "لا توجد اختبارات مسجلة بعد. ابدأ أول اختبار" },
+  noTestsYet: { fr: "Aucun test enregistré. Lancez le premier", en: "No tests yet. Run the first one", ar: "لا توجد اختبارات مسجلة بعد. ابدأ أول اختبار" },
   test: { fr: "Test", en: "Test", ar: "اختبار" },
   testDeleted: { fr: "Test supprimé", en: "Test deleted", ar: "تم حذف الاختبار" },
   deleteTestConfirm: { fr: "Supprimer ce test ?", en: "Delete this test?", ar: "حذف هذا الاختبار؟" },
