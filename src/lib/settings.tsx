@@ -241,7 +241,7 @@ const TR = {
   video: { fr: "vidéo", en: "video", ar: "فيديو" },
   ai: { fr: "IA", en: "AI", ar: "ذ. إ." },
   manual: { fr: "manuel", en: "manual", ar: "يدوي" },
-  splitsHint: { fr: "Utilisez la caméra ou l'analyse vidéo IA pour extraire les temps depuis une vidéo de course.", en: "Use the camera or AI video analysis to extract times from a run video.", ar: "نصيحة: استخدم الكاميرا أو تحليل الفيديو بالذكاء الاصطناعي لاستخراج الأزمنة من الفيديو." },
+  splitsHint: { fr: "Utilisez la caméra ou l'analyse vidéo IA pour extraire les temps depuis une vidéo de course.", en: "Use the camera or AI video analysis to extract times from a run video.", ar: "استخدم الكاميرا أو تحليل الفيديو بالذكاء الاصطناعي لاستخراج الأزمنة من الفيديو." },
   notesPlaceholder: { fr: "Observations, ressentis, contexte de la séance…", en: "Observations, feelings, session context…", ar: "ملاحظات، انطباعات، سياق الجلسة…" },
   selectAthlete: { fr: "Sélectionnez un athlète.", en: "Select an athlete.", ar: "اختر رياضياً." },
   needSplits: { fr: "Fournir au moins 3 splits + masse + taille.", en: "Provide at least 3 splits + mass + height.", ar: "قدّم 3 أزمنة على الأقل + الوزن + الطول." },
