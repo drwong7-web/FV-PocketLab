@@ -931,7 +931,34 @@ function SprintReport({ test, results, chartRef }: { test: TestRecord; results: 
         </Card>
       )}
 
+      <Card>
+        <CardHeader><CardTitle className="font-display text-base">{t("splits")}</CardTitle></CardHeader>
+        <CardContent>
+          <table className="w-full text-sm">
+            <thead className="text-xs text-muted-foreground">
+              <tr><th className="text-left">{t("distance")}</th><th className="text-left">{t("measured")}</th><th className="text-left">{t("model")}</th><th className="text-left">Δ</th></tr>
+            </thead>
+            <tbody>
+              {results.splits.map((s, i) => {
+                const tModel = s.predicted > 0 ? (s.distance / s.predicted) * s.time : 0;
+                return (
+                  <tr key={i} className="border-t">
+                    <td className="py-1.5">{s.distance} m</td>
+                    <td>{s.time.toFixed(3)} s</td>
+                    <td className="text-muted-foreground">{tModel.toFixed(3)} s</td>
+                    <td className={Math.abs(s.distance - s.predicted) > 0.5 ? "text-warning" : "text-muted-foreground"}>
+                      {(s.distance - s.predicted >= 0 ? "+" : "") + (s.distance - s.predicted).toFixed(2)} m
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </CardContent>
+      </Card>
+
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+
         <Metric label="F0 horiz." value={results.F0.toFixed(2)} unit="N/kg" color="text-force" />
         <Metric label="V0 / Vmax" value={results.Vmax.toFixed(2)} unit="m/s" color="text-velocity" />
         <Metric label="Pmax" value={Pmax.toFixed(1)} unit="W/kg" color="text-primary" />
@@ -1082,31 +1109,6 @@ function SprintReport({ test, results, chartRef }: { test: TestRecord; results: 
         </>
       )}
 
-      <Card>
-        <CardHeader><CardTitle className="font-display text-base">{t("splits")}</CardTitle></CardHeader>
-        <CardContent>
-          <table className="w-full text-sm">
-            <thead className="text-xs text-muted-foreground">
-              <tr><th className="text-left">{t("distance")}</th><th className="text-left">{t("measured")}</th><th className="text-left">{t("model")}</th><th className="text-left">Δ</th></tr>
-            </thead>
-            <tbody>
-              {results.splits.map((s, i) => {
-                const tModel = s.predicted > 0 ? (s.distance / s.predicted) * s.time : 0;
-                return (
-                  <tr key={i} className="border-t">
-                    <td className="py-1.5">{s.distance} m</td>
-                    <td>{s.time.toFixed(3)} s</td>
-                    <td className="text-muted-foreground">{tModel.toFixed(3)} s</td>
-                    <td className={Math.abs(s.distance - s.predicted) > 0.5 ? "text-warning" : "text-muted-foreground"}>
-                      {(s.distance - s.predicted >= 0 ? "+" : "") + (s.distance - s.predicted).toFixed(2)} m
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </CardContent>
-      </Card>
 
       <Card className="border-primary/30">
         <CardHeader>
