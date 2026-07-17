@@ -1121,9 +1121,6 @@ function SprintReport({ test, results, chartRef }: { test: TestRecord; results: 
               <div key={i} className="rounded-md bg-accent/40 p-2 text-xs">{r}</div>
             ))}
           </div>
-          <p className="text-[11px] italic text-muted-foreground">
-            {t("medicalDisclaimer")}
-          </p>
         </CardContent>
       </Card>
 
