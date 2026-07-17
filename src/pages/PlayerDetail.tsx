@@ -45,7 +45,7 @@ export default function PlayerDetail() {
         </div>
         <Link to={`/app/tests/new?playerId=${player.id}`}>
           <Button className="bg-gradient-primary text-primary-foreground font-semibold">
-            <Plus className="w-4 h-4 mr-1" /> {t("test")}
+            {t("test")}
           </Button>
         </Link>
       </div>
