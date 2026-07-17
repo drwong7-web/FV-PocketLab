@@ -1014,7 +1014,7 @@ function SprintReport({ test, results, chartRef }: { test: TestRecord; results: 
       )}
 
       <Card>
-        <CardHeader><CardTitle className="font-display text-base flex items-center gap-2"><Activity className="h-4 w-4 text-primary"/>{t("fvRelation")}</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="font-display text-base flex items-center gap-2">{t("fvRelation")}</CardTitle></CardHeader>
         <CardContent>
           <div ref={chartRef}>
             <FVChart
