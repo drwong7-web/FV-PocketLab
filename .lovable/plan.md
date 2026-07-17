@@ -1,30 +1,37 @@
+# Organisation de la page Tests par catégorie
+
 ## Objectif
 
-Ajouter une carte "Essais" sur la page de résultat du saut vertical (elle est présente dans l'export Word/PDF mais absente à l'écran, contrairement à la carte "Splits" du sprint).
+Sur `/app/tests`, regrouper les tests enregistrés par **type** (Saut vertical / Sprint linéaire) via des **onglets** en haut de page.
 
-## Changement
+## Changement — `src/pages/TestList.tsx`
 
-Dans `src/pages/TestResults.tsx`, dans `JumpReport`, insérer une nouvelle `<Card>` intitulée `t("trials")` avant la carte du graphique F-V (juste après la carte "Profil FV Samozino").
+Remplacer la liste unique par un composant `Tabs` (shadcn, déjà présent dans le projet).
 
-Contenu du tableau, une ligne par essai (`results.points` + `raw_data.trials`) :
+Structure :
 
-| # | Charge (kg) | Hauteur (cm) | Force (N/kg) | Vitesse (m/s) |
-|---|-------------|--------------|--------------|---------------|
+```
+[ Tous ] [ Saut vertical ] [ Sprint linéaire ]
 
-Source des valeurs :
-- Charge : `results.points[i].load`
-- Hauteur : `raw_data.trials[i].jumpHeight * 100`
-- Force : `results.points[i].force`
-- Vitesse : `results.points[i].velocity`
+<liste filtrée selon l'onglet actif, ordre chronologique inverse>
+```
 
-Style aligné sur la carte "Splits" existante (mêmes classes tableau/typographie/thead muted).
+- **Tous** : comportement actuel, tous les tests confondus.
+- **Saut vertical** : `tests.filter(t => t.type === "jump")`.
+- **Sprint linéaire** : `tests.filter(t => t.type === "sprint")`.
 
-## Traductions
+Chaque onglet affiche à côté de son libellé le nombre de tests correspondants (badge discret).
 
-Réutiliser les clés déjà présentes : `trials`, `loadsKg` (ou `loadKg`), `jumpHeightCm`, `forceNkg`, `velocityMs`. Ajouter uniquement les clés manquantes dans `src/lib/settings.tsx` (FR/EN/AR) si l'audit du fichier montre qu'elles n'existent pas.
+État vide par onglet : réutiliser le message existant `t("noTests")` quand la catégorie sélectionnée est vide.
+
+## Traductions — `src/lib/settings.tsx`
+
+Ajouter (FR / EN / AR) uniquement si absentes :
+- `all` (Tous / All / الكل)
+- `verticalJump` / `linearSprint` sont déjà utilisés ailleurs — les réutiliser.
 
 ## Non concerné
 
-- Sprint (déjà OK)
-- Export Word/PDF (déjà OK)
-- Aucune logique de calcul modifiée
+- Aucune modification du stockage, des calculs, ou de la page de résultat d'un test.
+- Aucun changement sur `PlayerDetail` ou `Dashboard`.
+- Onglets uniquement sur cette page.

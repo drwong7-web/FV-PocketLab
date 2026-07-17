@@ -89,6 +89,7 @@ const TR = {
 
   // ---- Tests list / new ----
   allTests: { fr: "Tous les tests", en: "All tests", ar: "كل الاختبارات" },
+  all: { fr: "Tous", en: "All", ar: "الكل" },
   acrossOrg: { fr: "Sur toute votre organisation.", en: "Across your organisation.", ar: "عبر المنظمة بأكملها." },
   new: { fr: "Nouveau", en: "New", ar: "جديد" },
   noTests: { fr: "Aucun test enregistré pour le moment.", en: "No tests recorded yet.", ar: "لا توجد اختبارات مسجلة بعد." },
