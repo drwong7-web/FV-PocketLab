@@ -1,37 +1,20 @@
-# Organisation de la page Tests par catégorie
+## Context
+The user wants the tabs on `/app/tests` to look like the cards on the Teams page and to be more visually emphasized.
 
-## Objectif
+## Current state
+- `src/pages/TestList.tsx` uses the default `TabsList` / `TabsTrigger` from `src/components/ui/tabs.tsx`.
+- The default tabs have a compact `bg-muted` pill-bar style with a small active background change.
+- The Teams page cards use `glass-card p-5 ... bg-gradient-to-br from-primary/10 to-transparent` with a hover border highlight.
 
-Sur `/app/tests`, regrouper les tests enregistrés par **type** (Saut vertical / Sprint linéaire) via des **onglets** en haut de page.
+## Plan
+1. Update `src/components/ui/tabs.tsx` so `TabsList` and `TabsTrigger` adopt a card-like design inspired by the Teams page cards:
+   - `TabsList`: remove the compact muted bar; use a transparent or minimal container with a small gap between triggers.
+   - `TabsTrigger`: give each trigger `glass-card` styling, padding, rounded corners, and the `bg-gradient-to-br from-primary/10 to-transparent` treatment.
+   - Active trigger: add a `border-primary/50` (or stronger) highlight and a subtle glow/shadow so the selected tab stands out.
+   - Inactive trigger: keep a muted glass surface with hover state.
+   - Preserve focus rings and accessibility attributes.
+2. Verify `src/pages/TestList.tsx` still renders the three tabs (`all`, `jump`, `sprint`) correctly; adjust spacing if needed.
+3. Test visually on mobile viewport (the user is currently on 390×844) to ensure the 3-column tab layout remains readable and the emphasized active state is visible.
 
-## Changement — `src/pages/TestList.tsx`
-
-Remplacer la liste unique par un composant `Tabs` (shadcn, déjà présent dans le projet).
-
-Structure :
-
-```
-[ Tous ] [ Saut vertical ] [ Sprint linéaire ]
-
-<liste filtrée selon l'onglet actif, ordre chronologique inverse>
-```
-
-- **Tous** : comportement actuel, tous les tests confondus.
-- **Saut vertical** : `tests.filter(t => t.type === "jump")`.
-- **Sprint linéaire** : `tests.filter(t => t.type === "sprint")`.
-
-Chaque onglet affiche à côté de son libellé le nombre de tests correspondants (badge discret).
-
-État vide par onglet : réutiliser le message existant `t("noTests")` quand la catégorie sélectionnée est vide.
-
-## Traductions — `src/lib/settings.tsx`
-
-Ajouter (FR / EN / AR) uniquement si absentes :
-- `all` (Tous / All / الكل)
-- `verticalJump` / `linearSprint` sont déjà utilisés ailleurs — les réutiliser.
-
-## Non concerné
-
-- Aucune modification du stockage, des calculs, ou de la page de résultat d'un test.
-- Aucun changement sur `PlayerDetail` ou `Dashboard`.
-- Onglets uniquement sur cette page.
+## Outcome
+The tabs on `/app/tests` will look like the team cards, with the active tab clearly highlighted.
