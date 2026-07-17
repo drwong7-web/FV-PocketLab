@@ -1,31 +1,33 @@
-## Constat
-En thème clair, les 2 logos ne se comportent pas pareil :
-- **Vertical Jump** = néon vert pur avec halo blanc/clair → se dilue sur fond clair, semble flou/pâle.
-- **Linear Sprint** = trait crayon gris + accents verts → reste lisible et net sur fond clair.
+## Objective
+Reorder the sprint test results page so the **Splits** card appears immediately after the **Quality score** card.
 
-Le déséquilibre vient des PNG eux-mêmes (styles graphiques différents), pas des filtres CSS. En thème sombre les deux marchent car le halo clair du jump ressort sur fond noir.
+## Current state (verified)
+In `src/pages/TestResults.tsx`, the `SprintReport` component currently renders cards in this order:
+1. Header card
+2. Protocol conditions
+3. Quality score card
+4. Metrics grids
+5. Distance-time chart
+6. Velocity-time phases chart
+7. Acceleration-time chart
+8. Force-velocity relation chart
+9. Power-velocity chart
+10. RF-velocity chart
+11. **Splits card**
+12. Interpretation card
+13. Notes card (if any)
+14. Recommendation card
+15. References card
 
-## Solution
-Donner à **chaque conteneur logo** (sur les 2 cartes de `NewTest.tsx`) un **médaillon interne sombre** — un petit fond arrondi contrasté à l'intérieur de la carte — pour que les 2 logos soient toujours vus sur le même fond, indépendamment du thème global.
+## Proposed change
+Move the `<Card>` containing the splits table from position 11 to position 4 — directly after the quality score card and before the metrics grids.
 
-Effet : en light theme, la carte reste claire mais l'aire du logo passe sur un fond sombre discret → les 2 logos rendent de façon identique et nette.
+## Implementation
+- Edit `src/pages/TestResults.tsx` only.
+- Cut the splits `<Card>` block (currently after the RF-velocity chart) and paste it immediately after the quality score `<Card>` block.
+- No logic, data, or translation changes required.
 
-### Changements
-
-1. **`src/pages/NewTest.tsx`** (cartes jump + sprint uniquement)
-   - Envelopper l'`<img>` dans un médaillon : `rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 ring-1 ring-primary/20 shadow-inner p-2` (via tokens sémantiques, pas de couleurs hardcodées — j'utiliserai `bg-foreground/90` ou un nouveau token `--logo-well`).
-   - Ajouter un token CSS `--logo-well` dans `src/index.css` : sombre en light ET en dark, pour un rendu constant.
-
-2. **`src/index.css`**
-   - Ajouter classe utilitaire `.logo-well` avec ce fond sombre unifié + ring subtil primary + `overflow-hidden`.
-   - Ajuster `.engraved-logo` pour retirer le drop-shadow "haut sombre" quand posé sur un fond déjà sombre (garder juste un léger glow néon).
-
-### Alternative (rejetée)
-Régénérer le PNG jump dans le style crayon/gris du sprint — plus lourd, casse l'identité néon actuelle sur toutes les autres pages (header, JumpTest, exports Word/PDF).
-
-## Portée
-- Uniquement les 2 cartes de `/app/tests/new`.
-- Les logos sur `JumpTest.tsx`, `SprintTest.tsx`, header et rapports exportés restent inchangés.
-
-## Vérification
-Playwright screenshot `/app/tests/new` en dark **et** light, confirmation visuelle que les 2 logos ont le même rendu et la même lisibilité.
+## Acceptance criteria
+- On a sprint test result page, the **Quality score** card is followed immediately by the **Splits** card.
+- All existing cards remain present and functional.
+- Jump test results are unaffected.
