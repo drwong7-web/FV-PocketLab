@@ -175,6 +175,46 @@ export default function TeamDetail() {
           ))}
         </div>
       )}
+
+      {resume === "team-import" && !showDone && (
+        <OnboardingCoach
+          targetSelector='[data-onb="team-import"]'
+          title={t("onbTeamImportTitle")}
+          description={t("onbTeamImportDesc")}
+          onNext={() => {
+            setOnboardingResume("team-add");
+            setResume("team-add");
+          }}
+          onSkip={finishOnboarding}
+        />
+      )}
+
+      {resume === "team-add" && !showDone && (
+        <OnboardingCoach
+          targetSelector='[data-onb="team-add"]'
+          title={t("onbTeamAddTitle")}
+          description={t("onbTeamAddDesc")}
+          onNext={() => setShowDone(true)}
+          onSkip={finishOnboarding}
+        />
+      )}
+
+      {showDone && (
+        <OnboardingCoach
+          centered
+          title={t("onbTeamDoneTitle")}
+          description={t("onbTeamDoneDesc")}
+          nextLabel={t("onbTeamDoneRunTest")}
+          onNext={() => {
+            finishOnboarding();
+            navigate("/app/tests/new");
+          }}
+          secondaryLabel={t("onbTeamDoneLater")}
+          onSecondary={finishOnboarding}
+          skipLabel={t("onbTeamDoneLater")}
+          onSkip={finishOnboarding}
+        />
+      )}
     </div>
   );
 }
