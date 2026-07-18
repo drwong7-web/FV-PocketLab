@@ -17,6 +17,8 @@ import SprintTest from "./pages/SprintTest";
 import TestList from "./pages/TestList";
 import TestResults from "./pages/TestResults";
 import NotFound from "./pages/NotFound";
+import InstallModal from "@/components/pwa/InstallModal";
+import InstallBanner from "@/components/pwa/InstallBanner";
 
 const queryClient = new QueryClient();
 
@@ -33,6 +35,8 @@ const App = () => (
       <Sonner position="top-center" />
       <BrowserRouter>
         <AuthProvider>
+          <InstallBanner />
+          <InstallModal />
           <Routes>
             <Route path="/" element={<RootRedirect />} />
             <Route path="/auth" element={<Auth />} />

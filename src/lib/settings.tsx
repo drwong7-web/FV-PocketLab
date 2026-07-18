@@ -415,6 +415,20 @@ const TR = {
   onbTourTeamDesc: { fr: "Cliquez sur ce bouton pour ajouter une équipe et lui associer un sport.", en: "Tap this button to add a team and pick its sport.", ar: "انقر هذا الزر لإضافة فريق واختيار رياضته." },
   onbTourPlayerTitle: { fr: "Ajoutez vos athlètes", en: "Add your athletes", ar: "أضف رياضييك" },
   onbTourPlayerDesc: { fr: "Saisissez un athlète manuellement, ou importez une liste depuis un PDF, Word ou une image.", en: "Add athletes one by one, or import a list from a PDF, Word file or image.", ar: "أضف رياضياً يدوياً، أو استورد قائمة من PDF أو Word أو صورة." },
+
+  // ---- PWA install ----
+  installTitle: { fr: "Installer Pocket Lab", en: "Install Pocket Lab", ar: "تثبيت Pocket Lab" },
+  installSubtitle: { fr: "Installez l'app pour sécuriser vos données et y accéder comme une vraie application.", en: "Install the app to keep your data safe and launch it like a native app.", ar: "ثبّت التطبيق لحماية بياناتك وتشغيله كتطبيق أصلي." },
+  installIosStep1: { fr: "Appuyez sur le bouton Partager en bas de Safari.", en: "Tap the Share button at the bottom of Safari.", ar: "اضغط على زر المشاركة أسفل Safari." },
+  installIosStep2: { fr: "Faites défiler puis choisissez « Sur l'écran d'accueil ».", en: "Scroll down and tap \"Add to Home Screen\".", ar: "مرّر واختر «إضافة إلى الشاشة الرئيسية»." },
+  installIosStep3: { fr: "Confirmez avec « Ajouter » — l'icône FV apparaîtra.", en: "Confirm with \"Add\" — the FV icon will appear.", ar: "أكّد بـ«إضافة» — ستظهر أيقونة FV." },
+  installAndroidCta: { fr: "Installer maintenant", en: "Install now", ar: "التثبيت الآن" },
+  installAndroidHint: { fr: "Sinon, ouvrez le menu ⋮ du navigateur et choisissez « Installer l'application ».", en: "Otherwise open your browser's ⋮ menu and choose \"Install app\".", ar: "أو افتح قائمة ⋮ في المتصفح واختر «تثبيت التطبيق»." },
+  installFirefoxHint: { fr: "Pour installer Pocket Lab, ouvrez cette page dans Chrome, Edge ou Safari.", en: "To install Pocket Lab, open this page in Chrome, Edge or Safari.", ar: "لتثبيت Pocket Lab، افتح هذه الصفحة في Chrome أو Edge أو Safari." },
+  installLater: { fr: "Plus tard", en: "Later", ar: "لاحقاً" },
+  installBanner: { fr: "Installez Pocket Lab pour ne rien perdre.", en: "Install Pocket Lab so nothing gets lost.", ar: "ثبّت Pocket Lab حتى لا تفقد شيئاً." },
+  installBannerCta: { fr: "Installer", en: "Install", ar: "تثبيت" },
+  installedToast: { fr: "Pocket Lab est installée. Merci !", en: "Pocket Lab is installed. Thanks!", ar: "تم تثبيت Pocket Lab. شكراً!" },
 } as const;
 
 
