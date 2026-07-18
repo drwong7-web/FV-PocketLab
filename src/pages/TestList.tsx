@@ -1,7 +1,11 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ChevronRight, Plus } from "lucide-react";
+import { ChevronRight, Plus, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
 import { listUnifiedTests, type UnifiedTest } from "@/lib/unifiedTests";
+import { deleteTest } from "@/lib/storage";
+import { deleteLocalTest } from "@/lib/localHistory";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useSettings } from "@/lib/settings";
@@ -9,10 +13,19 @@ import { useSettings } from "@/lib/settings";
 export default function TestList() {
   const { user } = useAuth();
   const { t } = useSettings();
+  const [, force] = useState(0);
   if (!user) return <div className="min-h-[60vh]" aria-hidden />;
   const tests = listUnifiedTests(user.organizationId);
   const jumpTests = tests.filter((tt) => tt.type === "jump");
   const sprintTests = tests.filter((tt) => tt.type === "sprint");
+
+  const onDelete = (tt: UnifiedTest) => {
+    if (!confirm(t("deleteTestConfirm"))) return;
+    if (tt.source === "local") deleteLocalTest(tt.id);
+    else deleteTest(tt.id);
+    force((n) => n + 1);
+    toast.success(t("testDeleted"));
+  };
 
   const renderList = (items: UnifiedTest[]) =>
     items.length === 0 ? (
@@ -22,15 +35,24 @@ export default function TestList() {
     ) : (
       <div className="space-y-2">
         {items.map((tt) => (
-          <Link key={tt.id} to={`/app/tests/${tt.id}`} className="glass-card p-4 flex items-center justify-between">
-            <div>
-              <div className="font-semibold">{tt.playerName}</div>
-              <div className="text-xs text-muted-foreground mt-0.5 mono-num">
-                {new Date(tt.createdAt).toLocaleString()} · {tt.type === "jump" ? t("jump") : t("sprint")} · {tt.primary} · {tt.secondary}
+          <div key={tt.id} className="glass-card flex items-center">
+            <Link to={`/app/tests/${tt.id}`} className="flex-1 p-4 flex items-center justify-between">
+              <div>
+                <div className="font-semibold">{tt.playerName}</div>
+                <div className="text-xs text-muted-foreground mt-0.5 mono-num">
+                  {new Date(tt.createdAt).toLocaleString()} · {tt.type === "jump" ? t("jump") : t("sprint")} · {tt.primary} · {tt.secondary}
+                </div>
               </div>
-            </div>
-            <ChevronRight className="w-5 h-5 text-muted-foreground" />
-          </Link>
+              <ChevronRight className="w-5 h-5 text-muted-foreground" />
+            </Link>
+            <button
+              className="p-3 text-muted-foreground hover:text-destructive transition-colors"
+              onClick={() => onDelete(tt)}
+              aria-label={t("deleteTest")}
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
         ))}
       </div>
     );
