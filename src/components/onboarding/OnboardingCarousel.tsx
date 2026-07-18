@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Activity, ArrowRight, Check, Moon, Sun, Timer, Upload, Users, X, Zap } from "lucide-react";
+import { ArrowRight, Check, Moon, Sun, Users, X } from "lucide-react";
 import fvLogo from "@/assets/fv-logo.png.asset.json";
 import { Button } from "@/components/ui/button";
 import { useSettings, type Lang, type Theme, type TKey } from "@/lib/settings";
 import { markOnboardingDone } from "@/lib/onboarding";
+import { setTourStep } from "@/lib/onboardingTour";
 import { cn } from "@/lib/utils";
 
 const SWATCHES = [
