@@ -236,10 +236,11 @@ export default function AppLayout() {
                   max={360}
                   value={Number(accent)}
                   onChange={(e) => setAccent(e.target.value)}
-                  className="h-2 w-full cursor-pointer appearance-none rounded-full"
+                  className="hue-slider h-2.5 w-full cursor-pointer appearance-none rounded-full shadow-inner"
                   style={{
                     background:
                       "linear-gradient(to right, hsl(0 90% 55%), hsl(60 90% 55%), hsl(120 90% 55%), hsl(180 90% 55%), hsl(240 90% 55%), hsl(300 90% 55%), hsl(360 90% 55%))",
+                    ["--thumb-hue" as any]: String(accent),
                   }}
                 />
               </div>
