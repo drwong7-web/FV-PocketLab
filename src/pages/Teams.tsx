@@ -1,5 +1,7 @@
-import { useState, FormEvent } from "react";
-import { Link } from "react-router-dom";
+import { useState, useRef, useEffect, FormEvent } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { CoachMark } from "@/components/onboarding/CoachMark";
+import { getTourStep, setTourStep } from "@/lib/onboardingTour";
 import { ChevronRight, Plus, Trash2, Users } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { createTeam, deleteTeam, listPlayers, listTeams } from "@/lib/storage";
@@ -30,10 +32,17 @@ const GROUP_LABEL_KEYS: Record<(typeof SPORT_GROUPS)[number]["key"], string> = {
 export default function Teams() {
   const { user } = useAuth();
   const { t } = useSettings();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [sport, setSport] = useState("");
   const [, force] = useState(0);
+  const newBtnRef = useRef<HTMLButtonElement>(null);
+  const [showCoach, setShowCoach] = useState(false);
+
+  useEffect(() => {
+    if (getTourStep() === "team-create") setShowCoach(true);
+  }, []);
 
   if (!user) return <div className="min-h-[60vh]" aria-hidden />;
   const teams = listTeams(user.organizationId);
@@ -42,10 +51,16 @@ export default function Teams() {
   const onCreate = (e: FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
-    createTeam(user.organizationId, name.trim(), sport || undefined);
+    const team = createTeam(user.organizationId, name.trim(), sport || undefined);
     setName(""); setSport(""); setOpen(false);
     force((n) => n + 1);
     toast.success(t("teamCreated"));
+    if (getTourStep() === "team-create") {
+      setShowCoach(false);
+      setTourStep("player-add");
+      const id = (team as any)?.id;
+      if (id) navigate(`/app/teams/${id}`);
+    }
   };
 
   return (
@@ -57,7 +72,7 @@ export default function Teams() {
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-gradient-primary text-primary-foreground font-bold uppercase tracking-wide">
+            <Button ref={newBtnRef} className="bg-gradient-primary text-primary-foreground font-bold uppercase tracking-wide">
               <Plus className="w-4 h-4 mr-1 stroke-[3]" /> {t("new")}
             </Button>
           </DialogTrigger>
@@ -150,6 +165,14 @@ export default function Teams() {
             );
           })}
         </div>
+      )}
+      {showCoach && (
+        <CoachMark
+          targetRef={newBtnRef}
+          titleKey="onbTourTeamTitle"
+          descKey="onbTourTeamDesc"
+          onDismiss={() => setShowCoach(false)}
+        />
       )}
     </div>
   );

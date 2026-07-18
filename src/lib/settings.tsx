@@ -410,6 +410,11 @@ const TR = {
   onb4Cta: { fr: "Nouveau test", en: "New test", ar: "اختبار جديد" },
   onb5Title: { fr: "Sauvegarde & rapports", en: "Backup & reports", ar: "النسخ الاحتياطي والتقارير" },
   onb5Sub: { fr: "Sauvegardez vos données sur Google Drive, iCloud ou un fichier .slfv. Exportez chaque rapport en Word ou PDF.", en: "Back up your data to Google Drive, iCloud or a .slfv file. Export every report as Word or PDF.", ar: "احفظ بياناتك على Google Drive أو iCloud أو ملف .slfv. صدّر كل تقرير بصيغة Word أو PDF." },
+  onbTourGotIt: { fr: "OK", en: "Got it", ar: "حسناً" },
+  onbTourTeamTitle: { fr: "Créez votre première équipe", en: "Create your first team", ar: "أنشئ فريقك الأول" },
+  onbTourTeamDesc: { fr: "Cliquez sur ce bouton pour ajouter une équipe et lui associer un sport.", en: "Tap this button to add a team and pick its sport.", ar: "انقر هذا الزر لإضافة فريق واختيار رياضته." },
+  onbTourPlayerTitle: { fr: "Ajoutez vos athlètes", en: "Add your athletes", ar: "أضف رياضييك" },
+  onbTourPlayerDesc: { fr: "Saisissez un athlète manuellement, ou importez une liste depuis un PDF, Word ou une image.", en: "Add athletes one by one, or import a list from a PDF, Word file or image.", ar: "أضف رياضياً يدوياً، أو استورد قائمة من PDF أو Word أو صورة." },
 } as const;
 
 
