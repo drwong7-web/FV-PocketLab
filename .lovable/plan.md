@@ -1,32 +1,47 @@
-# Améliorer le design des boules de couleur (Paramètres)
+## Onboarding — Carrousel plein écran (1er accès Dashboard)
 
-Cible : la grille de 8 pastilles d'accent dans `src/components/AppLayout.tsx` (section Thème du Dialog Paramètres).
+### Objectif
+Guider l'utilisateur à sa toute première ouverture du Dashboard via un carrousel plein écran de 5 slides, entièrement traduit (FR/EN/AR), stylisé au thème de l'app, avec possibilité de skipper et de relancer depuis Réglages.
 
-## Améliorations visuelles
+### Déclenchement
+- Clé persistante `slfv:onboarding:done` dans `localStorage`.
+- Au montage de `src/pages/Dashboard.tsx`: si la clé est absente → afficher l'overlay onboarding.
+- Marquée `true` à la fin (bouton "Commencer") **ou** au skip.
+- Bouton "Revoir l'onboarding" ajouté dans le dialogue Réglages (`AppLayout.tsx`) qui remet la clé à `false` et re-navigue vers `/app`.
 
-1. **Pastilles plus riches**
-   - Remplacer le fond plat `hsl(H 90% 55%)` par un dégradé radial : centre lumineux (`H 95% 65%`) → bord plus profond (`H 85% 45%`), avec un léger highlight en haut-gauche pour un effet de bille 3D.
-   - Ajouter une ombre portée colorée `0 4px 12px hsl(H 90% 55% / 0.35)` pour un halo assorti.
-   - Anneau intérieur subtil (`inset 0 0 0 1px hsl(0 0% 100% / 0.15)`) pour délimiter proprement en clair/sombre.
+### Structure des 5 slides
 
-2. **État actif**
-   - Halo primaire renforcé avec double bordure : anneau extérieur `ring-2 ring-offset-2 ring-offset-background` de la couleur elle-même + `Check` blanc net centré avec `drop-shadow`.
-   - Légère mise à l'échelle (`scale-110`) et glow animé.
+1. **Bienvenue** — logo FV, titre "Pocket Lab", pitch court (profil Force-Vitesse local & privé).
+2. **Langue & thème** — sélecteurs inline (FR/EN/AR, clair/sombre, 8 pastilles d'accent) réutilisant exactement les composants du dialogue Réglages. Modifications appliquées en temps réel.
+3. **Équipe & athlète** — explique la structure Équipes → Athlètes. CTA secondaire "Aller aux équipes" (navigue vers `/app/teams` et ferme l'onboarding).
+4. **Premier test** — présente Saut vertical vs Sprint linéaire (2 cartes côte à côte avec icônes). CTA "Nouveau test" → `/app/tests/new`.
+5. **Sync & exports** — mentionne sauvegarde cloud (Drive/iCloud/.slfv) et export Word/PDF des rapports. Bouton final "Commencer".
 
-3. **Hover / focus**
-   - Transition douce (`transition-all duration-300 ease-out`), `hover:scale-110` remplacé par un `hover:-translate-y-0.5` + glow amplifié.
-   - `focus-visible` : anneau accessible utilisant `--ring`.
+### UX
+- Overlay plein écran `fixed inset-0 z-50` avec fond `bg-background/95 backdrop-blur-xl`.
+- Slide centrée dans une carte `glass-card` responsive (max-w-lg), gradient primary discret.
+- Header: logo + bouton "Passer" (skip) en haut à droite.
+- Footer: pastilles de progression (5 dots), boutons "Précédent" / "Suivant" (ou "Commencer" sur la dernière).
+- Navigation clavier: ← → Échap.
+- Animations douces (fade + translate) entre slides via classes Tailwind.
+- Respecte les tokens sémantiques (aucune couleur hardcodée), style aligné avec les cartes de la page Teams et les onglets récemment redesignés.
 
-4. **Grille**
-   - Passer de `grid-cols-8 gap-2` → `grid-cols-8 gap-2.5` avec pastilles `h-10 w-10` (au lieu de `h-9 w-9`) pour meilleure zone tactile sur mobile.
-   - Conteneur légèrement `py-1` pour laisser respirer les ombres colorées.
+### i18n
+Ajouter dans `src/lib/settings.tsx` un bloc de clés `onboarding*` (welcome, welcomeSub, step2Title, step2Sub, step3Title, step3Sub, step4Title, step4Sub, step5Title, step5Sub, skip, next, prev, start, replayOnboarding, goToTeams, newTestCta, jumpShort, sprintShort, etc.) pour les 3 langues.
 
-5. **Slider de teinte (juste en dessous)**
-   - Curseur (thumb) stylé : petit disque blanc avec bordure de la teinte courante, ombre douce, pour cohérence avec les pastilles.
-   - Piste (`h-2` → `h-2.5`) avec `rounded-full` et `shadow-inner` léger.
+### Fichiers touchés
 
-## Portée
+**Créés**
+- `src/components/onboarding/OnboardingCarousel.tsx` — composant overlay + logique carrousel + 5 slides internes.
+- `src/lib/onboarding.ts` — helpers `isOnboardingDone()`, `markOnboardingDone()`, `resetOnboarding()` autour de `localStorage`.
 
-- **Fichiers modifiés** : `src/components/AppLayout.tsx` uniquement (markup des pastilles + slider).
-- Éventuellement quelques styles pour le thumb du slider dans `src/index.css` (règles `::-webkit-slider-thumb` / `::-moz-range-thumb` scopées via une classe dédiée type `.hue-slider`).
-- Aucune logique modifiée : mêmes 8 teintes, même state `accent`, même setter.
+**Modifiés**
+- `src/pages/Dashboard.tsx` — monte `<OnboardingCarousel />` conditionnellement au premier accès.
+- `src/components/AppLayout.tsx` — ajoute une entrée "Revoir l'onboarding" dans le dialogue Réglages (section langue/thème ou nouvelle section compacte), qui appelle `resetOnboarding()` puis recharge Dashboard.
+- `src/lib/settings.tsx` — nouvelles clés i18n FR/EN/AR.
+
+### Hors périmètre
+- Pas de tour de tooltips pointant les vrais éléments (l'utilisateur a choisi le carrousel).
+- Pas de checklist persistante sur Dashboard.
+- Pas de modification du flux Auth (l'onboarding se joue **après** création du profil, à l'arrivée sur Dashboard).
+- Pas de changement de logique métier (F-V, calculs, export) — uniquement présentation.

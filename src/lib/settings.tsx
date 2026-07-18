@@ -391,7 +391,27 @@ const TR = {
   fitQualityModerate: { fr: "Ajustement modéré : F0/V0/Pmax utilisables avec précaution.", en: "Moderate fit: F0/V0/Pmax usable with caution.", ar: "ملاءمة متوسطة: يمكن استخدام F0/V0/Pmax بحذر." },
   fitQualityGood: { fr: "Bon ajustement : F0/V0/Pmax fiables.", en: "Good fit: F0/V0/Pmax are reliable.", ar: "ملاءمة جيدة: قيم F0/V0/Pmax موثوقة." },
   interpretationPrefix: { fr: "INTERPRÉTATION :", en: "INTERPRETATION:", ar: "التفسير:" },
+
+  // ---- Onboarding ----
+  onbSkip: { fr: "Passer", en: "Skip", ar: "تخطي" },
+  onbNext: { fr: "Suivant", en: "Next", ar: "التالي" },
+  onbPrev: { fr: "Précédent", en: "Back", ar: "السابق" },
+  onbStart: { fr: "Commencer", en: "Get started", ar: "لنبدأ" },
+  onbReplay: { fr: "Revoir l'introduction", en: "Replay onboarding", ar: "إعادة الجولة التعريفية" },
+  onb1Title: { fr: "Bienvenue sur Pocket Lab", en: "Welcome to Pocket Lab", ar: "مرحباً بك في Pocket Lab" },
+  onb1Sub: { fr: "Votre labo de profil Force-Vitesse, 100% local et privé. Créons ensemble votre premier test en quelques étapes.", en: "Your Force-Velocity profiling lab — 100% local, private by default. Let's set you up in a few quick steps.", ar: "مختبر ملف القوة والسرعة الخاص بك، محلي بالكامل وخاص افتراضياً. لنقم بإعدادك في بضع خطوات." },
+  onb2Title: { fr: "Langue & apparence", en: "Language & appearance", ar: "اللغة والمظهر" },
+  onb2Sub: { fr: "Choisissez votre langue, votre thème et votre couleur d'accent. Vous pourrez les changer à tout moment depuis les réglages.", en: "Pick your language, theme and accent color. You can change them anytime from settings.", ar: "اختر لغتك ومظهرك ولون التمييز. يمكنك تغييرها في أي وقت من الإعدادات." },
+  onb3Title: { fr: "Équipes & athlètes", en: "Teams & athletes", ar: "الفرق والرياضيون" },
+  onb3Sub: { fr: "Regroupez vos athlètes par équipe. Chaque équipe a un sport qui définit un profil F-V cible pour la comparaison.", en: "Group your athletes by team. Each team has a sport that sets a target F-V profile for comparison.", ar: "جمّع رياضييك في فرق. يحدد كل فريق رياضة تعرّف ملف قوة-سرعة مرجعي للمقارنة." },
+  onb3Cta: { fr: "Créer une équipe", en: "Create a team", ar: "إنشاء فريق" },
+  onb4Title: { fr: "Lancez un test", en: "Run a test", ar: "أجرِ اختباراً" },
+  onb4Sub: { fr: "Deux protocoles disponibles : Saut vertical chargé (F-V vertical) et Sprint linéaire (F-V horizontal).", en: "Two protocols available: loaded Vertical Jump (vertical F-V) and Linear Sprint (horizontal F-V).", ar: "بروتوكولان متاحان: القفز العمودي المحمّل (قوة-سرعة عمودي) والعدو الخطي (قوة-سرعة أفقي)." },
+  onb4Cta: { fr: "Nouveau test", en: "New test", ar: "اختبار جديد" },
+  onb5Title: { fr: "Sauvegarde & rapports", en: "Backup & reports", ar: "النسخ الاحتياطي والتقارير" },
+  onb5Sub: { fr: "Sauvegardez vos données sur Google Drive, iCloud ou un fichier .slfv. Exportez chaque rapport en Word ou PDF.", en: "Back up your data to Google Drive, iCloud or a .slfv file. Export every report as Word or PDF.", ar: "احفظ بياناتك على Google Drive أو iCloud أو ملف .slfv. صدّر كل تقرير بصيغة Word أو PDF." },
 } as const;
+
 
 export type TKey = keyof typeof TR;
 
