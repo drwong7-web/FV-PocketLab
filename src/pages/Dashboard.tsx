@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Activity, ArrowRight, Plus, User, Users } from "lucide-react";
 import { useAuth } from "@/lib/auth";
@@ -6,10 +7,17 @@ import { listUnifiedTests } from "@/lib/unifiedTests";
 import { Button } from "@/components/ui/button";
 import { MetricCard } from "@/components/MetricCard";
 import { useSettings } from "@/lib/settings";
+import { OnboardingCarousel } from "@/components/onboarding/OnboardingCarousel";
+import { isOnboardingDone } from "@/lib/onboarding";
 
 export default function Dashboard() {
   const { user } = useAuth();
   const { t } = useSettings();
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  useEffect(() => {
+    if (!isOnboardingDone()) setShowOnboarding(true);
+  }, []);
+
   if (!user) return <div className="min-h-[60vh]" aria-hidden />;
   const org = getOrganization(user.organizationId);
   const teams = listTeams(user.organizationId);
