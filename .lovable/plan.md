@@ -1,20 +1,32 @@
-## Context
-The user wants the tabs on `/app/tests` to look like the cards on the Teams page and to be more visually emphasized.
+# Améliorer le design des boules de couleur (Paramètres)
 
-## Current state
-- `src/pages/TestList.tsx` uses the default `TabsList` / `TabsTrigger` from `src/components/ui/tabs.tsx`.
-- The default tabs have a compact `bg-muted` pill-bar style with a small active background change.
-- The Teams page cards use `glass-card p-5 ... bg-gradient-to-br from-primary/10 to-transparent` with a hover border highlight.
+Cible : la grille de 8 pastilles d'accent dans `src/components/AppLayout.tsx` (section Thème du Dialog Paramètres).
 
-## Plan
-1. Update `src/components/ui/tabs.tsx` so `TabsList` and `TabsTrigger` adopt a card-like design inspired by the Teams page cards:
-   - `TabsList`: remove the compact muted bar; use a transparent or minimal container with a small gap between triggers.
-   - `TabsTrigger`: give each trigger `glass-card` styling, padding, rounded corners, and the `bg-gradient-to-br from-primary/10 to-transparent` treatment.
-   - Active trigger: add a `border-primary/50` (or stronger) highlight and a subtle glow/shadow so the selected tab stands out.
-   - Inactive trigger: keep a muted glass surface with hover state.
-   - Preserve focus rings and accessibility attributes.
-2. Verify `src/pages/TestList.tsx` still renders the three tabs (`all`, `jump`, `sprint`) correctly; adjust spacing if needed.
-3. Test visually on mobile viewport (the user is currently on 390×844) to ensure the 3-column tab layout remains readable and the emphasized active state is visible.
+## Améliorations visuelles
 
-## Outcome
-The tabs on `/app/tests` will look like the team cards, with the active tab clearly highlighted.
+1. **Pastilles plus riches**
+   - Remplacer le fond plat `hsl(H 90% 55%)` par un dégradé radial : centre lumineux (`H 95% 65%`) → bord plus profond (`H 85% 45%`), avec un léger highlight en haut-gauche pour un effet de bille 3D.
+   - Ajouter une ombre portée colorée `0 4px 12px hsl(H 90% 55% / 0.35)` pour un halo assorti.
+   - Anneau intérieur subtil (`inset 0 0 0 1px hsl(0 0% 100% / 0.15)`) pour délimiter proprement en clair/sombre.
+
+2. **État actif**
+   - Halo primaire renforcé avec double bordure : anneau extérieur `ring-2 ring-offset-2 ring-offset-background` de la couleur elle-même + `Check` blanc net centré avec `drop-shadow`.
+   - Légère mise à l'échelle (`scale-110`) et glow animé.
+
+3. **Hover / focus**
+   - Transition douce (`transition-all duration-300 ease-out`), `hover:scale-110` remplacé par un `hover:-translate-y-0.5` + glow amplifié.
+   - `focus-visible` : anneau accessible utilisant `--ring`.
+
+4. **Grille**
+   - Passer de `grid-cols-8 gap-2` → `grid-cols-8 gap-2.5` avec pastilles `h-10 w-10` (au lieu de `h-9 w-9`) pour meilleure zone tactile sur mobile.
+   - Conteneur légèrement `py-1` pour laisser respirer les ombres colorées.
+
+5. **Slider de teinte (juste en dessous)**
+   - Curseur (thumb) stylé : petit disque blanc avec bordure de la teinte courante, ombre douce, pour cohérence avec les pastilles.
+   - Piste (`h-2` → `h-2.5`) avec `rounded-full` et `shadow-inner` léger.
+
+## Portée
+
+- **Fichiers modifiés** : `src/components/AppLayout.tsx` uniquement (markup des pastilles + slider).
+- Éventuellement quelques styles pour le thumb du slider dans `src/index.css` (règles `::-webkit-slider-thumb` / `::-moz-range-thumb` scopées via une classe dédiée type `.hue-slider`).
+- Aucune logique modifiée : mêmes 8 teintes, même state `accent`, même setter.

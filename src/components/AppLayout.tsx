@@ -194,7 +194,7 @@ export default function AppLayout() {
 
               <div className="space-y-2">
                 <p className="text-xs text-muted-foreground">{"\n"}</p>
-                <div className="grid grid-cols-8 gap-2">
+                <div className="grid grid-cols-8 gap-2.5 py-1">
                   {swatches.map((s) => {
                     const active = accent === s.hue;
                     return (
@@ -203,12 +203,22 @@ export default function AppLayout() {
                         onClick={() => setAccent(s.hue)}
                         aria-label={s.label}
                         className={cn(
-                          "relative flex h-9 w-9 items-center justify-center rounded-full border-2 transition-transform hover:scale-110",
-                          active ? "border-foreground" : "border-transparent"
+                          "relative flex h-10 w-10 items-center justify-center rounded-full outline-none transition-all duration-300 ease-out hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                          active && "scale-110"
                         )}
-                        style={{ background: `hsl(${s.hue} 90% 55%)` }}
+                        style={{
+                          background: `radial-gradient(circle at 30% 25%, hsl(${s.hue} 100% 78%) 0%, hsl(${s.hue} 92% 55%) 45%, hsl(${s.hue} 85% 42%) 100%)`,
+                          boxShadow: active
+                            ? `0 0 0 2px hsl(var(--background)), 0 0 0 4px hsl(${s.hue} 90% 55%), 0 6px 18px hsl(${s.hue} 90% 55% / 0.55), inset 0 1px 0 hsl(0 0% 100% / 0.35), inset 0 -3px 6px hsl(0 0% 0% / 0.25)`
+                            : `0 4px 12px hsl(${s.hue} 90% 55% / 0.35), inset 0 1px 0 hsl(0 0% 100% / 0.3), inset 0 -3px 6px hsl(0 0% 0% / 0.22), inset 0 0 0 1px hsl(0 0% 100% / 0.12)`,
+                        }}
                       >
-                        {active && <Check className="h-4 w-4 text-background" strokeWidth={3} />}
+                        {active && (
+                          <Check
+                            className="h-4 w-4 text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]"
+                            strokeWidth={3.5}
+                          />
+                        )}
                       </button>
                     );
                   })}
