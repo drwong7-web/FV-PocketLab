@@ -4,7 +4,7 @@ import { Activity, ArrowRight, Check, Moon, Sun, Timer, Upload, Users, X, Zap } 
 import fvLogo from "@/assets/fv-logo.png.asset.json";
 import { Button } from "@/components/ui/button";
 import { useSettings, type Lang, type Theme, type TKey } from "@/lib/settings";
-import { markOnboardingDone, setOnboardingResume } from "@/lib/onboarding";
+import { markOnboardingDone } from "@/lib/onboarding";
 import { cn } from "@/lib/utils";
 
 const SWATCHES = [
@@ -47,11 +47,7 @@ export function OnboardingCarousel({ onClose }: { onClose: () => void }) {
   }, []);
 
   const goto = (path: string) => {
-    if (path === "/app/teams") {
-      setOnboardingResume("teams-create");
-    } else {
-      markOnboardingDone();
-    }
+    markOnboardingDone();
     onClose();
     navigate(path);
   };

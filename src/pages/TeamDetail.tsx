@@ -1,5 +1,5 @@
-import { useState, FormEvent, useEffect } from "react";
-import { Link, useParams, useNavigate } from "react-router-dom";
+import { useState, FormEvent } from "react";
+import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, ChevronRight, Plus, Trash2, UserRound } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { createPlayer, deletePlayer, getTeam, listPlayers } from "@/lib/storage";
@@ -8,14 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import ImportPlayersDialog from "@/components/players/ImportPlayersDialog";
-import OnboardingCoach from "@/components/onboarding/OnboardingCoach";
-import {
-  clearOnboardingResume,
-  getOnboardingResume,
-  markOnboardingDone,
-  setOnboardingResume,
-  type OnboardingResume,
-} from "@/lib/onboarding";
 import { toast } from "sonner";
 import { useSettings } from "@/lib/settings";
 import { getSportLabel } from "@/lib/sportTargets";
@@ -24,7 +16,6 @@ export default function TeamDetail() {
   const { teamId = "" } = useParams();
   const { user } = useAuth();
   const { t } = useSettings();
-  const navigate = useNavigate();
   const team = getTeam(teamId);
   const [open, setOpen] = useState(false);
   const [first, setFirst] = useState("");
@@ -32,19 +23,6 @@ export default function TeamDetail() {
   const [mass, setMass] = useState("75");
   const [height, setHeight] = useState("");
   const [, force] = useState(0);
-  const [resume, setResume] = useState<OnboardingResume>(() => getOnboardingResume());
-  const [showDone, setShowDone] = useState(false);
-
-  useEffect(() => {
-    setResume(getOnboardingResume());
-  }, []);
-
-  const finishOnboarding = () => {
-    clearOnboardingResume();
-    markOnboardingDone();
-    setResume(null);
-    setShowDone(false);
-  };
 
   if (!team || !user) {
     return (
@@ -89,19 +67,14 @@ export default function TeamDetail() {
           <p className="text-sm text-muted-foreground">{getSportLabel(team.sport, t as any) || t("sportNotSet")}</p>
         </div>
         <div className="flex items-center gap-2">
-          <span data-onb="team-import" className="inline-flex">
-            <ImportPlayersDialog
-              teamId={team.id}
-              organizationId={user.organizationId}
-              onImported={() => force((n) => n + 1)}
-            />
-          </span>
+          <ImportPlayersDialog
+            teamId={team.id}
+            organizationId={user.organizationId}
+            onImported={() => force((n) => n + 1)}
+          />
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button
-                data-onb="team-add"
-                className="bg-gradient-primary text-primary-foreground font-semibold"
-              >
+              <Button className="bg-gradient-primary text-primary-foreground font-semibold">
                 <Plus className="w-4 h-4 mr-1" /> {t("player")}
               </Button>
             </DialogTrigger>
@@ -174,46 +147,6 @@ export default function TeamDetail() {
             </div>
           ))}
         </div>
-      )}
-
-      {resume === "team-import" && !showDone && (
-        <OnboardingCoach
-          targetSelector='[data-onb="team-import"]'
-          title={t("onbTeamImportTitle")}
-          description={t("onbTeamImportDesc")}
-          onNext={() => {
-            setOnboardingResume("team-add");
-            setResume("team-add");
-          }}
-          onSkip={finishOnboarding}
-        />
-      )}
-
-      {resume === "team-add" && !showDone && (
-        <OnboardingCoach
-          targetSelector='[data-onb="team-add"]'
-          title={t("onbTeamAddTitle")}
-          description={t("onbTeamAddDesc")}
-          onNext={() => setShowDone(true)}
-          onSkip={finishOnboarding}
-        />
-      )}
-
-      {showDone && (
-        <OnboardingCoach
-          centered
-          title={t("onbTeamDoneTitle")}
-          description={t("onbTeamDoneDesc")}
-          nextLabel={t("onbTeamDoneRunTest")}
-          onNext={() => {
-            finishOnboarding();
-            navigate("/app/tests/new");
-          }}
-          secondaryLabel={t("onbTeamDoneLater")}
-          onSecondary={finishOnboarding}
-          skipLabel={t("onbTeamDoneLater")}
-          onSkip={finishOnboarding}
-        />
       )}
     </div>
   );

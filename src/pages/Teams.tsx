@@ -1,13 +1,6 @@
-import { useState, FormEvent, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState, FormEvent } from "react";
+import { Link } from "react-router-dom";
 import { ChevronRight, Plus, Trash2, Users } from "lucide-react";
-import OnboardingCoach from "@/components/onboarding/OnboardingCoach";
-import {
-  clearOnboardingResume,
-  getOnboardingResume,
-  markOnboardingDone,
-  setOnboardingResume,
-} from "@/lib/onboarding";
 import { useAuth } from "@/lib/auth";
 import { createTeam, deleteTeam, listPlayers, listTeams } from "@/lib/storage";
 import { Button } from "@/components/ui/button";
@@ -37,16 +30,10 @@ const GROUP_LABEL_KEYS: Record<(typeof SPORT_GROUPS)[number]["key"], string> = {
 export default function Teams() {
   const { user } = useAuth();
   const { t } = useSettings();
-  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [sport, setSport] = useState("");
   const [, force] = useState(0);
-  const [resume, setResume] = useState(() => getOnboardingResume());
-
-  useEffect(() => {
-    setResume(getOnboardingResume());
-  }, []);
 
   if (!user) return <div className="min-h-[60vh]" aria-hidden />;
   const teams = listTeams(user.organizationId);
@@ -55,15 +42,10 @@ export default function Teams() {
   const onCreate = (e: FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
-    const team = createTeam(user.organizationId, name.trim(), sport || undefined);
+    createTeam(user.organizationId, name.trim(), sport || undefined);
     setName(""); setSport(""); setOpen(false);
     force((n) => n + 1);
     toast.success(t("teamCreated"));
-    if (resume === "teams-create") {
-      setOnboardingResume("team-import");
-      setResume(null);
-      if (team?.id) navigate(`/app/teams/${team.id}`);
-    }
   };
 
   return (
@@ -75,10 +57,7 @@ export default function Teams() {
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button
-              data-onb="teams-create"
-              className="bg-gradient-primary text-primary-foreground font-bold uppercase tracking-wide"
-            >
+            <Button className="bg-gradient-primary text-primary-foreground font-bold uppercase tracking-wide">
               <Plus className="w-4 h-4 mr-1 stroke-[3]" /> {t("new")}
             </Button>
           </DialogTrigger>
@@ -171,23 +150,6 @@ export default function Teams() {
             );
           })}
         </div>
-      )}
-
-      {resume === "teams-create" && (
-        <OnboardingCoach
-          targetSelector='[data-onb="teams-create"]'
-          title={t("onbTeamsCreateTitle")}
-          description={t("onbTeamsCreateDesc")}
-          nextLabel={t("onbCoachGotIt")}
-          onNext={() => {
-            setOpen(true);
-          }}
-          onSkip={() => {
-            clearOnboardingResume();
-            markOnboardingDone();
-            setResume(null);
-          }}
-        />
       )}
     </div>
   );
