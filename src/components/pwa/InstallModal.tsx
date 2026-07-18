@@ -12,7 +12,7 @@ import {
   promptInstall,
 } from "@/lib/pwa/install";
 import { Download, Share2, Plus, Check } from "lucide-react";
-import logo from "@/assets/fv-logo.png";
+import fvLogo from "@/assets/fv-logo.png.asset.json";
 
 const SEEN_KEY = "slfv:install-modal-seen";
 const SESSION_HIDE_KEY = "slfv:install-modal-hide-session";
