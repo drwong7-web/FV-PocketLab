@@ -62,7 +62,7 @@ export default function InstallModal({ open: openProp, onClose, forced }: Props)
     <Dialog open={open} onOpenChange={(v) => { if (!v) dismiss(); }}>
       <DialogContent className="sm:max-w-md" onEscapeKeyDown={(e) => forced && e.preventDefault()} onPointerDownOutside={(e) => forced && e.preventDefault()}>
         <DialogHeader className="items-center text-center">
-          <img src={logo} alt="" className="w-20 h-20 rounded-2xl shadow-lg mb-2" />
+          <img src={fvLogo.url} alt="" className="w-20 h-20 rounded-2xl shadow-lg mb-2" />
           <DialogTitle className="text-2xl">{t("installTitle")}</DialogTitle>
           <DialogDescription>{t("installSubtitle")}</DialogDescription>
         </DialogHeader>
