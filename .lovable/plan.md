@@ -1,47 +1,72 @@
-## Onboarding — Carrousel plein écran (1er accès Dashboard)
 
-### Objectif
-Guider l'utilisateur à sa toute première ouverture du Dashboard via un carrousel plein écran de 5 slides, entièrement traduit (FR/EN/AR), stylisé au thème de l'app, avec possibilité de skipper et de relancer depuis Réglages.
+## Objectif
 
-### Déclenchement
-- Clé persistante `slfv:onboarding:done` dans `localStorage`.
-- Au montage de `src/pages/Dashboard.tsx`: si la clé est absente → afficher l'overlay onboarding.
-- Marquée `true` à la fin (bouton "Commencer") **ou** au skip.
-- Bouton "Revoir l'onboarding" ajouté dans le dialogue Réglages (`AppLayout.tsx`) qui remet la clé à `false` et re-navigue vers `/app`.
+Réduire le carrousel d'onboarding à 3 slides (au lieu de 5), et enchaîner avec un mini-tour interactif qui met en surbrillance les boutons clés :
+1. Bouton **"Nouvelle équipe"** sur `/app/teams` (avec explication).
+2. Après création de l'équipe → bouton **"Ajouter athlète"** et **"Importer"** (PDF / Word / image) sur `/app/teams/:id`.
 
-### Structure des 5 slides
+## Changements
 
-1. **Bienvenue** — logo FV, titre "Pocket Lab", pitch court (profil Force-Vitesse local & privé).
-2. **Langue & thème** — sélecteurs inline (FR/EN/AR, clair/sombre, 8 pastilles d'accent) réutilisant exactement les composants du dialogue Réglages. Modifications appliquées en temps réel.
-3. **Équipe & athlète** — explique la structure Équipes → Athlètes. CTA secondaire "Aller aux équipes" (navigue vers `/app/teams` et ferme l'onboarding).
-4. **Premier test** — présente Saut vertical vs Sprint linéaire (2 cartes côte à côte avec icônes). CTA "Nouveau test" → `/app/tests/new`.
-5. **Sync & exports** — mentionne sauvegarde cloud (Drive/iCloud/.slfv) et export Word/PDF des rapports. Bouton final "Commencer".
+### 1. Carrousel — arrêt à l'étape 3
+Fichier : `src/components/onboarding/OnboardingCarousel.tsx`
+- `total = 3` au lieu de 5.
+- Supprimer `SlideTests` (step 3) et `SlideBackup` (step 4) + imports `Timer`, `Upload`, `Zap`, `Activity`.
+- Sur la dernière slide (step 2, "Équipes & athlètes"), le CTA principal devient **"Créer une équipe"** :
+  - marque `onboarding:done`
+  - active un flag transient `slfv:onboarding:tour = "team-create"` dans `localStorage`
+  - navigue vers `/app/teams`
+- Le bouton "Commencer" reste disponible pour finir sans tour.
 
-### UX
-- Overlay plein écran `fixed inset-0 z-50` avec fond `bg-background/95 backdrop-blur-xl`.
-- Slide centrée dans une carte `glass-card` responsive (max-w-lg), gradient primary discret.
-- Header: logo + bouton "Passer" (skip) en haut à droite.
-- Footer: pastilles de progression (5 dots), boutons "Précédent" / "Suivant" (ou "Commencer" sur la dernière).
-- Navigation clavier: ← → Échap.
-- Animations douces (fade + translate) entre slides via classes Tailwind.
-- Respecte les tokens sémantiques (aucune couleur hardcodée), style aligné avec les cartes de la page Teams et les onglets récemment redesignés.
+### 2. Nouveau helper — état du tour guidé
+Fichier créé : `src/lib/onboardingTour.ts`
+- Clé `slfv:onboarding:tour` (valeurs : `"team-create" | "player-add" | null`).
+- Helpers : `getTourStep()`, `setTourStep(step)`, `clearTour()`.
+- Sur création d'équipe (dans `Teams.tsx`), si tour == `team-create` → passe à `player-add` et navigue vers la nouvelle équipe.
+- Sur création/import d'athlète (dans `TeamDetail.tsx`), si tour == `player-add` → `clearTour()`.
 
-### i18n
-Ajouter dans `src/lib/settings.tsx` un bloc de clés `onboarding*` (welcome, welcomeSub, step2Title, step2Sub, step3Title, step3Sub, step4Title, step4Sub, step5Title, step5Sub, skip, next, prev, start, replayOnboarding, goToTeams, newTestCta, jumpShort, sprintShort, etc.) pour les 3 langues.
+### 3. Coach-mark — composant réutilisable
+Fichier créé : `src/components/onboarding/CoachMark.tsx`
+- Props : `targetRef`, `title`, `description`, `onDismiss`, `placement?`.
+- Rendu : overlay `fixed inset-0` avec fond `bg-background/70 backdrop-blur-sm`, "trou" autour du bouton cible via un anneau lumineux `ring-4 ring-primary shadow-glow` appliqué en positionnant une div absolue calculée depuis `targetRef.getBoundingClientRect()`.
+- Bulle glass-card à côté du bouton avec titre, description, bouton "OK" (dismiss).
+- Anneau + bulle repositionnés sur `resize` / `scroll`.
+- Fermeture : clic sur "OK", clic hors bulle, ou touche `Échap`.
 
-### Fichiers touchés
+### 4. Intégration `Teams.tsx`
+- `useRef` sur le bouton "New" (DialogTrigger).
+- Au montage : si `getTourStep() === "team-create"` → afficher `<CoachMark>` pointant vers le bouton, avec titre `onbTourTeamTitle` et texte `onbTourTeamDesc`.
+- Dismiss = simplement cacher le coach-mark (le tour reste actif jusqu'à création réelle).
+- Après `createTeam` : si tour actif, `setTourStep("player-add")` puis `navigate("/app/teams/"+id)`.
+
+### 5. Intégration `TeamDetail.tsx`
+- `useRef` sur les boutons "Ajouter joueur" et "Importer".
+- Au montage : si `getTourStep() === "player-add"` → `<CoachMark>` pointant vers le groupe (ou séquentiellement : d'abord "Ajouter", puis "Importer").
+- Simplification : un seul coach-mark qui encadre les deux boutons, avec titre `onbTourPlayerTitle` et description mentionnant les deux options (saisie manuelle OU import PDF/Word/image).
+- Dismiss = `clearTour()`.
+
+### 6. i18n — nouvelles clés
+Fichier : `src/lib/settings.tsx`
+- Retirer/marquer inutilisées : `onb4Title`, `onb4Sub`, `onb4Cta`, `onb5Title`, `onb5Sub` (peuvent rester pour rétro-compat mais non référencées).
+- Ajouter :
+  - `onbTourTeamTitle` — "Créer votre première équipe" / "Create your first team" / "أنشئ فريقك الأول"
+  - `onbTourTeamDesc` — "Cliquez sur ce bouton pour ajouter une équipe et choisir son sport." / …
+  - `onbTourPlayerTitle` — "Ajoutez vos athlètes" / …
+  - `onbTourPlayerDesc` — "Saisissez un athlète manuellement, ou importez une liste depuis un PDF, Word ou une image." / …
+  - `onbTourGotIt` — "OK" / "Got it" / "حسناً"
+
+## Fichiers touchés
 
 **Créés**
-- `src/components/onboarding/OnboardingCarousel.tsx` — composant overlay + logique carrousel + 5 slides internes.
-- `src/lib/onboarding.ts` — helpers `isOnboardingDone()`, `markOnboardingDone()`, `resetOnboarding()` autour de `localStorage`.
+- `src/lib/onboardingTour.ts`
+- `src/components/onboarding/CoachMark.tsx`
 
 **Modifiés**
-- `src/pages/Dashboard.tsx` — monte `<OnboardingCarousel />` conditionnellement au premier accès.
-- `src/components/AppLayout.tsx` — ajoute une entrée "Revoir l'onboarding" dans le dialogue Réglages (section langue/thème ou nouvelle section compacte), qui appelle `resetOnboarding()` puis recharge Dashboard.
-- `src/lib/settings.tsx` — nouvelles clés i18n FR/EN/AR.
+- `src/components/onboarding/OnboardingCarousel.tsx` (total=3, suppression slides 4-5, CTA final)
+- `src/pages/Teams.tsx` (ref + coach-mark + progression du tour)
+- `src/pages/TeamDetail.tsx` (refs + coach-mark + fin du tour)
+- `src/lib/settings.tsx` (clés i18n FR/EN/AR)
 
-### Hors périmètre
-- Pas de tour de tooltips pointant les vrais éléments (l'utilisateur a choisi le carrousel).
-- Pas de checklist persistante sur Dashboard.
-- Pas de modification du flux Auth (l'onboarding se joue **après** création du profil, à l'arrivée sur Dashboard).
-- Pas de changement de logique métier (F-V, calculs, export) — uniquement présentation.
+## Hors périmètre
+- Pas de modification du flux de test/backup (les slides sont juste retirées).
+- Pas de refonte des dialogues existants "Créer équipe" / "Ajouter joueur" / "Importer".
+- Pas de tour persistant si l'utilisateur skip : `clearTour()` est appelé à tout dismiss final.
