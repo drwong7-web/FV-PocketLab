@@ -1,4 +1,4 @@
-import { useState, FormEvent } from "react";
+import { useState, useRef, useEffect, FormEvent } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, ChevronRight, Plus, Trash2, UserRound } from "lucide-react";
 import { useAuth } from "@/lib/auth";
@@ -11,6 +11,8 @@ import ImportPlayersDialog from "@/components/players/ImportPlayersDialog";
 import { toast } from "sonner";
 import { useSettings } from "@/lib/settings";
 import { getSportLabel } from "@/lib/sportTargets";
+import { CoachMark } from "@/components/onboarding/CoachMark";
+import { getTourStep, clearTour } from "@/lib/onboardingTour";
 
 export default function TeamDetail() {
   const { teamId = "" } = useParams();
@@ -23,6 +25,12 @@ export default function TeamDetail() {
   const [mass, setMass] = useState("75");
   const [height, setHeight] = useState("");
   const [, force] = useState(0);
+  const addWrapRef = useRef<HTMLDivElement>(null);
+  const [showCoach, setShowCoach] = useState(false);
+
+  useEffect(() => {
+    if (getTourStep() === "player-add") setShowCoach(true);
+  }, []);
 
   if (!team || !user) {
     return (
