@@ -399,7 +399,7 @@ const TR = {
   onbStart: { fr: "Commencer", en: "Get started", ar: "لنبدأ" },
   onbReplay: { fr: "Revoir l'introduction", en: "Replay onboarding", ar: "إعادة الجولة التعريفية" },
   onb1Title: { fr: "Bienvenue sur Pocket Lab", en: "Welcome to Pocket Lab", ar: "مرحباً بك في Pocket Lab" },
-  onb1Sub: { fr: "Votre labo de profil Force-Vitesse, 100% local et privé. Créons ensemble votre premier test en quelques étapes.", en: "Your Force-Velocity profiling lab — 100% local, private by default. Let's set you up in a few quick steps.", ar: "مختبر ملف القوة والسرعة الخاص بك، محلي بالكامل وخاص افتراضياً. لنقم بإعدادك في بضع خطوات." },
+  onb1Sub: { fr: "Votre labo de profil Force Velocity\nCréons ensemble votre premier test en quelques étapes.", en: "Your Force Velocity profiling lab\nLet's set you up in a few quick steps", ar: "مختبر ملف القوة والسرعة الخاص بك\nلنقم بإعدادك في بضع خطوات." },
   onb2Title: { fr: "Langue & apparence", en: "Language & appearance", ar: "اللغة والمظهر" },
   onb2Sub: { fr: "Choisissez votre langue, votre thème et votre couleur d'accent. Vous pourrez les changer à tout moment depuis les réglages.", en: "Pick your language, theme and accent color. You can change them anytime from settings.", ar: "اختر لغتك ومظهرك ولون التمييز. يمكنك تغييرها في أي وقت من الإعدادات." },
   onb3Title: { fr: "Équipes & athlètes", en: "Teams & athletes", ar: "الفرق والرياضيون" },
