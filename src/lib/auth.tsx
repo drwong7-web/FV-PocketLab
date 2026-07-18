@@ -55,10 +55,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setEnrolled(true);
     },
     signOut: () => {
+      // Ne PAS supprimer slfv:users / slfv:orgs : les données (équipes, athlètes, tests)
+      // sont liées à user_id / organization_id. Effacer ces clés orphelinerait tout.
       try {
         kvRemove(PROFILE_FLAG);
-        kvRemove("slfv:users");
-        kvRemove("slfv:orgs");
         kvRemove("slfv:session");
       } catch { /* */ }
       setUser(null);
