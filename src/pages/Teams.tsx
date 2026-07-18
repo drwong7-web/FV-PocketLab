@@ -37,10 +37,16 @@ const GROUP_LABEL_KEYS: Record<(typeof SPORT_GROUPS)[number]["key"], string> = {
 export default function Teams() {
   const { user } = useAuth();
   const { t } = useSettings();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [sport, setSport] = useState("");
   const [, force] = useState(0);
+  const [resume, setResume] = useState(() => getOnboardingResume());
+
+  useEffect(() => {
+    setResume(getOnboardingResume());
+  }, []);
 
   if (!user) return <div className="min-h-[60vh]" aria-hidden />;
   const teams = listTeams(user.organizationId);
@@ -49,10 +55,15 @@ export default function Teams() {
   const onCreate = (e: FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
-    createTeam(user.organizationId, name.trim(), sport || undefined);
+    const team = createTeam(user.organizationId, name.trim(), sport || undefined);
     setName(""); setSport(""); setOpen(false);
     force((n) => n + 1);
     toast.success(t("teamCreated"));
+    if (resume === "teams-create") {
+      setOnboardingResume("team-import");
+      setResume(null);
+      if (team?.id) navigate(`/app/teams/${team.id}`);
+    }
   };
 
   return (
