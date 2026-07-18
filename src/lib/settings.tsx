@@ -410,6 +410,21 @@ const TR = {
   onb4Cta: { fr: "Nouveau test", en: "New test", ar: "اختبار جديد" },
   onb5Title: { fr: "Sauvegarde & rapports", en: "Backup & reports", ar: "النسخ الاحتياطي والتقارير" },
   onb5Sub: { fr: "Sauvegardez vos données sur Google Drive, iCloud ou un fichier .slfv. Exportez chaque rapport en Word ou PDF.", en: "Back up your data to Google Drive, iCloud or a .slfv file. Export every report as Word or PDF.", ar: "احفظ بياناتك على Google Drive أو iCloud أو ملف .slfv. صدّر كل تقرير بصيغة Word أو PDF." },
+
+  // ---- Coach marks ----
+  onbCoachSkip: { fr: "Passer", en: "Skip tour", ar: "تخطي" },
+  onbCoachNext: { fr: "Suivant", en: "Next", ar: "التالي" },
+  onbCoachGotIt: { fr: "Compris", en: "Got it", ar: "حسناً" },
+  onbTeamsCreateTitle: { fr: "Créez votre première équipe", en: "Create your first team", ar: "أنشئ فريقك الأول" },
+  onbTeamsCreateDesc: { fr: "Tapez ici pour créer une équipe. Choisissez un sport pour activer un profil F-V cible adapté.", en: "Tap here to create a team. Pick a sport to activate a matching target F-V profile.", ar: "اضغط هنا لإنشاء فريق. اختر رياضة لتفعيل ملف قوة-سرعة مرجعي مناسب." },
+  onbTeamImportTitle: { fr: "Importer une liste de joueurs", en: "Import a player roster", ar: "استيراد قائمة اللاعبين" },
+  onbTeamImportDesc: { fr: "Importez rapidement plusieurs athlètes depuis un document (PDF, CSV, Excel). Les noms, masses et tailles sont détectés automatiquement.", en: "Quickly import multiple athletes from a document (PDF, CSV, Excel). Names, masses and heights are auto-detected.", ar: "استورد عدة رياضيين بسرعة من مستند (PDF أو CSV أو Excel). يتم كشف الأسماء والأوزان والأطوال تلقائياً." },
+  onbTeamAddTitle: { fr: "Ajouter un joueur", en: "Add a player", ar: "أضف لاعباً" },
+  onbTeamAddDesc: { fr: "Ou saisissez manuellement un athlète en renseignant nom, masse et taille.", en: "Or add an athlete manually by entering name, mass and height.", ar: "أو أضف رياضياً يدوياً بإدخال الاسم والوزن والطول." },
+  onbTeamDoneTitle: { fr: "Tout est prêt", en: "You're all set", ar: "كل شيء جاهز" },
+  onbTeamDoneDesc: { fr: "Vous pouvez maintenant lancer votre premier test F-V sur un athlète.", en: "You can now run your first F-V test on an athlete.", ar: "يمكنك الآن إجراء أول اختبار قوة-سرعة على رياضي." },
+  onbTeamDoneRunTest: { fr: "Nouveau test", en: "New test", ar: "اختبار جديد" },
+  onbTeamDoneLater: { fr: "Plus tard", en: "Later", ar: "لاحقاً" },
 } as const;
 
 

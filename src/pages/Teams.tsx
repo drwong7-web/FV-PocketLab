@@ -1,6 +1,13 @@
-import { useState, FormEvent } from "react";
-import { Link } from "react-router-dom";
+import { useState, FormEvent, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { ChevronRight, Plus, Trash2, Users } from "lucide-react";
+import OnboardingCoach from "@/components/onboarding/OnboardingCoach";
+import {
+  clearOnboardingResume,
+  getOnboardingResume,
+  markOnboardingDone,
+  setOnboardingResume,
+} from "@/lib/onboarding";
 import { useAuth } from "@/lib/auth";
 import { createTeam, deleteTeam, listPlayers, listTeams } from "@/lib/storage";
 import { Button } from "@/components/ui/button";
