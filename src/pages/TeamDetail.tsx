@@ -160,6 +160,14 @@ export default function TeamDetail() {
           ))}
         </div>
       )}
+      {showCoach && (
+        <CoachMark
+          targetRef={addWrapRef}
+          titleKey="onbTourPlayerTitle"
+          descKey="onbTourPlayerDesc"
+          onDismiss={() => { clearTour(); setShowCoach(false); }}
+        />
+      )}
     </div>
   );
 }
