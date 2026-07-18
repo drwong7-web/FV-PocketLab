@@ -24,6 +24,7 @@ export default function TeamDetail() {
   const { teamId = "" } = useParams();
   const { user } = useAuth();
   const { t } = useSettings();
+  const navigate = useNavigate();
   const team = getTeam(teamId);
   const [open, setOpen] = useState(false);
   const [first, setFirst] = useState("");
@@ -31,6 +32,19 @@ export default function TeamDetail() {
   const [mass, setMass] = useState("75");
   const [height, setHeight] = useState("");
   const [, force] = useState(0);
+  const [resume, setResume] = useState<OnboardingResume>(() => getOnboardingResume());
+  const [showDone, setShowDone] = useState(false);
+
+  useEffect(() => {
+    setResume(getOnboardingResume());
+  }, []);
+
+  const finishOnboarding = () => {
+    clearOnboardingResume();
+    markOnboardingDone();
+    setResume(null);
+    setShowDone(false);
+  };
 
   if (!team || !user) {
     return (
@@ -75,14 +89,19 @@ export default function TeamDetail() {
           <p className="text-sm text-muted-foreground">{getSportLabel(team.sport, t as any) || t("sportNotSet")}</p>
         </div>
         <div className="flex items-center gap-2">
-          <ImportPlayersDialog
-            teamId={team.id}
-            organizationId={user.organizationId}
-            onImported={() => force((n) => n + 1)}
-          />
+          <span data-onb="team-import" className="inline-flex">
+            <ImportPlayersDialog
+              teamId={team.id}
+              organizationId={user.organizationId}
+              onImported={() => force((n) => n + 1)}
+            />
+          </span>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button className="bg-gradient-primary text-primary-foreground font-semibold">
+              <Button
+                data-onb="team-add"
+                className="bg-gradient-primary text-primary-foreground font-semibold"
+              >
                 <Plus className="w-4 h-4 mr-1" /> {t("player")}
               </Button>
             </DialogTrigger>
