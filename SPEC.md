@@ -2,7 +2,7 @@
 
 > **Living specification.** Update this file in the SAME turn as any change to architecture, routes, data model, libraries, calculation protocols, or product behavior. If a change doesn't affect any of those, no update needed. Kept so another agent (Cursor, Claude Code, Codex, etc.) can continue the work with the exact same architecture and plan.
 
-**Last updated:** 2026-07-14
+**Last updated:** 2026-07-18
 **Owner:** Lovable agent (auto-maintained)
 **Related docs:** `.lovable/plan.md` (ephemeral per-task plans), `mem://index.md` (agent memory rules)
 

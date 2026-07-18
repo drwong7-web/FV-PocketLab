@@ -278,3 +278,20 @@ input[type="number"] {
   box-shadow: 0 2px 6px hsl(0 0% 0% / 0.35), 0 0 0 3px hsl(var(--background));
   cursor: pointer;
 }
+
+/* ============================================================
+   PWA — iOS safe-area handling (standalone / notch / home bar)
+   ============================================================ */
+@supports (padding: max(0px)) {
+  html, body {
+    /* Prevent horizontal shift on iPhone landscape when notch is on the side. */
+    background-color: hsl(var(--background));
+  }
+  #root {
+    min-height: 100dvh;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+}
