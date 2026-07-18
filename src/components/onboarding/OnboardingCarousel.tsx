@@ -148,7 +148,7 @@ function SlideWelcome({ titleKey, subKey }: { titleKey: TKey; subKey: TKey }) {
     <div className="flex flex-col items-center text-center gap-4 pt-4">
       <img src={fvLogo.url} alt="FV" className="engraved-logo w-24 h-24 object-contain" />
       <h2 className="text-2xl font-bold tracking-tight">{t(titleKey)}</h2>
-      <p className="text-sm text-muted-foreground leading-relaxed max-w-md">{t(subKey)}</p>
+      <p className="text-sm text-muted-foreground leading-relaxed max-w-md whitespace-pre-line">{t(subKey)}</p>
     </div>
   );
 }
