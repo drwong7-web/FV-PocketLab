@@ -166,6 +166,14 @@ export default function Teams() {
           })}
         </div>
       )}
+      {showCoach && (
+        <CoachMark
+          targetRef={newBtnRef}
+          titleKey="onbTourTeamTitle"
+          descKey="onbTourTeamDesc"
+          onDismiss={() => setShowCoach(false)}
+        />
+      )}
     </div>
   );
 }
