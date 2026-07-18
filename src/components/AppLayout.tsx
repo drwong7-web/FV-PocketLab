@@ -326,7 +326,21 @@ export default function AppLayout() {
           </div>
 
 
-          <DialogFooter>
+          <DialogFooter className="flex-col sm:flex-row gap-2 sm:justify-between">
+            <Button
+              variant="outline"
+              onClick={() => {
+                resetOnboarding();
+                setSettingsOpen(false);
+                if (window.location.pathname !== "/app") {
+                  window.location.assign("/app");
+                } else {
+                  window.location.reload();
+                }
+              }}
+            >
+              {t("onbReplay")}
+            </Button>
             <Button onClick={() => setSettingsOpen(false)} className="bg-gradient-primary text-primary-foreground">
               {t("done")}
             </Button>
