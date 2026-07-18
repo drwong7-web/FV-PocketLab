@@ -34,16 +34,26 @@ function writeRaw(key: string, items: LocalTest[]) {
 }
 
 /** One-shot migration: if the current profile has no bucket yet but a legacy
- * global bucket exists, attribute those tests to the current profile. */
+ * global bucket exists (either in localStorage or migrated into kvStore),
+ * attribute those tests to the current profile. */
 function migrateLegacyIfNeeded(key: string) {
   try {
     if (localStorage.getItem(key)) return;
-    const legacy = localStorage.getItem(LEGACY_KEY);
-    if (!legacy || legacy === "[]") return;
-    // If the legacy key IS the current key (same string), nothing to do.
     if (LEGACY_KEY === key) return;
-    localStorage.setItem(key, legacy);
-    localStorage.removeItem(LEGACY_KEY);
+    // Try localStorage first, then kvStore cache (kvStore migrates fv:* keys at boot).
+    let legacyArr: LocalTest[] | null = null;
+    const raw = localStorage.getItem(LEGACY_KEY);
+    if (raw && raw !== "[]") {
+      try { legacyArr = JSON.parse(raw) as LocalTest[]; } catch { /* */ }
+    }
+    if (!legacyArr) {
+      const kv = kvGet<LocalTest[]>(LEGACY_KEY);
+      if (Array.isArray(kv) && kv.length) legacyArr = kv;
+    }
+    if (!legacyArr || !legacyArr.length) return;
+    localStorage.setItem(key, JSON.stringify(legacyArr));
+    try { localStorage.removeItem(LEGACY_KEY); } catch { /* */ }
+    try { kvRemove(LEGACY_KEY); } catch { /* */ }
   } catch { /* */ }
 }
 
