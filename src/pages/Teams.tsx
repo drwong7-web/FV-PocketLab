@@ -72,7 +72,7 @@ export default function Teams() {
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-gradient-primary text-primary-foreground font-bold uppercase tracking-wide">
+            <Button ref={newBtnRef} className="bg-gradient-primary text-primary-foreground font-bold uppercase tracking-wide">
               <Plus className="w-4 h-4 mr-1 stroke-[3]" /> {t("new")}
             </Button>
           </DialogTrigger>
