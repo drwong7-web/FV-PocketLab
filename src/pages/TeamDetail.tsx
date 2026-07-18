@@ -61,6 +61,7 @@ export default function TeamDetail() {
     setFirst(""); setLast(""); setMass("75"); setHeight(""); setOpen(false);
     force((n) => n + 1);
     toast.success(t("playerAdded"));
+    if (getTourStep() === "player-add") { clearTour(); setShowCoach(false); }
   };
 
   return (
@@ -74,11 +75,14 @@ export default function TeamDetail() {
           <h1 className="text-2xl font-bold tracking-tight">{team.name}</h1>
           <p className="text-sm text-muted-foreground">{getSportLabel(team.sport, t as any) || t("sportNotSet")}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div ref={addWrapRef} className="flex items-center gap-2">
           <ImportPlayersDialog
             teamId={team.id}
             organizationId={user.organizationId}
-            onImported={() => force((n) => n + 1)}
+            onImported={() => {
+              force((n) => n + 1);
+              if (getTourStep() === "player-add") { clearTour(); setShowCoach(false); }
+            }}
           />
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
