@@ -1,5 +1,8 @@
-import { useState, FormEvent } from "react";
+import { useState, useRef, useEffect, FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
 import { Link } from "react-router-dom";
+import { CoachMark } from "@/components/onboarding/CoachMark";
+import { getTourStep, setTourStep } from "@/lib/onboardingTour";
 import { ChevronRight, Plus, Trash2, Users } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { createTeam, deleteTeam, listPlayers, listTeams } from "@/lib/storage";
