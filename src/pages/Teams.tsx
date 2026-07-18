@@ -75,7 +75,10 @@ export default function Teams() {
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-gradient-primary text-primary-foreground font-bold uppercase tracking-wide">
+            <Button
+              data-onb="teams-create"
+              className="bg-gradient-primary text-primary-foreground font-bold uppercase tracking-wide"
+            >
               <Plus className="w-4 h-4 mr-1 stroke-[3]" /> {t("new")}
             </Button>
           </DialogTrigger>
@@ -168,6 +171,23 @@ export default function Teams() {
             );
           })}
         </div>
+      )}
+
+      {resume === "teams-create" && (
+        <OnboardingCoach
+          targetSelector='[data-onb="teams-create"]'
+          title={t("onbTeamsCreateTitle")}
+          description={t("onbTeamsCreateDesc")}
+          nextLabel={t("onbCoachGotIt")}
+          onNext={() => {
+            setOpen(true);
+          }}
+          onSkip={() => {
+            clearOnboardingResume();
+            markOnboardingDone();
+            setResume(null);
+          }}
+        />
       )}
     </div>
   );

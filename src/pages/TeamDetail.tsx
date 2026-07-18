@@ -1,5 +1,5 @@
-import { useState, FormEvent } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useState, FormEvent, useEffect } from "react";
+import { Link, useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, ChevronRight, Plus, Trash2, UserRound } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { createPlayer, deletePlayer, getTeam, listPlayers } from "@/lib/storage";
@@ -8,6 +8,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import ImportPlayersDialog from "@/components/players/ImportPlayersDialog";
+import OnboardingCoach from "@/components/onboarding/OnboardingCoach";
+import {
+  clearOnboardingResume,
+  getOnboardingResume,
+  markOnboardingDone,
+  setOnboardingResume,
+  type OnboardingResume,
+} from "@/lib/onboarding";
 import { toast } from "sonner";
 import { useSettings } from "@/lib/settings";
 import { getSportLabel } from "@/lib/sportTargets";
