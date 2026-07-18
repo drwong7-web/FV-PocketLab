@@ -15,6 +15,7 @@ import {
   type SyncProvider,
 } from "@/lib/sync/config";
 import { syncPushNow, syncPullNow, syncBothNow } from "@/lib/sync/manager";
+import { resetOnboarding } from "@/lib/onboarding";
 
 import { cn } from "@/lib/utils";
 
