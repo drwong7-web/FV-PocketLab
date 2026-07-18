@@ -1,5 +1,6 @@
 import type { JumpResults, SprintResults } from "./fvCalculations";
 import { currentUser } from "./storage";
+import { kvGet, kvRemove } from "./db/kvStore";
 
 const BASE_KEY = "fv:local-tests:v1";
 const LEGACY_KEY = "fv:local-tests:v1";
