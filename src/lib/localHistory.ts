@@ -1,6 +1,8 @@
 import type { JumpResults, SprintResults } from "./fvCalculations";
+import { currentUser } from "./storage";
 
-const KEY = "fv:local-tests:v1";
+const BASE_KEY = "fv:local-tests:v1";
+const LEGACY_KEY = "fv:local-tests:v1";
 
 export interface LocalTest {
   id: string;
@@ -13,15 +15,48 @@ export interface LocalTest {
   saved?: boolean;
 }
 
-function read(): LocalTest[] {
+function currentKey(): string | null {
+  const u = currentUser();
+  if (!u) return null;
+  return `${BASE_KEY}:${u.id}`;
+}
+
+function readRaw(key: string): LocalTest[] {
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = localStorage.getItem(key);
     return raw ? (JSON.parse(raw) as LocalTest[]) : [];
   } catch { return []; }
 }
 
+function writeRaw(key: string, items: LocalTest[]) {
+  try { localStorage.setItem(key, JSON.stringify(items)); } catch { /* */ }
+}
+
+/** One-shot migration: if the current profile has no bucket yet but a legacy
+ * global bucket exists, attribute those tests to the current profile. */
+function migrateLegacyIfNeeded(key: string) {
+  try {
+    if (localStorage.getItem(key)) return;
+    const legacy = localStorage.getItem(LEGACY_KEY);
+    if (!legacy || legacy === "[]") return;
+    // If the legacy key IS the current key (same string), nothing to do.
+    if (LEGACY_KEY === key) return;
+    localStorage.setItem(key, legacy);
+    localStorage.removeItem(LEGACY_KEY);
+  } catch { /* */ }
+}
+
+function read(): LocalTest[] {
+  const key = currentKey();
+  if (!key) return [];
+  migrateLegacyIfNeeded(key);
+  return readRaw(key);
+}
+
 function write(items: LocalTest[]) {
-  try { localStorage.setItem(KEY, JSON.stringify(items)); } catch { /* */ }
+  const key = currentKey();
+  if (!key) return;
+  writeRaw(key, items);
 }
 
 export function saveLocalTest(t: Omit<LocalTest, "id"> & { id?: string }): LocalTest {
