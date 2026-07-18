@@ -29,7 +29,7 @@ export function OnboardingCarousel({ onClose }: { onClose: () => void }) {
   const { t, lang, setLang, theme, setTheme, accent, setAccent } = useSettings();
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
-  const total = 5;
+  const total = 3;
 
   const finish = () => {
     markOnboardingDone();
@@ -47,8 +47,9 @@ export function OnboardingCarousel({ onClose }: { onClose: () => void }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const goto = (path: string) => {
+  const goto = (path: string, tour?: "team-create") => {
     markOnboardingDone();
+    if (tour) setTourStep(tour);
     onClose();
     navigate(path);
   };
@@ -87,12 +88,8 @@ export function OnboardingCarousel({ onClose }: { onClose: () => void }) {
                 subKey="onb3Sub"
                 icon={<Users className="w-8 h-8" strokeWidth={1.75} />}
                 ctaLabel={t("onb3Cta")}
-                onCta={() => goto("/app/teams")}
+                onCta={() => goto("/app/teams", "team-create")}
               />
-            )}
-            {step === 3 && <SlideTests t={t} onCta={() => goto("/app/tests/new")} />}
-            {step === 4 && (
-              <SlideBackup titleKey="onb5Title" subKey="onb5Sub" />
             )}
           </div>
 
@@ -264,45 +261,6 @@ function SlideAction({
         {ctaLabel}
         <ArrowRight className="w-4 h-4 ml-1" />
       </Button>
-    </div>
-  );
-}
-
-function SlideTests({ t, onCta }: { t: (k: TKey) => string; onCta: () => void }) {
-  return (
-    <div className="flex flex-col items-center text-center gap-4 pt-2">
-      <h2 className="text-xl font-bold tracking-tight">{t("onb4Title")}</h2>
-      <p className="text-sm text-muted-foreground leading-relaxed max-w-md">{t("onb4Sub")}</p>
-      <div className="grid grid-cols-2 gap-3 w-full mt-2">
-        <div className="glass-card p-4 bg-gradient-to-br from-primary/10 to-transparent flex flex-col items-center gap-2">
-          <Activity className="w-7 h-7 text-primary" strokeWidth={1.75} />
-          <div className="text-sm font-semibold">{t("verticalJump")}</div>
-        </div>
-        <div className="glass-card p-4 bg-gradient-to-br from-primary/10 to-transparent flex flex-col items-center gap-2">
-          <Timer className="w-7 h-7 text-primary" strokeWidth={1.75} />
-          <div className="text-sm font-semibold">{t("linearSprint")}</div>
-        </div>
-      </div>
-      <Button variant="outline" onClick={onCta} className="mt-2">
-        {t("onb4Cta")}
-        <ArrowRight className="w-4 h-4 ml-1" />
-      </Button>
-    </div>
-  );
-}
-
-function SlideBackup({ titleKey, subKey }: { titleKey: TKey; subKey: TKey }) {
-  const { t } = useSettings();
-  return (
-    <div className="flex flex-col items-center text-center gap-4 pt-4">
-      <div className="w-16 h-16 rounded-2xl bg-gradient-primary text-primary-foreground flex items-center justify-center shadow-glow">
-        <Upload className="w-8 h-8" strokeWidth={1.75} />
-      </div>
-      <h2 className="text-xl font-bold tracking-tight">{t(titleKey)}</h2>
-      <p className="text-sm text-muted-foreground leading-relaxed max-w-md">{t(subKey)}</p>
-      <div className="flex items-center gap-2 text-[11px] text-muted-foreground uppercase tracking-widest">
-        <Zap className="w-3.5 h-3.5" /> Google Drive · iCloud · .slfv · Word · PDF
-      </div>
     </div>
   );
 }
