@@ -64,7 +64,7 @@ export default function Auth() {
           <img src={fvLogo.url} alt="FV logo" className="w-32 h-32 object-contain" />
           <div className="leading-tight">
             <h1 className="text-4xl font-bold tracking-tight">Pocket Lab</h1>
-            <p className="text-xs uppercase tracking-widest text-muted-foreground">
+            <p className="text-xs uppercase tracking-widest text-muted-foreground whitespace-pre-line">
               {t("localFirst")}
             </p>
           </div>
