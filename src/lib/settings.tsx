@@ -115,6 +115,10 @@ const TR = {
   nameAlreadyExists: { fr: "Ce nom est déjà utilisé.", en: "This name is already used.", ar: "هذا الاسم مستخدم بالفعل." },
   switchToLogin: { fr: "Déjà un profil ? Se connecter", en: "Already have a profile? Log in", ar: "لديك ملف؟ سجّل الدخول" },
   switchToSignup: { fr: "Pas de profil ? Créer un profil", en: "No profile?\u00a0 Sign up", ar: "لا يوجد ملف؟ أنشئ حساباً" },
+  alreadyHaveProfile: { fr: "Déjà un profil ?", en: "Already have a profile?", ar: "لديك ملف؟" },
+  noProfilePrompt: { fr: "Pas de profil ?", en: "No profile?", ar: "لا يوجد ملف؟" },
+  logInLink: { fr: "Se connecter", en: "Log in", ar: "سجّل الدخول" },
+  signUpLink: { fr: "Créer un profil", en: "Sign up", ar: "أنشئ حساباً" },
   loginBtn: { fr: "Se connecter", en: "Log in", ar: "تسجيل الدخول" },
   welcomeBack: { fr: "Bon retour", en: "Welcome back", ar: "مرحباً بعودتك" },
 
