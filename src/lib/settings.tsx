@@ -100,7 +100,7 @@ const TR = {
   // ---- Auth ----
   localFirst: { fr: "\n", en: "Local-first · Private by default", ar: "محلي أولاً · خاص افتراضياً" },
   createProfile: { fr: "\n", en: "Create your profile", ar: "أنشئ ملفك الشخصي" },
-  yourName: { fr: "Votre nom", en: "Your name", ar: "اسمك" },
+  yourName: { fr: "Username", en: "Username", ar: "اسم المستخدم" },
   createMyProfile: { fr: "Créer mon profil", en: "Create my profile", ar: "أنشئ ملفي" },
   nameTeamRequired: { fr: "Nom et mot de passe requis.", en: "Name and password required.", ar: "الاسم وكلمة المرور مطلوبان." },
   profileCreated: { fr: "Profil créé.", en: "Profile created.", ar: "تم إنشاء الملف." },
