@@ -99,7 +99,17 @@ export default function Auth() {
             onClick={() => setMode(mode === "signup" ? "login" : "signup")}
             className="w-full text-xs text-muted-foreground hover:text-foreground mt-4 underline-offset-2 hover:underline"
           >
-            {mode === "signup" ? t("switchToLogin") : t("switchToSignup")}
+            {mode === "signup" ? (
+              <>
+                {t("alreadyHaveProfile")}{" "}
+                <span className="text-sm font-semibold text-primary">{t("logInLink")}</span>
+              </>
+            ) : (
+              <>
+                {t("noProfilePrompt")}{" "}
+                <span className="text-sm font-semibold text-primary">{t("signUpLink")}</span>
+              </>
+            )}
           </button>
 
           <p className="text-[11px] text-muted-foreground text-center mt-5">
