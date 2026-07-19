@@ -98,7 +98,7 @@ const TR = {
   dashboard: { fr: "Tableau de bord", en: "Dashboard", ar: "الرئيسية" },
 
   // ---- Auth ----
-  localFirst: { fr: "\n", en: "Local-first · Private by default", ar: "محلي أولاً · خاص افتراضياً" },
+  localFirst: { fr: "FORCE VELOCITY PROFILER\n\u00a0 \u00a0 \u00a0 \u00a0IN YOUR POCKET\u00a0", en: "FORCE VELOCITY PROFILER\n\u00a0 \u00a0 \u00a0 \u00a0IN YOUR POCKET\u00a0", ar: "FORCE VELOCITY PROFILER\n\u00a0 \u00a0 \u00a0 \u00a0IN YOUR POCKET\u00a0" },
   createProfile: { fr: "\n", en: "Create your profile", ar: "أنشئ ملفك الشخصي" },
   yourName: { fr: "Username", en: "Username", ar: "اسم المستخدم" },
   createMyProfile: { fr: "Créer mon profil", en: "Create my profile", ar: "أنشئ ملفي" },
