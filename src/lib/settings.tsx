@@ -104,7 +104,7 @@ const TR = {
   createMyProfile: { fr: "Créer mon profil", en: "Create my profile", ar: "أنشئ ملفي" },
   nameTeamRequired: { fr: "Nom et mot de passe requis.", en: "Name and password required.", ar: "الاسم وكلمة المرور مطلوبان." },
   profileCreated: { fr: "Profil créé.", en: "Profile created.", ar: "تم إنشاء الملف." },
-  storageNote: { fr: "\n", en: "100% local storage · No online sign-up", ar: "تخزين محلي 100% · بدون تسجيل عبر الإنترنت" },
+  storageNote: { fr: "\n", en: "\n", ar: "\n" },
   login: { fr: "Connexion", en: "Login", ar: "تسجيل الدخول" },
   signUp: { fr: "Créer un profil", en: "Sign up", ar: "إنشاء حساب" },
   password: { fr: "Mot de passe", en: "Password", ar: "كلمة المرور" },
