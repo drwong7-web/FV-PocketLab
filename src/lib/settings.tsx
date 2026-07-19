@@ -114,7 +114,7 @@ const TR = {
   invalidCredentials: { fr: "Nom ou mot de passe incorrect.", en: "Invalid name or password.", ar: "الاسم أو كلمة المرور غير صحيحة." },
   nameAlreadyExists: { fr: "Ce nom est déjà utilisé.", en: "This name is already used.", ar: "هذا الاسم مستخدم بالفعل." },
   switchToLogin: { fr: "Déjà un profil ? Se connecter", en: "Already have a profile? Log in", ar: "لديك ملف؟ سجّل الدخول" },
-  switchToSignup: { fr: "Pas de profil ? Créer un profil", en: "No profile? Sign up", ar: "لا يوجد ملف؟ أنشئ حساباً" },
+  switchToSignup: { fr: "Pas de profil ? Créer un profil", en: "No profile?\u00a0 Sign up", ar: "لا يوجد ملف؟ أنشئ حساباً" },
   loginBtn: { fr: "Se connecter", en: "Log in", ar: "تسجيل الدخول" },
   welcomeBack: { fr: "Bon retour", en: "Welcome back", ar: "مرحباً بعودتك" },
 
