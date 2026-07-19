@@ -1,19 +1,13 @@
-Objectif : rendre l'action "Sign up" (et ses traductions) plus visible dans le bouton de bascule en bas du formulaire d'authentification, en augmentant légèrement sa taille et en appliquant la couleur d'accent du thème choisi.
+## Objectif
+Rendre l'haltère qui traverse la lettre **F** du logo `fv-logo.png` en **blanc**, tout en gardant le reste du logo identique. Le nouveau logo remplacera l'actuel partout dans l'application (page d'authentification, header, splash screens PWA, favicons).
 
-État actuel :
-- Le bouton se trouve dans `src/pages/Auth.tsx` (lignes 97-103) et affiche `t("switchToSignup")`.
-- La traduction complète est dans `src/lib/settings.tsx` : `"No profile?\u00a0 Sign up"`.
+## Étapes
 
-Plan :
-1. Ajouter deux nouvelles clés de traduction dans `src/lib/settings.tsx` :
-   - `noProfilePrompt` : "No profile?" / "Pas de profil ?" / "لا يوجد ملف؟"
-   - `signUpLink` : "Sign up" / "Créer un profil" / "أنشئ حساباً"
-2. Modifier `src/pages/Auth.tsx` pour afficher le préfixe et l'action séparément :
-   - Le préfixe reste en `text-xs text-muted-foreground`.
-   - L'action "Sign up" est wrappée dans un `<span>` avec `text-sm font-semibold text-primary` pour qu'elle adopte la couleur d'accent du thème et soit légèrement plus grande.
-3. Conserver le comportement existant du bouton (basculer entre login et signup au clic).
+1. **Édition IA du logo** — utiliser `imagegen--edit_image` sur le logo actuel avec un prompt du type : *"Change only the barbell/dumbbell crossing the letter F to pure white (#FFFFFF), keep everything else — the F, the V, colors, background, proportions — strictly identical."* Sortie sauvegardée en `src/assets/fv-logo-white-bar.png` (PNG, fond transparent conservé).
 
-Détails techniques :
-- Utiliser le token sémantique `text-primary` afin que la couleur suive le thème choisi par l'utilisateur.
-- Pas de changement de logique métier, uniquement de la présentation et des traductions.
-- Aucune dépendance supplémentaire requise.
+2. **Preview** — je te montrerai l'image générée avant tout remplacement. Tu valides ou tu demandes une nouvelle itération (couleur, contours, contraste).
+
+3. **Après validation seulement** — upload via `lovable-assets` pour remplacer le pointeur `src/assets/fv-logo.png.asset.json`. Aucun autre fichier à modifier : tous les usages (`Auth.tsx`, `AppLayout.tsx`, `InstallModal.tsx`, docx export, PWA icons) référencent le même pointeur.
+
+## Note
+Les icônes iOS et splash screens PWA générées précédemment (`public/icons/*`, `public/splash/*`) sont des fichiers statiques déjà déployés — si tu veux que **l'altère blanche** apparaisse aussi sur l'icône home-screen iOS et les splash screens, il faudra les régénérer depuis le nouveau logo. Dis-moi si je dois inclure cette régénération dans la même passe.
