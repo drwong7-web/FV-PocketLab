@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Camera, Plus, Trash2, Sparkles, Video, MapPin, Loader2, RefreshCw, AlertTriangle, Wind } from "lucide-react";
+import { ArrowLeft, Camera, Plus, Trash2, Sparkles, Video, MapPin, Loader2, RefreshCw, AlertTriangle, Wind } from "lucide-react";
+import { Link } from "react-router-dom";
 import logoSprint from "@/assets/logo-sprint-neon.png";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { toast } from "sonner";
@@ -207,6 +208,9 @@ export default function SprintTest() {
 
   return (
     <div className="space-y-5">
+      <Link to={`/app/tests/new${athleteId ? `?athleteId=${athleteId}` : ""}`} className="inline-flex items-center text-xs text-muted-foreground hover:text-foreground">
+        <ArrowLeft className="w-3 h-3 mr-1" /> {t("back")}
+      </Link>
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <img src={logoSprint} alt="Sprint" loading="eager" decoding="async" fetchPriority="high" className="logo-themed h-14 w-14 object-contain flex-shrink-0" />

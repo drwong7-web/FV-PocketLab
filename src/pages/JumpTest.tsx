@@ -1,12 +1,12 @@
 import { useEffect, useState, useMemo } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import { listPlayers, listTeams, getPlayer } from "@/lib/storage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Camera, Check, Plus, Ruler, Sparkles, Trash2 } from "lucide-react";
+import { ArrowLeft, Camera, Check, Plus, Ruler, Sparkles, Trash2 } from "lucide-react";
 import logoJump from "@/assets/logo-jump-neon.png";
 import { calculateJumpProfile, type JumpTrial } from "@/lib/fvCalculations";
 import { CameraDistance } from "@/components/camera/CameraDistance";
@@ -123,6 +123,9 @@ export default function JumpTest() {
 
   return (
     <div className="space-y-5">
+      <Link to={`/app/tests/new${athleteId ? `?athleteId=${athleteId}` : ""}`} className="inline-flex items-center text-xs text-muted-foreground hover:text-foreground">
+        <ArrowLeft className="w-3 h-3 mr-1" /> {t("back")}
+      </Link>
       <div className="flex items-center gap-3">
         <img src={logoJump} alt={t("verticalJump")} loading="eager" decoding="async" fetchPriority="high" className="logo-themed h-14 w-14 object-contain flex-shrink-0" />
         <div>
