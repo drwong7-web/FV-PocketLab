@@ -123,7 +123,7 @@ const TR = {
   welcomeBack: { fr: "Bon retour", en: "Welcome back", ar: "مرحباً بعودتك" },
 
   // ---- Teams page ----
-  teamsSubtitle: { fr: "Regroupez les athlètes par équipe ou session.", en: "Group athletes by squad or session.", ar: "جمّع الرياضيين حسب الفريق أو الجلسة." },
+  teamsSubtitle: { fr: "Regroupez les athlètes par équipe. Chaque équipe possède un sport qui définit un profil Force-Vitesse cible pour la comparaison.", en: "Group your athletes by team. Each team has a sport that sets a target Force-Velocity profile for comparison.", ar: "جمّع الرياضيين حسب الفريق. كل فريق لديه رياضة تحدد منحنى القوة والسرعة المستهدف للمقارنة." },
   createTeamTitle: { fr: "Créer une équipe", en: "Create team", ar: "إنشاء فريق" },
   teamName: { fr: "Nom de l'équipe", en: "Team name", ar: "اسم الفريق" },
   sport: { fr: "Sport", en: "Sport", ar: "الرياضة" },
