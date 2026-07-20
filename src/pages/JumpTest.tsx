@@ -135,7 +135,7 @@ export default function JumpTest() {
       </div>
 
       <Card>
-        <CardHeader><CardTitle as="h2" className="font-display text-base">{t("cameraCalib")}</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="font-display text-base">{t("cameraCalib")}</CardTitle></CardHeader>
         <CardContent className="space-y-3">
           <p className="text-xs text-muted-foreground">{t("cameraCalibOptional")}</p>
           <div className="flex items-center gap-2">
@@ -153,7 +153,7 @@ export default function JumpTest() {
       </Card>
 
       <Card>
-        <CardHeader><CardTitle as="h2" className="font-display text-base">{t("athleteParams")}</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="font-display text-base">{t("athleteParams")}</CardTitle></CardHeader>
         <CardContent className="space-y-3">
           <div className="space-y-1.5">
             <Label>{t("team")}</Label>
@@ -195,7 +195,7 @@ export default function JumpTest() {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle as="h2" className="font-display text-base">{t("trials")}</CardTitle>
+            <CardTitle className="font-display text-base">{t("trials")}</CardTitle>
             <Button size="sm" variant="outline" onClick={() => setTrials([...trials, { load: 0, jumpHeight: 0 }])}>
               <Plus className="h-4 w-4" />
             </Button>

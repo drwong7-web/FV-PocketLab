@@ -72,7 +72,6 @@ const TR = {
 
   // ---- Dashboard ----
   hello: { fr: "Bonjour", en: "Hello", ar: "مرحباً" },
-  performanceDashboard: { fr: "Tableau de bord performance", en: "Performance Dashboard", ar: "لوحة أداء" },
   tagline: { fr: "Votre labo de performance, dans votre poche.", en: "Your performance lab, in your pocket.", ar: "مختبر الأداء الخاص بك، في جيبك." },
   teams: { fr: "Équipes", en: "Teams", ar: "الفرق" },
   players: { fr: "Joueurs", en: "Players", ar: "اللاعبون" },
