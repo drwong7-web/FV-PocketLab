@@ -30,7 +30,6 @@ export default function Dashboard() {
     <div className="space-y-6">
       {showOnboarding && <OnboardingCarousel onClose={() => setShowOnboarding(false)} />}
       <div>
-        <p className="text-xs uppercase tracking-widest text-muted-foreground">{org?.name}</p>
         <h1 className="text-2xl font-bold tracking-tight mt-1">
           {t("hello")}, {user.name.split(" ")[0]}
         </h1>
