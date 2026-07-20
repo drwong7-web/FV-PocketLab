@@ -134,7 +134,7 @@ const TR = {
   sportGroupOther: { fr: "Autres sports", en: "Other sports", ar: "رياضات أخرى" },
   sportGroupFallback: { fr: "Non listé", en: "Not listed", ar: "غير مدرج" },
   // Sport options
-  sportFootball: { fr: "Football", en: "Football (soccer)", ar: "كرة القدم" },
+  sportFootball: { fr: "Football", en: "Football", ar: "كرة القدم" },
   sportRugby: { fr: "Rugby", en: "Rugby", ar: "الرجبي" },
   sportBasketball: { fr: "Basketball", en: "Basketball", ar: "كرة السلة" },
   sportHandball: { fr: "Handball", en: "Handball", ar: "كرة اليد" },
