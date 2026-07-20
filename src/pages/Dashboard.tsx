@@ -30,10 +30,10 @@ export default function Dashboard() {
     <div className="space-y-6">
       {showOnboarding && <OnboardingCarousel onClose={() => setShowOnboarding(false)} />}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight mt-1">
-          {t("hello")}, {user.name.split(" ")[0]}
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">{t("tagline")}</p>
+        <h1 className="text-2xl font-bold tracking-tight mt-1">{t("performanceDashboard")}</h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          {t("hello")}, {user.name.split(" ")[0]} · {t("tagline")}
+        </p>
       </div>
 
       <div className="grid grid-cols-3 gap-3">
