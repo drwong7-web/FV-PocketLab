@@ -6,6 +6,8 @@ export interface User {
   name: string;
   passwordHash: string; // simple hash, prototype only
   organizationId: string;
+  /** Base64url WebAuthn platform credential id for device-unlock password reset. */
+  webauthnCredentialId?: string;
 }
 
 export interface Organization {

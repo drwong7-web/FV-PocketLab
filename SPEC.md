@@ -2,9 +2,9 @@
 
 > **Living specification.** Update this file in the SAME turn as any change to architecture, routes, data model, libraries, calculation protocols, or product behavior. If a change doesn't affect any of those, no update needed. Kept so another agent (Cursor, Claude Code, Codex, etc.) can continue the work with the exact same architecture and plan.
 
-**Last updated:** 2026-07-18
-**Owner:** Lovable agent (auto-maintained)
-**Related docs:** `.lovable/plan.md` (ephemeral per-task plans), `mem://index.md` (agent memory rules)
+**Last updated:** 2026-07-24
+**Owner:** local maintainers
+**Related docs:** `DESIGN.md` (visual system), `mem://index.md` (agent memory rules when present)
 
 ---
 
@@ -23,7 +23,7 @@ Core user flows:
 
 - **Runtime:** Vite 5 + React 18 + TypeScript 5, TailwindCSS v3, shadcn/ui (Radix), lucide-react.
 - **Router:** react-router-dom v6. **State/data:** @tanstack/react-query + React context.
-- **Persistence:** IndexedDB via **Dexie** (`src/lib/db/kvStore.ts`, DB `slfv`, table `kv`) with a synchronous in-memory cache hydrated at boot (`bootstrapKvStore()` called in `main.tsx` before render). All app data (`slfv:*`, `fv:*`) lives in IndexedDB — much larger quota than `localStorage`, no eviction in private mode. `src/lib/storage.ts` is a thin façade over the cache and keeps its historical synchronous API. Legacy `localStorage` keys are auto-migrated one-shot on first boot (backup kept in `slfv:__backup-v0`). Falls back to `localStorage` transparently if IndexedDB fails to open. No Supabase, no server. (Legacy `supabase/config.toml` is a placeholder, unused.) A native SQLite adapter via `@capacitor-community/sqlite` can be plugged into the same façade for Capacitor builds.
+- **Persistence:** IndexedDB via **Dexie** (`src/lib/db/kvStore.ts`, DB `slfv`, table `kv`) with a synchronous in-memory cache hydrated at boot (`bootstrapKvStore()` called in `main.tsx` before render). App data (`slfv:users|orgs|teams|players|tests`, `fv:*`) lives in IndexedDB — much larger quota than `localStorage`, no eviction in private mode. **Login session** (`slfv:session`) is stored in **`sessionStorage` only** so closing the PWA / killing it from the app switcher logs the user out; teams and tests remain on device. `src/lib/storage.ts` is a thin façade over the cache and keeps its historical synchronous API. Legacy `localStorage` keys are auto-migrated one-shot on first boot (backup kept in `slfv:__backup-v0`). Falls back to `localStorage` transparently if IndexedDB fails to open. No cloud backend — local-first only. A native SQLite adapter via `@capacitor-community/sqlite` can be plugged into the same façade for Capacitor builds.
 - **Sync (drive natif du téléphone) :** `src/lib/sync/` — un seul bouton dans Réglages. `detectPreferredProvider()` choisit iCloud sur iOS/iPadOS, Google Drive sinon (fallback fichier `.slfv`). Google Drive utilise un Client ID managé (`VITE_SLFV_GDRIVE_CLIENT_ID`) + scope `drive.appdata` ; iCloud passe par l'app Fichiers d'iOS (download « Enregistrer dans Fichiers » + `<input type=file>`). Aucun compte SprintLab, aucune saisie d'URL/mot de passe. WebDAV supprimé.
 - **Video / vision:** `@mediapipe/tasks-vision` for pose (jump apex detection). `requestVideoFrameCallback` / `requestAnimationFrame` for timeline. Custom video filters (`videoFilters.ts`) + stabilizer (`videoStabilizer.ts`) + One-Euro / Butterworth signal smoothing (`signalFilters.ts`).
 - **Local document parsing (no API):**
@@ -31,9 +31,9 @@ Core user flows:
   - DOCX unzip + XML parse: `jszip`
   - OCR (images + scanned PDFs): `tesseract.js` (`fra+eng`)
 - **Exports:** `jspdf` + `html2canvas` (PDF), `docx` + `file-saver` (DOCX).
-- **Charts:** `recharts`. **Tests:** `vitest`. **Auth:** local only (`src/lib/auth.tsx`, prototype hash in `storage.ts`).
+- **Auth:** local only (`src/lib/auth.tsx`, prototype hash in `storage.ts`). Forgot-password proves device ownership on demand via WebAuthn **platform** authenticator (`src/lib/webauthn.ts` — Face ID / Touch ID / Android biometrics / Windows Hello / device PIN). No prior enroll or Settings setup. No cloud auth.
 
-Explicitly **removed / not used**: Supabase client, any AI-key based feature (Gemini/OpenAI), device biometrics/PIN layer, encryption-at-rest.
+Explicitly **removed / not used**: Supabase client, any AI-key based feature (Gemini/OpenAI), encryption-at-rest.
 
 ---
 
@@ -58,7 +58,8 @@ src/
       ImportPlayersDialog.tsx  PDF/DOCX/image → athletes preview → save
     ui/                        shadcn primitives
   lib/
-    auth.tsx                   local sign in/up context
+    auth.tsx                   local sign in/up + device-unlock password reset
+    webauthn.ts                WebAuthn platform authenticator helpers
     storage.ts                 localStorage repo (users, orgs, teams, players, tests, session)
     types.ts                   User, Organization, Team, Player, TestSession
     settings.tsx               user prefs (units, sync target)
@@ -105,14 +106,14 @@ Legacy alias: `/dashboard` → `/app`.
 ## 5. Data model (`src/lib/types.ts`)
 
 - **Organization** `{ id, name }` — 1 per user account (local).
-- **User** `{ id, email, name, passwordHash, organizationId }` — prototype-only hash.
+- **User** `{ id, email, name, passwordHash, organizationId, webauthnCredentialId? }` — prototype-only password hash; optional cached platform WebAuthn credential id after a password reset (not required to start reset).
 - **Team** `{ id, name, organizationId, sport?, createdAt }`. `sport` is a canonical enum key from `SPORT_GROUPS` in `src/lib/sportTargets.ts` (team sports, athletics sub-disciplines, other F-V sports, or `"other"` balanced fallback). Legacy free-text values are still normalized by `getSportTargets`/`getSportLabel`.
 - **Player** `{ id, teamId, organizationId, firstName, lastName, birthDate?, mass, height?, position?, createdAt }`.
 - **TestSession** `{ id, playerId, organizationId, createdAt, notes?, conditions?, mass, inputMode: "splits"|"position_time", splits? | positionTime?, analysis: SprintAnalysis }`.
 - **Local jump/sprint tests** snapshot the athlete name, body mass and the current team sport at save time. Result pages also resolve the player/team sport as a fallback for older tests whose snapshot has `sport: null`, so sport-specific F-V targets remain available.
 - Jump results stored as a variant of TestSession (see `jumpDetection.ts` + `unifiedTests.ts`).
 
-Persistence keys: `slfv:users | slfv:orgs | slfv:teams | slfv:players | slfv:tests | slfv:session`. `uid()` uses `crypto.randomUUID`.
+Persistence keys (IndexedDB): `slfv:users | slfv:orgs | slfv:teams | slfv:players | slfv:tests`. Ephemeral session (sessionStorage): `slfv:session`. `uid()` uses `crypto.randomUUID`.
 
 ---
 
@@ -187,4 +188,4 @@ Whenever a change touches any of the below, update SPEC.md in the same turn:
 
 Bump the `Last updated` date. Prefer diffs over rewrites. Keep this file under ~500 lines.
 
-Ephemeral per-task plans live in `.lovable/plan.md` and are safe to overwrite.
+Ephemeral per-task plans may live in agent tooling outside the repo and are safe to overwrite.

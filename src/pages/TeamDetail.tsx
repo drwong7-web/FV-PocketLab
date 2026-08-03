@@ -22,7 +22,7 @@ export default function TeamDetail() {
   const [open, setOpen] = useState(false);
   const [first, setFirst] = useState("");
   const [last, setLast] = useState("");
-  const [mass, setMass] = useState("75");
+  const [mass, setMass] = useState("");
   const [height, setHeight] = useState("");
   const [, force] = useState(0);
   const addWrapRef = useRef<HTMLDivElement>(null);
@@ -58,7 +58,7 @@ export default function TeamDetail() {
       mass: m,
       height: height ? parseFloat(height) : undefined,
     });
-    setFirst(""); setLast(""); setMass("75"); setHeight(""); setOpen(false);
+    setFirst(""); setLast(""); setMass(""); setHeight(""); setOpen(false);
     force((n) => n + 1);
     toast.success(t("playerAdded"));
     if (getTourStep() === "player-add") { clearTour(); setShowCoach(false); }

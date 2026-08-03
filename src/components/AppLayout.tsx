@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet } from "react-router-dom";
-import fvLogo from "@/assets/fv-logo.png.asset.json";
+import fvLogo from "@/assets/fv-logo.png";
 import { Activity, Check, Download, Home, LogOut, Moon, RefreshCw, Settings as SettingsIcon, Sun, Upload, Users } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
@@ -10,10 +10,18 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { useSettings, type Lang, type Theme } from "@/lib/settings";
 
 import {
-  getPublicConfig, setPublicConfig,
-  getSyncState, detectPreferredProvider, managedGoogleClientId,
+  getPublicConfig,
+  getSyncState,
+  detectPreferredProvider,
+  managedGoogleClientId,
   type SyncProvider,
 } from "@/lib/sync/config";
+import {
+  connectGDrive,
+  connectICloud,
+  connectFileSync,
+  disconnectCloud,
+} from "@/lib/sync/adapters";
 import { syncPushNow, syncPullNow, syncBothNow } from "@/lib/sync/manager";
 import { resetOnboarding } from "@/lib/onboarding";
 
@@ -33,7 +41,7 @@ export default function AppLayout() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [exportDir, setExportDir] = useState<string | null>(null);
   const [syncProvider, setSyncProviderState] = useState<SyncProvider>("none");
-  const [syncBusy, setSyncBusy] = useState<null | "push" | "pull" | "both">(null);
+  const [syncBusy, setSyncBusy] = useState<null | "push" | "pull" | "both" | "connect">(null);
   const [lastSyncAt, setLastSyncAt] = useState<number | undefined>(undefined);
   const preferredProvider = detectPreferredProvider();
   const gdriveAvailable = !!managedGoogleClientId();
@@ -46,13 +54,50 @@ export default function AppLayout() {
     }
   }, [settingsOpen]);
 
-  const enableSync = (provider: Exclude<SyncProvider, "none">) => {
-    setPublicConfig({ provider, fileName: "sprintlab.slfv" });
-    setSyncProviderState(provider);
+  const refreshSyncUi = () => {
+    const cfg = getPublicConfig();
+    setSyncProviderState(cfg.provider);
+    setLastSyncAt(getSyncState().lastSyncAt);
   };
-  const disableSync = () => {
-    setPublicConfig({ provider: "none" });
-    setSyncProviderState("none");
+
+  const connectCloud = async () => {
+    setSyncBusy("connect");
+    try {
+      if (preferredProvider === "icloud") {
+        connectICloud();
+        toast.success(t("syncConnected"));
+      } else if (gdriveAvailable) {
+        await connectGDrive();
+        toast.success(t("syncConnected"));
+      } else {
+        connectFileSync();
+        toast.success(t("syncConnectedFile"));
+      }
+      refreshSyncUi();
+    } catch (err) {
+      toast.error((err as Error).message || t("syncError"));
+    } finally {
+      setSyncBusy(null);
+    }
+  };
+
+  const connectFileOnly = () => {
+    connectFileSync();
+    toast.success(t("syncConnectedFile"));
+    refreshSyncUi();
+  };
+
+  const disableSync = async () => {
+    setSyncBusy("connect");
+    try {
+      await disconnectCloud();
+      refreshSyncUi();
+      toast.success(t("syncDisconnected"));
+    } catch (err) {
+      toast.error((err as Error).message || t("syncError"));
+    } finally {
+      setSyncBusy(null);
+    }
   };
 
   const runSync = async (kind: "push" | "pull" | "both") => {
@@ -102,7 +147,7 @@ export default function AppLayout() {
         <div className="container flex items-center justify-between h-14 max-w-5xl">
           <Link to="/app" className="group flex items-center gap-2.5">
             <img
-              src={fvLogo.url}
+              src={fvLogo}
               alt="FV logo"
               className="engraved-logo w-7 h-7 object-contain transition-transform duration-300 group-hover:scale-105"
             />
@@ -247,55 +292,80 @@ export default function AppLayout() {
               </div>
             </section>
 
-
-
             <section className="space-y-3 glass-card p-5 bg-gradient-to-br from-primary/10 to-transparent hover:border-primary/40 transition-colors">
               <div className="flex items-center gap-2 text-sm font-semibold">
                 <h3 className="text-lg uppercase">{t("cloudBackup")}</h3>
               </div>
-              <p className="text-xs text-muted-foreground">{"\n"}</p>
+              <p className="text-xs text-muted-foreground">{t("cloudBackupDesc")}</p>
 
               {syncProvider === "none" ? (
                 <div className="space-y-2">
                   {preferredProvider === "icloud" ? (
                     <Button
-                      onClick={() => enableSync("icloud")}
+                      onClick={() => connectCloud()}
+                      disabled={!!syncBusy}
                       className="w-full bg-gradient-primary text-primary-foreground"
                     >
-                      {t("backupICloud")}
+                      {syncBusy === "connect" ? (
+                        <RefreshCw className="h-4 w-4 animate-spin" />
+                      ) : (
+                        t("connectICloud")
+                      )}
+                    </Button>
+                  ) : gdriveAvailable ? (
+                    <Button
+                      onClick={() => connectCloud()}
+                      disabled={!!syncBusy}
+                      className="w-full bg-gradient-primary text-primary-foreground"
+                    >
+                      {syncBusy === "connect" ? (
+                        <RefreshCw className="h-4 w-4 animate-spin" />
+                      ) : (
+                        t("connectGDrive")
+                      )}
                     </Button>
                   ) : (
+                    <>
+                      <Button
+                        onClick={() => connectFileOnly()}
+                        disabled={!!syncBusy}
+                        className="w-full bg-gradient-primary text-primary-foreground"
+                      >
+                        {t("useSlfvFile")}
+                      </Button>
+                      <p className="text-[11px] text-muted-foreground">{t("gdriveUnavailable")}</p>
+                    </>
+                  )}
+                  {(preferredProvider === "icloud" || gdriveAvailable) && (
                     <button
-                      onClick={() => enableSync("gdrive")}
-                      disabled={!gdriveAvailable}
-                      className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm font-medium transition-all hover:border-primary/40 disabled:opacity-50 disabled:cursor-not-allowed"
+                      type="button"
+                      onClick={() => connectFileOnly()}
+                      disabled={!!syncBusy}
+                      className="w-full text-[11px] text-muted-foreground hover:text-primary underline underline-offset-2 disabled:opacity-50"
                     >
-                      {t("backupGDrive")}
+                      {t("useSlfvFile")}
                     </button>
                   )}
-                  {preferredProvider === "gdrive" && !gdriveAvailable && (
-                    <p className="text-[11px] text-muted-foreground">{"\n"}</p>
-                  )}
-                  <button
-                    onClick={() => enableSync("file")}
-                    className="w-full text-[11px] text-muted-foreground hover:text-primary underline underline-offset-2"
-                  >
-                    {""}
-                  </button>
                 </div>
               ) : (
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center justify-between text-xs gap-2">
                     <span className="text-muted-foreground">
-                      {t("provider")} :{" "}
                       <span className="text-foreground font-medium">
                         {syncProvider === "gdrive" && "Google Drive"}
                         {syncProvider === "icloud" && "iCloud Drive"}
                         {syncProvider === "file" && ".slfv"}
                       </span>
+                      {" · "}
+                      <span className="text-primary">{t("syncConnectedStatus")}</span>
                     </span>
-                    <button onClick={disableSync} className="text-muted-foreground hover:text-destructive underline underline-offset-2">
-                      {t("disable")}
+                    <button
+                      type="button"
+                      onClick={() => disableSync()}
+                      disabled={!!syncBusy}
+                      className="text-muted-foreground hover:text-destructive underline underline-offset-2 disabled:opacity-50"
+                    >
+                      {t("disconnectCloud")}
                     </button>
                   </div>
 
@@ -306,13 +376,16 @@ export default function AppLayout() {
                     <Button variant="outline" size="sm" disabled={!!syncBusy} onClick={() => runSync("push")}>
                       <Upload className="h-3.5 w-3.5 mr-1" /> {t("push")}
                     </Button>
-                    <Button size="sm" disabled={!!syncBusy || syncProvider !== "gdrive"} onClick={() => runSync("both")} className="bg-gradient-primary text-primary-foreground">
+                    <Button size="sm" disabled={!!syncBusy} onClick={() => runSync("both")} className="bg-gradient-primary text-primary-foreground">
                       <RefreshCw className={cn("h-3.5 w-3.5 mr-1", syncBusy === "both" && "animate-spin")} /> {t("sync")}
                     </Button>
                   </div>
 
                   {syncProvider === "icloud" && (
                     <p className="text-[11px] text-muted-foreground">{t("iCloudHint")}</p>
+                  )}
+                  {syncProvider === "file" && (
+                    <p className="text-[11px] text-muted-foreground">{t("fileSyncHint")}</p>
                   )}
                   {lastSyncAt && (
                     <p className="text-[11px] text-muted-foreground">

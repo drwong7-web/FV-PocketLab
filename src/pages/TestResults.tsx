@@ -29,7 +29,7 @@ import { getJumpTarget, getSprintTarget, getSportTargets } from "@/lib/sportTarg
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { generateDOCX, downloadBlob, fileNameFor, saveLocalExport } from "@/lib/docxExport";
-import fvLogoAsset from "@/assets/fv-logo.png.asset.json";
+import fvLogo from "@/assets/fv-logo.png";
 import type { Lang, TKey } from "@/lib/settings";
 import { clearExportDirectory, getExportDirectoryLabel, isDirectoryPickerSupported, isInIframe, pickExportDirectory, saveBlobToTarget } from "@/lib/exportTarget";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -369,7 +369,7 @@ export default function TestResults() {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch(fvLogoAsset.url);
+        const res = await fetch(fvLogo);
         if (!res.ok) return;
         const blob = await res.blob();
         const reader = new FileReader();

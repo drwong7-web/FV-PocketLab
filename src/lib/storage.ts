@@ -25,6 +25,44 @@ function write<T>(k: string, v: T) {
   kvSet(k, v);
 }
 
+/** Ephemeral login session — cleared when the PWA/tab process ends. */
+const SESSION_KEY = KEYS.session;
+let legacySessionCleared = false;
+
+function purgeLegacyPersistentSession() {
+  if (legacySessionCleared) return;
+  legacySessionCleared = true;
+  try {
+    kvRemove(SESSION_KEY);
+  } catch { /* */ }
+}
+
+function readSession(): { userId?: string } {
+  purgeLegacyPersistentSession();
+  try {
+    const raw = sessionStorage.getItem(SESSION_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as { userId?: string };
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeSession(session: { userId: string }) {
+  purgeLegacyPersistentSession();
+  try {
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  } catch { /* */ }
+}
+
+function clearSession() {
+  purgeLegacyPersistentSession();
+  try {
+    sessionStorage.removeItem(SESSION_KEY);
+  } catch { /* */ }
+}
+
 export const uid = () =>
   (crypto.randomUUID?.() ?? Math.random().toString(36).slice(2) + Date.now().toString(36));
 
@@ -65,16 +103,54 @@ export function authenticate(email: string, password: string): User {
   if (!user || user.passwordHash !== hashPassword(password)) {
     throw new Error("Invalid email or password.");
   }
-  write(KEYS.session, { userId: user.id });
+  writeSession({ userId: user.id });
   return user;
 }
 
 export function currentUser(): User | null {
-  const s = read<{ userId?: string }>(KEYS.session, {});
+  const s = readSession();
   if (!s.userId) return null;
   return listUsers().find((u) => u.id === s.userId) ?? null;
 }
-export function signOut() { kvRemove(KEYS.session); }
+export function signOut() {
+  clearSession();
+}
+
+export function findUserByName(name: string): User | null {
+  const trimmed = name.trim();
+  if (!trimmed) return null;
+  const email = `${trimmed.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "user"}@local`;
+  const users = listUsers();
+  return (
+    users.find((u) => u.email.toLowerCase() === email) ??
+    users.find((u) => u.name.trim().toLowerCase() === trimmed.toLowerCase()) ??
+    null
+  );
+}
+
+export function setUserWebAuthnCredential(userId: string, credentialId: string | undefined): User {
+  const users = listUsers();
+  const idx = users.findIndex((u) => u.id === userId);
+  if (idx < 0) throw new Error("USER_NOT_FOUND");
+  const updated: User = { ...users[idx] };
+  if (credentialId) updated.webauthnCredentialId = credentialId;
+  else delete updated.webauthnCredentialId;
+  users[idx] = updated;
+  write(KEYS.users, users);
+  return updated;
+}
+
+export function resetPasswordForUser(userId: string, newPassword: string): User {
+  if (newPassword.length < 6) throw new Error("PASSWORD_TOO_SHORT");
+  const users = listUsers();
+  const idx = users.findIndex((u) => u.id === userId);
+  if (idx < 0) throw new Error("USER_NOT_FOUND");
+  const updated: User = { ...users[idx], passwordHash: hashPassword(newPassword) };
+  users[idx] = updated;
+  write(KEYS.users, users);
+  writeSession({ userId: updated.id });
+  return updated;
+}
 
 export function getOrganization(id: string) {
   return listOrgs().find((o) => o.id === id) ?? null;

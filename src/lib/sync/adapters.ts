@@ -5,7 +5,14 @@
  *     un download (« Enregistrer dans Fichiers ») et un <input type=file>.
  *   - gdriveAdapter : OAuth Google natif, dossier appData privé de l'app.
  */
-import { getPublicConfig, getSecretConfig, setSecretConfig, managedGoogleClientId } from "./config";
+import {
+  getPublicConfig,
+  setPublicConfig,
+  getSecretConfig,
+  setSecretConfig,
+  clearSecretConfig,
+  managedGoogleClientId,
+} from "./config";
 
 export interface SyncAdapter {
   id: string;
@@ -74,9 +81,20 @@ export const icloudAdapter: SyncAdapter = {
 
 // ---------- Google Drive (OAuth natif, Client ID managé) ----------
 const GIS_SRC = "https://accounts.google.com/gsi/client";
+const GDRIVE_SCOPE = "https://www.googleapis.com/auth/drive.appdata";
+
+type GoogleOauth2 = {
+  initTokenClient: (o: unknown) => { requestAccessToken: (o: unknown) => void };
+  revoke?: (token: string, done?: () => void) => void;
+};
+
+function googleOauth2(): GoogleOauth2 | undefined {
+  return (window as unknown as { google?: { accounts?: { oauth2?: GoogleOauth2 } } }).google?.accounts?.oauth2;
+}
+
 function loadGis(): Promise<void> {
   return new Promise((resolve, reject) => {
-    if ((window as unknown as { google?: { accounts?: { oauth2?: unknown } } }).google?.accounts?.oauth2) return resolve();
+    if (googleOauth2()) return resolve();
     const s = document.createElement("script");
     s.src = GIS_SRC; s.async = true; s.defer = true;
     s.onload = () => resolve();
@@ -84,6 +102,7 @@ function loadGis(): Promise<void> {
     document.head.appendChild(s);
   });
 }
+
 async function gdriveToken(force = false): Promise<string> {
   const clientId = managedGoogleClientId();
   const s = await getSecretConfig();
@@ -93,25 +112,69 @@ async function gdriveToken(force = false): Promise<string> {
   }
   if (!clientId) throw new Error("Google Drive n'est pas configuré sur cette build.");
   await loadGis();
+  const oauth = googleOauth2();
+  if (!oauth) throw new Error("Google Identity Services unavailable.");
   return new Promise<string>((resolve, reject) => {
     try {
-      const client = (window as unknown as { google: { accounts: { oauth2: { initTokenClient: (o: unknown) => { requestAccessToken: (o: unknown) => void } } } } })
-        .google.accounts.oauth2.initTokenClient({
-          client_id: clientId,
-          scope: "https://www.googleapis.com/auth/drive.appdata",
-          prompt: "",
-          callback: async (resp: { error?: string; access_token?: string; expires_in?: number }) => {
-            if (resp?.error) return reject(new Error(`OAuth Google : ${resp.error}`));
-            const token = resp.access_token as string;
-            const exp = now + Math.max(0, Number(resp.expires_in || 0) - 30) * 1000;
-            await setSecretConfig({ ...(await getSecretConfig()), gdriveAccessToken: token, gdriveTokenExpiresAt: exp });
-            resolve(token);
-          },
-        });
-      client.requestAccessToken({ prompt: s.gdriveAccessToken ? "" : "consent" });
+      const client = oauth.initTokenClient({
+        client_id: clientId,
+        scope: GDRIVE_SCOPE,
+        prompt: "",
+        callback: async (resp: { error?: string; access_token?: string; expires_in?: number }) => {
+          if (resp?.error) return reject(new Error(`OAuth Google : ${resp.error}`));
+          const token = resp.access_token as string;
+          const exp = now + Math.max(0, Number(resp.expires_in || 0) - 30) * 1000;
+          await setSecretConfig({ ...(await getSecretConfig()), gdriveAccessToken: token, gdriveTokenExpiresAt: exp });
+          resolve(token);
+        },
+      });
+      client.requestAccessToken({
+        prompt: force || !s.gdriveAccessToken ? "consent" : "",
+      });
     } catch (e) { reject(e as Error); }
   });
 }
+
+/** First-time (or re-link) Google Drive OAuth; stores token and marks provider linked. */
+export async function connectGDrive(): Promise<void> {
+  if (!managedGoogleClientId()) {
+    throw new Error("Google Drive n'est pas configuré sur cette build.");
+  }
+  await gdriveToken(true);
+  setPublicConfig({ provider: "gdrive", fileName: "sprintlab.slfv", linked: true });
+}
+
+export async function isGDriveLinked(): Promise<boolean> {
+  const cfg = getPublicConfig();
+  if (cfg.provider !== "gdrive") return false;
+  const s = await getSecretConfig();
+  return !!s.gdriveAccessToken;
+}
+
+/** Enable iCloud provider (Files-based; no persistent OAuth in the browser). */
+export function connectICloud(): void {
+  setPublicConfig({ provider: "icloud", fileName: "sprintlab.slfv", linked: true });
+}
+
+/** Enable local .slfv file mode. */
+export function connectFileSync(): void {
+  setPublicConfig({ provider: "file", fileName: "sprintlab.slfv", linked: true });
+}
+
+/** Clear cloud link (tokens + provider). */
+export async function disconnectCloud(): Promise<void> {
+  const s = await getSecretConfig();
+  const token = s.gdriveAccessToken;
+  if (token) {
+    try {
+      await loadGis();
+      googleOauth2()?.revoke?.(token);
+    } catch { /* */ }
+  }
+  await clearSecretConfig();
+  setPublicConfig({ provider: "none", linked: false });
+}
+
 async function gdriveFindFile(token: string, name: string): Promise<string | null> {
   const q = encodeURIComponent(`name='${name.replace(/'/g, "\\'")}' and trashed=false`);
   const res = await fetch(

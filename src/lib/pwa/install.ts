@@ -32,14 +32,6 @@ export function isRefusedContext(): boolean {
   if (typeof window === "undefined") return true;
   if (!import.meta.env.PROD) return true;
   try { if (window.self !== window.top) return true; } catch { return true; }
-  const h = window.location.hostname;
-  if (
-    h.startsWith("id-preview--") ||
-    h.startsWith("preview--") ||
-    h === "lovableproject.com" || h.endsWith(".lovableproject.com") ||
-    h === "lovableproject-dev.com" || h.endsWith(".lovableproject-dev.com") ||
-    h === "beta.lovable.dev" || h.endsWith(".beta.lovable.dev")
-  ) return true;
   return false;
 }
 

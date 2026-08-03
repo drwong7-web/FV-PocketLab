@@ -15,6 +15,8 @@ export interface PublicConfig {
   provider: SyncProvider;
   /** Nom du fichier de snapshot côté drive (par défaut sprintlab.slfv). */
   fileName?: string;
+  /** True after user completed connect (OAuth or iCloud enable). */
+  linked?: boolean;
 }
 export interface SecretConfig {
   gdriveAccessToken?: string;
@@ -26,13 +28,18 @@ export interface SyncState {
   lastError?: string;
 }
 
+export function isIOSDevice(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent || "";
+  return /iPad|iPhone|iPod/.test(ua)
+    || (navigator.platform === "MacIntel" && (navigator as unknown as { maxTouchPoints?: number }).maxTouchPoints! > 1);
+}
+
 /** Détecte le provider recommandé selon l'appareil. */
 export function detectPreferredProvider(): Exclude<SyncProvider, "none"> {
   if (typeof navigator === "undefined") return "gdrive";
-  const ua = navigator.userAgent || "";
-  const isIOS = /iPad|iPhone|iPod/.test(ua)
-    || (navigator.platform === "MacIntel" && (navigator as unknown as { maxTouchPoints?: number }).maxTouchPoints! > 1);
-  return isIOS ? "icloud" : "gdrive";
+  if (isIOSDevice()) return "icloud";
+  return managedGoogleClientId() ? "gdrive" : "file";
 }
 
 /** Client ID Google managé (publique, injecté à la build). */
@@ -60,6 +67,10 @@ export async function getSecretConfig(): Promise<SecretConfig> {
 }
 export async function setSecretConfig(s: SecretConfig): Promise<void> {
   try { localStorage.setItem(SECRETS_KEY, JSON.stringify(s)); } catch { /* */ }
+}
+
+export async function clearSecretConfig(): Promise<void> {
+  try { localStorage.removeItem(SECRETS_KEY); } catch { /* */ }
 }
 
 export function getSyncState(): SyncState {

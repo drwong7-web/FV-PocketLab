@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, Check, Moon, Sun, Users, X } from "lucide-react";
-import fvLogo from "@/assets/fv-logo.png.asset.json";
+import { ArrowRight, Check, ChevronsLeft, ChevronsRight, Moon, Sun, Users, X } from "lucide-react";
+import fvLogo from "@/assets/fv-logo.png";
 import { Button } from "@/components/ui/button";
 import { useSettings, type Lang, type Theme, type TKey } from "@/lib/settings";
 import { markOnboardingDone } from "@/lib/onboarding";
@@ -112,24 +112,19 @@ export function OnboardingCarousel({ onClose }: { onClose: () => void }) {
                 variant="ghost"
                 onClick={() => setStep((s) => Math.max(s - 1, 0))}
                 disabled={step === 0}
-                className="disabled:opacity-30"
+                className="!text-white hover:!text-white disabled:!text-white/70 disabled:opacity-100"
               >
+                <ChevronsLeft className="w-4 h-4" />
                 {t("onbPrev")}
               </Button>
-              {step < total - 1 ? (
+              {step < total - 1 && (
                 <Button
+                  variant="ghost"
                   onClick={() => setStep((s) => s + 1)}
-                  className="bg-gradient-primary text-primary-foreground shadow-glow"
+                  className="!text-white hover:!text-white"
                 >
                   {t("onbNext")}
-                  <ArrowRight className="w-4 h-4 ml-1" />
-                </Button>
-              ) : (
-                <Button
-                  onClick={finish}
-                  className="bg-gradient-primary text-primary-foreground shadow-glow"
-                >
-                  {t("onbStart")}
+                  <ChevronsRight className="w-4 h-4" />
                 </Button>
               )}
             </div>
@@ -144,7 +139,12 @@ function SlideWelcome({ titleKey, subKey }: { titleKey: TKey; subKey: TKey }) {
   const { t } = useSettings();
   return (
     <div className="flex flex-col items-center text-center gap-4 pt-4">
-      <img src={fvLogo.url} alt="FV" className="engraved-logo w-24 h-24 object-contain" />
+      <div className="flex items-center justify-center gap-1.5">
+        <img src={fvLogo} alt="FV" className="engraved-logo w-24 h-24 object-contain shrink-0" />
+        <p className="text-[28px] font-bold tracking-tight font-display leading-none">
+          PocketLab
+        </p>
+      </div>
       <h2 className="text-2xl font-bold tracking-tight">{t(titleKey)}</h2>
       <p className="text-sm text-muted-foreground leading-relaxed max-w-md whitespace-pre-line">{t(subKey)}</p>
     </div>

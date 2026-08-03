@@ -1,9 +1,9 @@
 /**
  * PWA registration wrapper.
  *
- * Only registers the app-shell service worker in production and outside
- * Lovable preview/iframe contexts, per the Lovable PWA safety rules.
- * Supports `?sw=off` as a kill switch that unregisters existing SWs.
+ * Registers the app-shell service worker in production only, and skips
+ * iframe embeds. Supports `?sw=off` as a kill switch that unregisters
+ * existing SWs.
  */
 
 function isRefusedContext(): boolean {
@@ -13,14 +13,6 @@ function isRefusedContext(): boolean {
   } catch {
     return true;
   }
-  const h = window.location.hostname;
-  if (
-    h.startsWith("id-preview--") ||
-    h.startsWith("preview--") ||
-    h === "lovableproject.com" || h.endsWith(".lovableproject.com") ||
-    h === "lovableproject-dev.com" || h.endsWith(".lovableproject-dev.com") ||
-    h === "beta.lovable.dev" || h.endsWith(".beta.lovable.dev")
-  ) return true;
   if (new URLSearchParams(window.location.search).get("sw") === "off") return true;
   return false;
 }
