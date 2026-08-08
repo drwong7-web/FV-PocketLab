@@ -85,9 +85,9 @@ function setExportDirectoryLabel(label: string | null) {
 }
 
 export async function pickExportDirectory(): Promise<PickResult> {
-  // Capacitor native: no real picker; use Documents/SprintLab as a virtual choice.
+  // Capacitor native: no real picker; use Documents/FV-PocketLab as a virtual choice.
   if (isCapacitor()) {
-    const label = "Documents/SprintLab";
+    const label = "Documents/FV-PocketLab";
     setExportDirectoryLabel(label);
     return { ok: true, name: label };
   }
@@ -147,7 +147,7 @@ async function writeViaCapacitor(blob: Blob, filename: string): Promise<boolean>
     const buf = await blob.arrayBuffer();
     const base64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
     await Filesystem.writeFile({
-      path: `SprintLab/${filename}`,
+      path: `FV-PocketLab/${filename}`,
       data: base64,
       directory: Directory.Documents,
       recursive: true,
@@ -165,7 +165,7 @@ async function writeViaCapacitor(blob: Blob, filename: string): Promise<boolean>
 export async function saveBlobToTarget(blob: Blob, filename: string): Promise<string> {
   if (isCapacitor() && getExportDirectoryLabel()) {
     const ok = await writeViaCapacitor(blob, filename);
-    if (ok) return getExportDirectoryLabel() || "Documents/SprintLab";
+    if (ok) return getExportDirectoryLabel() || "Documents/FV-PocketLab";
   }
   if (isFileSystemAccessSupported()) {
     const handle = await getStoredHandle();

@@ -124,7 +124,7 @@ export default function Auth() {
         <div className="flex items-center gap-3 mb-8 justify-center">
           <img src={fvLogo} alt="FV logo" className="w-32 h-32 object-contain" />
           <div className="leading-tight">
-            <h1 className="text-4xl font-bold tracking-tight">Pocket Lab</h1>
+            <h1 className="text-4xl font-bold tracking-tight">FV PocketLab</h1>
             <p className="text-xs uppercase tracking-widest text-muted-foreground whitespace-pre-line">
               {t("localFirst")}
             </p>

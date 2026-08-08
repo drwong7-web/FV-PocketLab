@@ -1,4 +1,4 @@
-# DESIGN — SprintLab FV Pro / F-V Pocket Lab
+# DESIGN — FV PocketLab
 
 > **Living design reference.** Update this file in the SAME turn as any change to design tokens, gradients, shadows, typography classes, component patterns, brand assets, or global UX rules. Companion to `SPEC.md` (architecture) — read both before working on the app.
 
@@ -28,7 +28,7 @@ Give another code editor (Cursor, Claude Code, Codex, another Lovable agent…) 
 ## 3. Brand
 
 - **Logo asset:** `src/assets/fv-logo.png` (managed via `.asset.json`). Square, transparent, neon "FV" mark on black.
-- **App name (UI):** "Pocket Lab" in the auth title, "F V Pocket Lab" / "SprintLab FV Pro" in metadata.
+- **App name (UI):** "FV PocketLab" in the auth title, header, PWA metadata, and PDF reports.
 - **Tagline:** `FORCE VELOCITY PROFILER — IN YOUR POCKET` (multiline, uppercase, muted).
 - **Logo treatments:**
   - `.logo-well` — dark radial medallion behind the logo on cards. Adds primary-tinted inner ring + inner shadow. Keeps neon assets on identical backgrounds in both themes.

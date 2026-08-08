@@ -142,7 +142,7 @@ function SlideWelcome({ titleKey, subKey }: { titleKey: TKey; subKey: TKey }) {
       <div className="flex items-center justify-center gap-1.5">
         <img src={fvLogo} alt="FV" className="engraved-logo w-24 h-24 object-contain shrink-0" />
         <p className="text-[28px] font-bold tracking-tight font-display leading-none">
-          PocketLab
+          FV PocketLab
         </p>
       </div>
       <h2 className="text-2xl font-bold tracking-tight">{t(titleKey)}</h2>

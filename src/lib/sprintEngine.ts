@@ -1,5 +1,5 @@
 /**
- * SprintLab FV Pro — Sprint Science Engine
+ * FV PocketLab — Sprint Science Engine
  * Modular implementation:
  *  - EMA smoothing
  *  - 1D Kalman filter (position + velocity state)

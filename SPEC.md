@@ -1,4 +1,4 @@
-# SPEC — SprintLab FV Pro
+# SPEC — FV PocketLab
 
 > **Living specification.** Update this file in the SAME turn as any change to architecture, routes, data model, libraries, calculation protocols, or product behavior. If a change doesn't affect any of those, no update needed. Kept so another agent (Cursor, Claude Code, Codex, etc.) can continue the work with the exact same architecture and plan.
 
@@ -24,7 +24,7 @@ Core user flows:
 - **Runtime:** Vite 5 + React 18 + TypeScript 5, TailwindCSS v3, shadcn/ui (Radix), lucide-react.
 - **Router:** react-router-dom v6. **State/data:** @tanstack/react-query + React context.
 - **Persistence:** IndexedDB via **Dexie** (`src/lib/db/kvStore.ts`, DB `slfv`, table `kv`) with a synchronous in-memory cache hydrated at boot (`bootstrapKvStore()` called in `main.tsx` before render). App data (`slfv:users|orgs|teams|players|tests`, `fv:*`) lives in IndexedDB — much larger quota than `localStorage`, no eviction in private mode. **Login session** (`slfv:session`) is stored in **`sessionStorage` only** so closing the PWA / killing it from the app switcher logs the user out; teams and tests remain on device. `src/lib/storage.ts` is a thin façade over the cache and keeps its historical synchronous API. Legacy `localStorage` keys are auto-migrated one-shot on first boot (backup kept in `slfv:__backup-v0`). Falls back to `localStorage` transparently if IndexedDB fails to open. No cloud backend — local-first only. A native SQLite adapter via `@capacitor-community/sqlite` can be plugged into the same façade for Capacitor builds.
-- **Sync (drive natif du téléphone) :** `src/lib/sync/` — un seul bouton dans Réglages. `detectPreferredProvider()` choisit iCloud sur iOS/iPadOS, Google Drive sinon (fallback fichier `.slfv`). Google Drive utilise un Client ID managé (`VITE_SLFV_GDRIVE_CLIENT_ID`) + scope `drive.appdata` ; iCloud passe par l'app Fichiers d'iOS (download « Enregistrer dans Fichiers » + `<input type=file>`). Aucun compte SprintLab, aucune saisie d'URL/mot de passe. WebDAV supprimé.
+- **Sync (drive natif du téléphone) :** `src/lib/sync/` — un seul bouton dans Réglages. `detectPreferredProvider()` choisit iCloud sur iOS/iPadOS, Google Drive sinon (fallback fichier `.slfv`). Google Drive utilise un Client ID managé (`VITE_SLFV_GDRIVE_CLIENT_ID`) + scope `drive.appdata` ; iCloud passe par l'app Fichiers d'iOS (download « Enregistrer dans Fichiers » + `<input type=file>`). Aucun compte FV PocketLab, aucune saisie d'URL/mot de passe. WebDAV supprimé.
 - **Video / vision:** `@mediapipe/tasks-vision` for pose (jump apex detection). `requestVideoFrameCallback` / `requestAnimationFrame` for timeline. Custom video filters (`videoFilters.ts`) + stabilizer (`videoStabilizer.ts`) + One-Euro / Butterworth signal smoothing (`signalFilters.ts`).
 - **Local document parsing (no API):**
   - PDF text + rasterization: `pdfjs-dist`

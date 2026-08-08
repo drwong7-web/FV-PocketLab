@@ -152,7 +152,7 @@ export default function AppLayout() {
               className="engraved-logo w-7 h-7 object-contain transition-transform duration-300 group-hover:scale-105"
             />
             <div className="leading-tight">
-              <div className="font-display text-sm tracking-tight">PocketLab</div>
+              <div className="font-display text-sm tracking-tight">FV PocketLab</div>
               <div className="text-[9px] uppercase tracking-[0.2em] text-muted-foreground -mt-0.5">F–V Profile</div>
             </div>
           </Link>

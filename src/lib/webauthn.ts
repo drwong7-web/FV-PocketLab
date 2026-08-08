@@ -4,7 +4,7 @@
  * Requires a secure context (HTTPS or localhost).
  */
 
-const RP_NAME = "Pocket Lab";
+const RP_NAME = "FV PocketLab";
 const TIMEOUT_MS = 60_000;
 
 /** In-memory failed assert counter (per page session). */
@@ -147,7 +147,7 @@ function assertCanUseWebAuthn() {
 
 /**
  * Register a platform credential for password-reset unlock.
- * Returns base64url credential id to store on the User.
+ * Returns base64url credential id to store in device-local creds map.
  */
 export async function registerPlatformCredential(opts: {
   userId: string;
@@ -241,8 +241,8 @@ export async function assertPlatformCredential(credentialId: string): Promise<vo
  * Prove the user can unlock this device (any OS platform authenticator).
  * Always runs create with UV required so Forgot password needs no prior enroll.
  * If a credential already exists for this user, falls back to assert when we have
- * a cached id; otherwise retries create with an ephemeral user handle.
- * Returns the credential id to cache (silent).
+ * a cached id; otherwise retries create with a fresh ≤64-byte user handle.
+ * Returns the credential id to cache device-locally (silent).
  */
 export async function proveDeviceOwnership(opts: {
   userId: string;
@@ -264,8 +264,11 @@ export async function proveDeviceOwnership(opts: {
       return opts.existingCredentialId;
     }
     if (mapped.code === "DUPLICATE") {
+      // Fresh handle only — must stay ≤ 64 bytes (WebAuthn user.id limit).
+      // 32 random bytes → 43-char base64url when UTF-8 encoded.
+      const ephemeralId = bufferToBase64Url(crypto.getRandomValues(new Uint8Array(32)));
       return await registerPlatformCredential({
-        userId: `${opts.userId}:${crypto.randomUUID()}`,
+        userId: ephemeralId,
         userName: opts.userName,
         displayName: opts.displayName,
       });
