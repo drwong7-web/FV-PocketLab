@@ -121,10 +121,10 @@ export default function Auth() {
   return (
     <div className="min-h-svh flex items-center justify-center px-4 py-10">
       <div className="w-full max-w-md">
-        <div className="flex items-center gap-3 mb-8 justify-center">
+        <div className="flex items-center gap-1 mb-8 justify-center">
           <img src={fvLogo} alt="FV logo" className="w-32 h-32 object-contain" />
           <div className="leading-tight">
-            <h1 className="text-4xl font-bold tracking-tight">FV PocketLab</h1>
+            <h1 className="text-4xl font-bold tracking-tight">PocketLab</h1>
             <p className="text-xs uppercase tracking-widest text-muted-foreground whitespace-pre-line">
               {t("localFirst")}
             </p>

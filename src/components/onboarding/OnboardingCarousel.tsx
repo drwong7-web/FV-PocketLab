@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, Check, ChevronsLeft, ChevronsRight, Moon, Sun, Users, X } from "lucide-react";
+import { ArrowRight, Check, ChevronsRight, Moon, Sun, Users, X } from "lucide-react";
 import fvLogo from "@/assets/fv-logo.png";
 import { Button } from "@/components/ui/button";
 import { useSettings, type Lang, type Theme, type TKey } from "@/lib/settings";
@@ -107,17 +107,8 @@ export function OnboardingCarousel({ onClose }: { onClose: () => void }) {
                 />
               ))}
             </div>
-            <div className="flex items-center justify-between gap-2">
-              <Button
-                variant="ghost"
-                onClick={() => setStep((s) => Math.max(s - 1, 0))}
-                disabled={step === 0}
-                className="!text-white hover:!text-white disabled:!text-white/70 disabled:opacity-100"
-              >
-                <ChevronsLeft className="w-4 h-4" />
-                {t("onbPrev")}
-              </Button>
-              {step < total - 1 && (
+            {step < total - 1 && (
+              <div className="flex items-center justify-end gap-2">
                 <Button
                   variant="ghost"
                   onClick={() => setStep((s) => s + 1)}
@@ -126,8 +117,8 @@ export function OnboardingCarousel({ onClose }: { onClose: () => void }) {
                   {t("onbNext")}
                   <ChevronsRight className="w-4 h-4" />
                 </Button>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -139,10 +130,10 @@ function SlideWelcome({ titleKey, subKey }: { titleKey: TKey; subKey: TKey }) {
   const { t } = useSettings();
   return (
     <div className="flex flex-col items-center text-center gap-4 pt-4">
-      <div className="flex items-center justify-center gap-1.5">
+      <div className="flex items-center justify-center gap-0">
         <img src={fvLogo} alt="FV" className="engraved-logo w-24 h-24 object-contain shrink-0" />
-        <p className="text-[28px] font-bold tracking-tight font-display leading-none">
-          FV PocketLab
+        <p className="text-[36px] font-bold tracking-tight font-display leading-none -ml-1">
+          PocketLab
         </p>
       </div>
       <h2 className="text-2xl font-bold tracking-tight">{t(titleKey)}</h2>
