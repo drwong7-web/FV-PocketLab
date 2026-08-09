@@ -4,35 +4,33 @@ Manual settings in the Supabase project dashboard. These are not applied by SQL 
 
 ## Providers
 
-- [ ] **Email** enabled (Authentication → Providers → Email).
-- [ ] **Google / Apple / other OAuth** disabled (the app is email + password only).
-- [ ] Prefer **Confirm email** on for production; off is fine for local testing.
-- [ ] Enable **Leaked password protection** (HaveIBeenPwned) if the project plan supports it.
-- [ ] Minimum password length ≥ 6 (matches the app validation).
+- [x] **Email** enabled (Authentication → Providers → Email).
+- [x] **Google / Apple / other OAuth** disabled (pushed via `supabase config push`, 2026-08-09).
+- [x] **Confirm email** off for local/dev speed (`enable_confirmations = false` in `config.toml`). Turn on for production when ready.
+- [ ] Enable **Leaked password protection** (HaveIBeenPwned) if the project plan supports it (dashboard-only).
+- [x] Minimum password length ≥ 6 (matches the app validation).
 
 ## URLs
 
-Authentication → URL Configuration:
+Authentication → URL Configuration (pushed via `supabase config push`):
 
-- [ ] **Site URL** = production origin (or `https://localhost:8081` while developing).
-- [ ] **Redirect URLs** include:
-  - `https://localhost:8081/auth/callback`
-  - `https://localhost:8081/auth/reset`
-  - production equivalents of both paths
+- [x] **Site URL** = `https://localhost:8081` while developing.
+- [x] **Redirect URLs** include localhost `/auth/callback` and `/auth/reset` (8080/8081, http/https).
+- [ ] Add production equivalents of both paths before launch.
 
 Without these, email confirmation and password-reset links bounce.
 
 ## API keys
 
-- [ ] Only the **anon** key is in the app (`.env` → `VITE_SUPABASE_ANON_KEY`).
-- [ ] **service_role** key never appears in any `VITE_*` variable, client bundle, or git commit.
-- [ ] Prefer `git rm --cached .env` if `.env` was ever committed while tracked.
+- [x] Only the **anon** key is in the app (local `.env` → `VITE_SUPABASE_ANON_KEY`).
+- [x] **service_role** key is not in any `VITE_*` variable or git commit.
+- [x] `.env` removed from git tracking (`git rm --cached .env`).
 
 ## Database policies
 
-- [ ] Run [`migrations/20260809000000_auth_profiles_plans.sql`](migrations/20260809000000_auth_profiles_plans.sql) once.
-- [ ] Run [`migrations/20260809000001_rls_hardening.sql`](migrations/20260809000001_rls_hardening.sql) once.
-- [ ] Confirm with [`VERIFY_RLS.sql`](VERIFY_RLS.sql).
+- [x] [`migrations/20260809000000_auth_profiles_plans.sql`](migrations/20260809000000_auth_profiles_plans.sql) applied (`supabase db push`).
+- [x] [`migrations/20260809000001_rls_hardening.sql`](migrations/20260809000001_rls_hardening.sql) applied (`supabase db push`).
+- [x] Verified with remote queries (RLS enabled+forced, own-row policies, anon has no table privileges).
 
 ## Quick smoke tests
 
