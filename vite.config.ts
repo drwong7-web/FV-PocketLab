@@ -9,7 +9,7 @@ export default defineConfig(() => ({
   server: {
     host: "::",
     port: 8080,
-    // HTTPS so LAN phones get a secure context (WebAuthn / device unlock).
+    // HTTPS so LAN phones get a secure context (camera, OAuth redirects).
     https: true,
     hmr: {
       overlay: false,

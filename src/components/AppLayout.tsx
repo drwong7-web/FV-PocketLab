@@ -24,6 +24,7 @@ import {
 } from "@/lib/sync/adapters";
 import { syncPushNow, syncPullNow, syncBothNow } from "@/lib/sync/manager";
 import { resetOnboarding } from "@/lib/onboarding";
+import type { PlanId, PlanStatus } from "@/lib/plan";
 
 import { cn } from "@/lib/utils";
 
@@ -35,10 +36,25 @@ const navItems: { to: string; labelKey: TKey; icon: typeof Home; end?: boolean }
   { to: "/app/tests", labelKey: "navTests", icon: Activity },
 ];
 
+const PLAN_LABEL: Record<PlanId, TKey> = {
+  free: "planFree",
+  pro_monthly: "planProMonthly",
+  lifetime: "planLifetime",
+};
+
+const PLAN_STATUS_LABEL: Record<PlanStatus, TKey> = {
+  active: "planStatusActive",
+  trialing: "planStatusTrialing",
+  past_due: "planStatusPastDue",
+  canceled: "planStatusCanceled",
+  expired: "planStatusExpired",
+};
+
 export default function AppLayout() {
-  const { user, signOut } = useAuth();
+  const { user, signOut, entitlements, offlineMode, refreshEntitlements } = useAuth();
   const { lang, theme, accent, setLang, setTheme, setAccent, t } = useSettings();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [planBusy, setPlanBusy] = useState(false);
   const [exportDir, setExportDir] = useState<string | null>(null);
   const [syncProvider, setSyncProviderState] = useState<SyncProvider>("none");
   const [syncBusy, setSyncBusy] = useState<null | "push" | "pull" | "both" | "connect">(null);
@@ -184,6 +200,75 @@ export default function AppLayout() {
           </DialogHeader>
 
           <div className="space-y-4 py-2">
+            <section className="space-y-3 glass-card p-5 bg-gradient-to-br from-primary/10 to-transparent hover:border-primary/40 transition-colors">
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="text-lg uppercase font-semibold">{t("account")}</h3>
+                {offlineMode && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-warning/40 bg-warning/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-warning">
+                    {t("offlineBadge")}
+                  </span>
+                )}
+              </div>
+
+              {user && (
+                <p className="text-xs text-muted-foreground">
+                  {t("signedInAs")} <span className="text-foreground">{user.email || user.name}</span>
+                </p>
+              )}
+
+              <div className="rounded-xl border border-border/60 bg-background/40 p-3 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="section-label">{t("planLabel")}</span>
+                  <span
+                    className={cn(
+                      "rounded-full px-2.5 py-1 text-[11px] font-semibold",
+                      entitlements.fullAccess
+                        ? "bg-primary/15 text-primary"
+                        : "bg-muted text-muted-foreground"
+                    )}
+                  >
+                    {t(PLAN_LABEL[entitlements.plan])}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                  <span>{t(PLAN_STATUS_LABEL[entitlements.status])}</span>
+                  {entitlements.periodEnd && (
+                    <span className="mono-num">
+                      {t("planRenewsOn")}{" "}
+                      {new Date(entitlements.periodEnd).toLocaleDateString(lang)}
+                    </span>
+                  )}
+                </div>
+
+                <p className="text-xs text-muted-foreground">
+                  {entitlements.fullAccess ? t("planFullAccessNote") : t("planLimitedNote")}
+                </p>
+              </div>
+
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[11px] text-muted-foreground">
+                  {offlineMode ? t("planOfflineNote") : t("planUpgradeSoon")}
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={planBusy || offlineMode}
+                  onClick={async () => {
+                    setPlanBusy(true);
+                    try {
+                      await refreshEntitlements();
+                    } finally {
+                      setPlanBusy(false);
+                    }
+                  }}
+                >
+                  <RefreshCw className={cn("h-3.5 w-3.5", planBusy && "animate-spin")} />
+                  {t("planRefresh")}
+                </Button>
+              </div>
+            </section>
+
             <section className="space-y-3 glass-card p-5 bg-gradient-to-br from-primary/10 to-transparent hover:border-primary/40 transition-colors">
               <div className="flex items-center gap-2 text-sm font-semibold">
                 <h3 className="text-lg uppercase">{t("language")}</h3>

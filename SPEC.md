@@ -2,7 +2,7 @@
 
 > **Living specification.** Update this file in the SAME turn as any change to architecture, routes, data model, libraries, calculation protocols, or product behavior. If a change doesn't affect any of those, no update needed. Kept so another agent (Cursor, Claude Code, Codex, etc.) can continue the work with the exact same architecture and plan.
 
-**Last updated:** 2026-07-24
+**Last updated:** 2026-08-09
 **Owner:** local maintainers
 **Related docs:** `DESIGN.md` (visual system), `mem://index.md` (agent memory rules when present)
 
@@ -10,7 +10,11 @@
 
 ## 1. Product
 
-Local-first web app to plan, capture and analyze athletic performance tests (linear sprint, vertical jump) for teams. Force–Velocity (FV) profiling with on-device video analysis. No account, no server: everything stays on the device with optional native drive sync (Google Drive on Android/desktop, iCloud Drive on iOS/iPadOS, `.slfv` file fallback).
+Local-first web app to plan, capture and analyze athletic performance tests (linear sprint, vertical jump) for teams. Force–Velocity (FV) profiling with on-device video analysis.
+
+**Split of responsibilities:** identity and subscription state live in Supabase; all performance data (teams, athletes, tests, videos) stays on the device, with optional native drive sync (Google Drive on Android/desktop, iCloud Drive on iOS/iPadOS, `.slfv` file fallback).
+
+**Plans:** `free` (limited features, ads), `pro_monthly` (recurring, full access, no ads), `lifetime` (one-time purchase, full access, no ads). Payments will be handled by Creem; the schema is already shaped for it (`plan_source`, `creem_customer_id`, `creem_subscription_id`, `plan_events`) but no checkout is wired yet.
 
 Core user flows:
 1. Create a team → add athletes (manual or import from PDF/DOCX/image via local OCR).
@@ -31,9 +35,12 @@ Core user flows:
   - DOCX unzip + XML parse: `jszip`
   - OCR (images + scanned PDFs): `tesseract.js` (`fra+eng`)
 - **Exports:** `jspdf` + `html2canvas` (PDF), `docx` + `file-saver` (DOCX).
-- **Auth:** local only (`src/lib/auth.tsx`, prototype hash in `storage.ts`). Forgot-password proves device ownership on demand via WebAuthn **platform** authenticator (`src/lib/webauthn.ts` — Face ID / Touch ID / Android biometrics / Windows Hello / device PIN). No prior enroll or Settings setup. No cloud auth.
+- **Auth:** Supabase Auth (`@supabase/supabase-js`) — **email + password only**, no OAuth providers. Client in `src/lib/supabase/client.ts`, provider in `src/lib/auth.tsx`. Session persists in `localStorage` (key `slfv:supabase-auth`) so a signed-in user keeps working offline. Password reset goes through Supabase's email link (`/auth/reset`); the old WebAuthn device-unlock reset and `src/lib/webauthn.ts` are removed.
+  - **Offline sign-in:** sign-up requires a connection. On each successful online password sign-in, a PBKDF2-SHA256 verifier (210k iterations, random salt) is cached in `src/lib/offlineAuth.ts` under `slfv:offline-auth`, so the same email can sign in again with no network.
+  - **Local bridge:** `ensureLocalUserForRemote()` in `storage.ts` mirrors the Supabase identity into the local repo, reusing the `organizationId` already present on the device so existing teams/tests are never orphaned. The local `User` id **is** the Supabase auth user id.
+- **Entitlements:** `src/lib/plan.ts` derives `fullAccess` / `adsEnabled` from plan + status + period end, mirroring the `public.has_full_access` SQL function so the rules also work offline. Cached per user under `slfv:entitlements`. `FREE_LIMITS` is declared but **not enforced yet** — it waits on the ad/limit spec.
 
-Explicitly **removed / not used**: Supabase client, any AI-key based feature (Gemini/OpenAI), encryption-at-rest.
+Explicitly **removed / not used**: any AI-key based feature (Gemini/OpenAI), encryption-at-rest, WebAuthn.
 
 ---
 
@@ -58,9 +65,13 @@ src/
       ImportPlayersDialog.tsx  PDF/DOCX/image → athletes preview → save
     ui/                        shadcn primitives
   lib/
-    auth.tsx                   local sign in/up + device-unlock password reset
-    webauthn.ts                WebAuthn platform authenticator helpers
-    storage.ts                 localStorage repo (users, orgs, teams, players, tests, session)
+    auth.tsx                   Supabase auth provider (+ offline sign-in, entitlements)
+    supabase/
+      client.ts                configured Supabase client, isSupabaseConfigured, isOnline
+      types.ts                 hand-written DB types (regenerate with supabase gen types)
+    plan.ts                    plan model, entitlement derivation, offline cache
+    offlineAuth.ts             PBKDF2 verifier cache enabling offline sign-in
+    storage.ts                 local repo (orgs, teams, players, tests) + Supabase→local bridge
     types.ts                   User, Organization, Team, Player, TestSession
     settings.tsx               user prefs (units, sync target)
     sprintEngine.ts            Sprint analysis pipeline (splits or position/time → SprintAnalysis)
@@ -82,7 +93,9 @@ src/
     import/
       athletes.ts              PDF/DOCX/image → ParsedAthlete[] (100% local)
   pages/
-    Auth.tsx
+    Auth.tsx                   email/password sign in + sign up, reset-link request
+    AuthCallback.tsx           email-confirmation redirect target
+    ResetPassword.tsx          password-reset link target
     Dashboard.tsx
     Teams.tsx, TeamDetail.tsx, PlayerDetail.tsx
     NewTest.tsx (chooser) → JumpTest.tsx | SprintTest.tsx
@@ -94,7 +107,7 @@ src/
 
 ## 4. Routes (`src/App.tsx`)
 
-Public: `/auth`. Root `/` redirects to `/app` if a local profile exists, else `/auth` (no marketing landing in this project — landing lives in a separate Lovable project).
+Public: `/auth` (email + password), `/auth/callback` (email-confirmation landing; the Supabase client consumes the code via `detectSessionInUrl`), `/auth/reset` (password-reset link target). Root `/` redirects to `/app` if a session exists, else `/auth` (no marketing landing in this project).
 Protected under `/app` (wraps `AppLayout`):
 - `` → Dashboard
 - `teams` / `teams/:teamId` / `players/:playerId`
@@ -106,7 +119,7 @@ Legacy alias: `/dashboard` → `/app`.
 ## 5. Data model (`src/lib/types.ts`)
 
 - **Organization** `{ id, name }` — 1 per user account (local).
-- **User** `{ id, email, name, passwordHash, organizationId, webauthnCredentialId? }` — prototype-only password hash; optional cached platform WebAuthn credential id after a password reset (not required to start reset).
+- **User** `{ id, email, name, organizationId }` — local mirror of the Supabase user; `id` is the Supabase auth user id. Passwords are never stored here (only the PBKDF2 offline verifier in `slfv:offline-auth`).
 - **Team** `{ id, name, organizationId, sport?, createdAt }`. `sport` is a canonical enum key from `SPORT_GROUPS` in `src/lib/sportTargets.ts` (team sports, athletics sub-disciplines, other F-V sports, or `"other"` balanced fallback). Legacy free-text values are still normalized by `getSportTargets`/`getSportLabel`.
 - **Player** `{ id, teamId, organizationId, firstName, lastName, birthDate?, mass, height?, position?, createdAt }`.
 - **TestSession** `{ id, playerId, organizationId, createdAt, notes?, conditions?, mass, inputMode: "splits"|"position_time", splits? | positionTime?, analysis: SprintAnalysis }`.
@@ -114,6 +127,28 @@ Legacy alias: `/dashboard` → `/app`.
 - Jump results stored as a variant of TestSession (see `jumpDetection.ts` + `unifiedTests.ts`).
 
 Persistence keys (IndexedDB): `slfv:users | slfv:orgs | slfv:teams | slfv:players | slfv:tests`. Ephemeral session (sessionStorage): `slfv:session`. `uid()` uses `crypto.randomUUID`.
+
+---
+
+## 5b. Supabase schema (`supabase/migrations/`)
+
+Apply with `supabase db push`, or paste each migration into the SQL editor in order. Env vars live in `.env` (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`); both are public by design — the anon key only reaches what RLS allows. **Never** put the service-role key in a `VITE_*` variable.
+
+Migrations:
+
+1. `20260809000000_auth_profiles_plans.sql` — tables, triggers, base own-row RLS, admin RPC.
+2. `20260809000001_rls_hardening.sql` — revoke `anon`/`PUBLIC`, `FORCE ROW LEVEL SECURITY`, explicit deny policies for deletes / plan_events mutations.
+
+Operator helpers: `supabase/VERIFY_RLS.sql` (SQL checks), `supabase/AUTH_CHECKLIST.md` (Auth dashboard settings).
+
+- **`public.profiles`** — one row per `auth.users` row, created by the `on_auth_user_created` trigger.
+  `id, email, full_name, avatar_url, plan, plan_status, plan_source, current_period_end, cancel_at, creem_customer_id, creem_subscription_id, is_admin, created_at, updated_at`.
+  `plan ∈ (free, pro_monthly, lifetime)`, `plan_status ∈ (active, trialing, past_due, canceled, expired)`, `plan_source ∈ (system, manual, creem)`.
+- **`public.plan_events`** — append-only audit of plan/status transitions, written automatically by the `log_plan_change` trigger and by `admin_set_plan`. This is where Creem webhooks should log their payloads.
+- **Functions:** `is_admin()`, `has_full_access(uuid)`, `my_entitlements()` (single RPC the client calls on sign-in), `admin_set_plan(target_user, new_plan, new_status, period_end, note)`.
+- **Security model:** RLS lets a signed-in user SELECT/INSERT/UPDATE **their own** profile (`id = auth.uid()`), and SELECT their own `plan_events`. Deletes and plan_events mutations are denied. A `BEFORE UPDATE` trigger (`guard_profile_billing_columns`) raises `PLAN_CHANGE_NOT_ALLOWED` if a non-privileged caller touches billing columns or `is_admin`. Plans change only via the service role (webhook) or `admin_set_plan` called by an admin. Never grant a paid feature on the strength of the client-side check alone. Teams/athletes/tests stay on-device and are outside Postgres RLS.
+- **Live verification (2026-08-09):** REST probe with the project anon key — `GET /rest/v1/profiles` and `/plan_events` returned `[]`; anon `POST` to both returned `42501` (“violates row-level security policy”). So base RLS from migration 000 is **already applied** on the project. Still run migration 001 for revoke/`FORCE` hardening, then `VERIFY_RLS.sql`.
+- **Editing a user's status by hand:** set `is_admin = true` on your own profile once from the SQL editor, then call `select public.admin_set_plan('<user-uuid>', 'lifetime', 'active', null, 'comped');`.
 
 ---
 

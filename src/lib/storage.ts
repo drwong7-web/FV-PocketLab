@@ -3,6 +3,9 @@
  * (voir `src/lib/db/kvStore.ts`). Les lectures viennent d'un cache mémoire
  * hydraté au boot ; les écritures sont miroir cache + write-through Dexie.
  * Compatible avec les appelants historiques (aucun changement de signature).
+ *
+ * Les comptes sont gérés par Supabase (`src/lib/auth.tsx`) : ici on ne garde
+ * qu'un miroir local de l'utilisateur connecté, sans mot de passe.
  */
 
 import type { Organization, Player, Team, TestSession, User } from "./types";
@@ -66,43 +69,59 @@ function clearSession() {
 export const uid = () =>
   (crypto.randomUUID?.() ?? Math.random().toString(36).slice(2) + Date.now().toString(36));
 
-// Light prototype-only password "hash"
-export function hashPassword(p: string) {
-  let h = 0;
-  for (let i = 0; i < p.length; i++) h = (h << 5) - h + p.charCodeAt(i);
-  return `h_${(h >>> 0).toString(16)}_${p.length}`;
-}
-
 // ----- Users / Orgs -----
 export function listUsers(): User[] { return read(KEYS.users, [] as User[]); }
 export function listOrgs(): Organization[] { return read(KEYS.orgs, [] as Organization[]); }
 
-export function createUserAndOrg(email: string, password: string, name: string, orgName: string): User {
+/**
+ * Mirror a Supabase identity into the local repository and open the session.
+ *
+ * Accounts live in Supabase; teams, athletes and tests stay on the device and
+ * are keyed by `organizationId`. So the first time an account signs in on a
+ * device that already holds data, we attach it to the organization that is
+ * already there instead of creating an empty one — otherwise the existing
+ * teams and tests would be orphaned.
+ */
+export function ensureLocalUserForRemote(remote: {
+  id: string;
+  email: string;
+  name: string;
+}): User {
   const users = listUsers();
-  if (users.some((u) => u.email.toLowerCase() === email.toLowerCase())) {
-    throw new Error("An account with this email already exists.");
+  const idx = users.findIndex((u) => u.id === remote.id);
+
+  if (idx >= 0) {
+    const current = users[idx];
+    const patched: User = {
+      ...current,
+      email: remote.email || current.email,
+      name: remote.name || current.name,
+    };
+    if (patched.email !== current.email || patched.name !== current.name) {
+      users[idx] = patched;
+      write(KEYS.users, users);
+    }
+    writeSession({ userId: patched.id });
+    return patched;
   }
+
   const orgs = listOrgs();
-  const org: Organization = { id: uid(), name: orgName };
-  orgs.push(org);
-  write(KEYS.orgs, orgs);
+  let organizationId = users[0]?.organizationId ?? orgs[0]?.id;
+  if (!organizationId) {
+    const org: Organization = { id: uid(), name: remote.name || remote.email };
+    orgs.push(org);
+    write(KEYS.orgs, orgs);
+    organizationId = org.id;
+  }
+
   const user: User = {
-    id: uid(),
-    email,
-    name,
-    passwordHash: hashPassword(password),
-    organizationId: org.id,
+    id: remote.id,
+    email: remote.email,
+    name: remote.name || remote.email,
+    organizationId,
   };
   users.push(user);
   write(KEYS.users, users);
-  return user;
-}
-
-export function authenticate(email: string, password: string): User {
-  const user = listUsers().find((u) => u.email.toLowerCase() === email.toLowerCase());
-  if (!user || user.passwordHash !== hashPassword(password)) {
-    throw new Error("Invalid email or password.");
-  }
   writeSession({ userId: user.id });
   return user;
 }
@@ -112,44 +131,9 @@ export function currentUser(): User | null {
   if (!s.userId) return null;
   return listUsers().find((u) => u.id === s.userId) ?? null;
 }
+
 export function signOut() {
   clearSession();
-}
-
-export function findUserByName(name: string): User | null {
-  const trimmed = name.trim();
-  if (!trimmed) return null;
-  const email = `${trimmed.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "user"}@local`;
-  const users = listUsers();
-  return (
-    users.find((u) => u.email.toLowerCase() === email) ??
-    users.find((u) => u.name.trim().toLowerCase() === trimmed.toLowerCase()) ??
-    null
-  );
-}
-
-export function setUserWebAuthnCredential(userId: string, credentialId: string | undefined): User {
-  const users = listUsers();
-  const idx = users.findIndex((u) => u.id === userId);
-  if (idx < 0) throw new Error("USER_NOT_FOUND");
-  const updated: User = { ...users[idx] };
-  if (credentialId) updated.webauthnCredentialId = credentialId;
-  else delete updated.webauthnCredentialId;
-  users[idx] = updated;
-  write(KEYS.users, users);
-  return updated;
-}
-
-export function resetPasswordForUser(userId: string, newPassword: string): User {
-  if (newPassword.length < 6) throw new Error("PASSWORD_TOO_SHORT");
-  const users = listUsers();
-  const idx = users.findIndex((u) => u.id === userId);
-  if (idx < 0) throw new Error("USER_NOT_FOUND");
-  const updated: User = { ...users[idx], passwordHash: hashPassword(newPassword) };
-  users[idx] = updated;
-  write(KEYS.users, users);
-  writeSession({ userId: updated.id });
-  return updated;
 }
 
 export function getOrganization(id: string) {

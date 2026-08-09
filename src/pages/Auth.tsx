@@ -1,64 +1,39 @@
 import { useEffect, useState, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import fvLogo from "@/assets/fv-logo.png";
-import { Fingerprint, Loader2 } from "lucide-react";
-import { useAuth } from "@/lib/auth";
-import { getDeviceUnlockBlockReason } from "@/lib/webauthn";
+import { Loader2, WifiOff } from "lucide-react";
+import { AuthError, useAuth, type AuthErrorCode } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { useSettings, type TKey } from "@/lib/settings";
 
-type Mode = "login" | "signup" | "recover";
+type Mode = "login" | "signup" | "forgot";
 
-function mapUnlockError(err: unknown, t: (k: TKey) => string): string {
-  const code = err instanceof Error ? err.message : String(err);
-  const detail = err instanceof Error && typeof err.cause === "string" ? err.cause : undefined;
-  switch (code) {
-    case "CANCELLED":
-      return t("deviceUnlockCancelled");
-    case "LAN_HTTP":
-      return t("deviceUnlockLanHttp");
-    case "INSECURE_CONTEXT":
-      return t("deviceUnlockInsecure");
-    case "UNSUPPORTED":
-    case "DUPLICATE":
-      return detail ? `${t("deviceUnlockUnsupported")} (${detail})` : t("deviceUnlockUnsupported");
-    case "RATE_LIMITED":
-      return t("deviceUnlockRateLimited");
-    case "FAILED":
-      return detail ? `${t("deviceUnlockFailed")} (${detail})` : t("deviceUnlockFailed");
-    case "PASSWORD_TOO_SHORT":
-      return t("passwordTooShort");
-    case "INVALID_CREDENTIALS":
-      return t("invalidCredentials");
-    default:
-      return detail ? `${t("deviceUnlockFailed")} (${detail})` : t("deviceUnlockFailed");
-  }
-}
-
-function deviceUnlockUnavailableHint(t: (k: TKey) => string): string {
-  const reason = getDeviceUnlockBlockReason();
-  if (reason === "LAN_HTTP") return t("deviceUnlockLanHttp");
-  if (reason === "INSECURE_CONTEXT") return t("deviceUnlockInsecure");
-  return t("deviceUnlockUnsupported");
-}
+const ERROR_COPY: Record<AuthErrorCode, TKey> = {
+  EMAIL_EXISTS: "emailExists",
+  INVALID_CREDENTIALS: "invalidCredentials",
+  EMAIL_NOT_CONFIRMED: "emailNotConfirmed",
+  PASSWORD_TOO_SHORT: "passwordTooShort",
+  PASSWORDS_DONT_MATCH: "passwordsDontMatch",
+  OFFLINE_SIGNUP: "offlineSignupBlocked",
+  OFFLINE_NO_CREDENTIAL: "offlineNoCredential",
+  OFFLINE_RESET: "offlineResetBlocked",
+  NOT_CONFIGURED: "notConfiguredError",
+  NETWORK: "networkError",
+  UNKNOWN: "genericAuthError",
+};
 
 export default function Auth() {
-  const {
-    enrolled,
-    hasAnyProfile,
-    signUp,
-    login,
-    recoverWithDeviceUnlock,
-    deviceUnlockAvailable,
-  } = useAuth();
+  const { enrolled, hasAnyProfile, signUp, signIn, sendPasswordReset } = useAuth();
   const { t } = useSettings();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<Mode>(hasAnyProfile ? "login" : "signup");
+  const [online, setOnline] = useState(() => navigator.onLine !== false);
   const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
 
@@ -70,53 +45,79 @@ export default function Auth() {
     if (enrolled) navigate("/app", { replace: true });
   }, [enrolled, navigate]);
 
+  useEffect(() => {
+    const sync = () => setOnline(navigator.onLine !== false);
+    window.addEventListener("online", sync);
+    window.addEventListener("offline", sync);
+    return () => {
+      window.removeEventListener("online", sync);
+      window.removeEventListener("offline", sync);
+    };
+  }, []);
+
+  const fail = (err: unknown) => {
+    if (err instanceof AuthError) toast.error(t(ERROR_COPY[err.code]));
+    else toast.error(t("genericAuthError"));
+  };
+
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !password) {
-      toast.error(t("nameTeamRequired"));
+
+    if (mode === "forgot") {
+      if (!email.trim()) {
+        toast.error(t("emailRequired"));
+        return;
+      }
+      setLoading(true);
+      try {
+        await sendPasswordReset(email);
+        toast.success(t("resetEmailSent"));
+        setMode("login");
+      } catch (err) {
+        fail(err);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    if (!email.trim() || !password) {
+      toast.error(t("emailRequired"));
       return;
     }
     if (password.length < 6) {
       toast.error(t("passwordTooShort"));
       return;
     }
+    if (mode === "signup" && password !== confirm) {
+      toast.error(t("passwordsDontMatch"));
+      return;
+    }
+
     setLoading(true);
     try {
       if (mode === "signup") {
-        if (password !== confirm) {
-          toast.error(t("passwordsDontMatch"));
-          return;
-        }
-        try {
-          await signUp({ name, password });
+        const { needsEmailConfirmation } = await signUp({ email, password, name });
+        if (needsEmailConfirmation) {
+          toast.success(t("confirmEmailSent"));
+          setMode("login");
+          setPassword("");
+          setConfirm("");
+        } else {
           toast.success(t("profileCreated"));
-        } catch (err) {
-          const code = (err as Error).message;
-          if (code === "NAME_EXISTS") toast.error(t("nameAlreadyExists"));
-          else toast.error(code);
-        }
-      } else if (mode === "login") {
-        try {
-          await login({ name, password });
-        } catch {
-          toast.error(t("invalidCredentials"));
         }
       } else {
-        if (password !== confirm) {
-          toast.error(t("passwordsDontMatch"));
-          return;
-        }
-        try {
-          await recoverWithDeviceUnlock({ name, newPassword: password });
-          toast.success(t("passwordResetOk"));
-        } catch (err) {
-          toast.error(mapUnlockError(err, t));
-        }
+        await signIn({ email, password });
       }
+    } catch (err) {
+      fail(err);
     } finally {
       setLoading(false);
     }
   };
+
+  const title =
+    mode === "signup" ? t("signUp") : mode === "forgot" ? t("forgotPasswordTitle") : t("welcomeBack");
 
   return (
     <div className="min-h-svh flex items-center justify-center px-4 py-10">
@@ -132,47 +133,61 @@ export default function Auth() {
         </div>
 
         <div className="glass-card p-6 shadow-elevated">
-          <div className="flex items-center gap-2 mb-4 text-sm font-semibold">
-            <span>
-              {mode === "signup"
-                ? t("signUp")
-                : mode === "recover"
-                  ? t("forgotPasswordTitle")
-                  : t("welcomeBack")}
-            </span>
+          <div className="flex items-center justify-between gap-2 mb-4">
+            <span className="text-sm font-semibold">{title}</span>
+            {!online && (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-warning/40 bg-warning/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-warning">
+                <WifiOff className="w-3 h-3" />
+                {t("offlineBadge")}
+              </span>
+            )}
           </div>
 
-          {mode === "recover" && (
-            <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
-              {deviceUnlockAvailable ? t("forgotPasswordHint") : deviceUnlockUnavailableHint(t)}
-            </p>
+          {mode === "forgot" && (
+            <p className="text-xs text-muted-foreground mb-3 leading-relaxed">{t("resetEmailHint")}</p>
           )}
 
           <form onSubmit={onSubmit} className="space-y-3">
+            {mode === "signup" && (
+              <div>
+                <Label htmlFor="name">{t("yourName")}</Label>
+                <Input
+                  id="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  autoComplete="name"
+                />
+              </div>
+            )}
+
             <div>
-              <Label htmlFor="name">{t("yourName")}</Label>
+              <Label htmlFor="email">{t("authEmail")}</Label>
               <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
+                id="email"
+                type="email"
+                inputMode="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 required
-                autoComplete="username"
+                autoComplete="email"
               />
             </div>
-            <div>
-              <Label htmlFor="password">
-                {mode === "recover" ? t("newPassword") : t("password")}
-              </Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                autoComplete={mode === "login" ? "current-password" : "new-password"}
-              />
-            </div>
-            {(mode === "signup" || mode === "recover") && (
+
+            {mode !== "forgot" && (
+              <div>
+                <Label htmlFor="password">{t("password")}</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  autoComplete={mode === "login" ? "current-password" : "new-password"}
+                />
+              </div>
+            )}
+
+            {mode === "signup" && (
               <div>
                 <Label htmlFor="confirm">{t("confirmPassword")}</Label>
                 <Input
@@ -185,34 +200,28 @@ export default function Auth() {
                 />
               </div>
             )}
+
             <Button
               type="submit"
               className="w-full mt-2 bg-gradient-primary text-primary-foreground hover:opacity-90 shadow-glow font-semibold"
-              disabled={loading || (mode === "recover" && !deviceUnlockAvailable)}
+              disabled={loading}
             >
               {loading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : mode === "signup" ? (
                 t("createMyProfile")
-              ) : mode === "recover" ? (
-                <>
-                  <Fingerprint className="w-4 h-4 mr-1" />
-                  {t("unlockAndResetPassword")}
-                </>
+              ) : mode === "forgot" ? (
+                t("sendResetLink")
               ) : (
                 t("loginBtn")
               )}
             </Button>
           </form>
 
-          {mode === "login" && hasAnyProfile && (
+          {mode === "login" && (
             <button
               type="button"
-              onClick={() => {
-                setMode("recover");
-                setPassword("");
-                setConfirm("");
-              }}
+              onClick={() => setMode("forgot")}
               className="w-full text-xs text-primary hover:underline mt-3"
             >
               {t("forgotPassword")}
@@ -222,7 +231,7 @@ export default function Auth() {
           <button
             type="button"
             onClick={() => {
-              setMode(mode === "signup" ? "login" : mode === "recover" ? "login" : "signup");
+              setMode(mode === "signup" ? "login" : mode === "forgot" ? "login" : "signup");
               setPassword("");
               setConfirm("");
             }}
@@ -235,7 +244,7 @@ export default function Auth() {
                   {t("logInLink")}
                 </span>
               </>
-            ) : mode === "recover" ? (
+            ) : mode === "forgot" ? (
               <span className="text-sm font-semibold text-primary underline-offset-2 hover:underline">
                 {t("backToLogin")}
               </span>
@@ -249,7 +258,11 @@ export default function Auth() {
             )}
           </button>
 
-          <p className="text-[11px] text-muted-foreground text-center mt-5">{t("storageNote")}</p>
+          {!online && mode !== "forgot" && (
+            <p className="text-[11px] text-muted-foreground text-center mt-5 leading-relaxed">
+              {mode === "signup" ? t("offlineSignupBlocked") : t("offlineSignedIn")}
+            </p>
+          )}
         </div>
       </div>
     </div>

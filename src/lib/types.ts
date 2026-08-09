@@ -1,13 +1,14 @@
 import type { SprintAnalysis, Split } from "./sprintEngine";
 
+/**
+ * Local mirror of the signed-in Supabase user. `id` is the Supabase auth user
+ * id, which is what ties on-device teams/athletes/tests to an account.
+ */
 export interface User {
   id: string;
   email: string;
   name: string;
-  passwordHash: string; // simple hash, prototype only
   organizationId: string;
-  /** Base64url WebAuthn platform credential id for device-unlock password reset. */
-  webauthnCredentialId?: string;
 }
 
 export interface Organization {
