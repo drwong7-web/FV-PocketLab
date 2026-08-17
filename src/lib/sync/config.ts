@@ -1,11 +1,16 @@
 /**
  * Persistance de la configuration de sync (stockage local).
- * L'app détecte automatiquement le drive natif du téléphone :
+ *
+ * Provider recommandé quand l'utilisateur est connecté et abonné :
+ *   - supabase → fichier privé `{auth.uid()}/pocketlab.slfv` dans Storage,
+ *     seul mode réellement automatique et identique sur toutes les plateformes.
+ *
+ * Sinon, l'app détecte le drive natif de l'appareil :
  *   - iOS/iPadOS → iCloud Drive (via l'app Fichiers du système)
  *   - Android / desktop → Google Drive (OAuth Google natif)
  *   - Fallback manuel → Fichier .slfv téléchargeable
  */
-export type SyncProvider = "none" | "gdrive" | "icloud" | "file";
+export type SyncProvider = "none" | "supabase" | "gdrive" | "icloud" | "file";
 
 const CFG_KEY = "fv:sync:cfg-v2";
 const SECRETS_KEY = "fv:sync:secrets-v2";
@@ -35,11 +40,20 @@ export function isIOSDevice(): boolean {
     || (navigator.platform === "MacIntel" && (navigator as unknown as { maxTouchPoints?: number }).maxTouchPoints! > 1);
 }
 
-/** Détecte le provider recommandé selon l'appareil. */
-export function detectPreferredProvider(): Exclude<SyncProvider, "none"> {
+/** Détecte le provider d'appareil recommandé (hors compte Supabase). */
+export function detectPreferredProvider(): Exclude<SyncProvider, "none" | "supabase"> {
   if (typeof navigator === "undefined") return "gdrive";
   if (isIOSDevice()) return "icloud";
   return managedGoogleClientId() ? "gdrive" : "file";
+}
+
+/**
+ * La sauvegarde sur le compte est réservée aux formules payantes : les règles
+ * RLS du bucket `user-backups` refusent l'upload sans `has_full_access()`.
+ * Ce test ne fait qu'éviter d'afficher un bouton qui échouerait.
+ */
+export function isAccountSyncAvailable(signedIn: boolean, fullAccess: boolean): boolean {
+  return signedIn && fullAccess;
 }
 
 /** Client ID Google managé (publique, injecté à la build). */

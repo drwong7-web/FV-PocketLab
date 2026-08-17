@@ -30,6 +30,11 @@ Without these, email confirmation and password-reset links bounce.
 
 - [x] [`migrations/20260809000000_auth_profiles_plans.sql`](migrations/20260809000000_auth_profiles_plans.sql) applied (`supabase db push`).
 - [x] [`migrations/20260809000001_rls_hardening.sql`](migrations/20260809000001_rls_hardening.sql) applied (`supabase db push`).
+- [ ] [`migrations/20260809000002_storage_user_backups.sql`](migrations/20260809000002_storage_user_backups.sql) applied — private `user-backups` bucket for per-user data snapshots.
+- [ ] [`migrations/20260816000000_creem_apply_event.sql`](migrations/20260816000000_creem_apply_event.sql) applied — Creem webhook writer.
+- [ ] [`migrations/20260816000001_pro_yearly.sql`](migrations/20260816000001_pro_yearly.sql) applied — `pro_yearly` plan.
+- [ ] [`migrations/20260817000000_admin_plan_console.sql`](migrations/20260817000000_admin_plan_console.sql) applied — admin console view + grant/revoke helpers (see [`ADMIN_PLANS.md`](ADMIN_PLANS.md)).
+- [ ] Creem Edge Functions deployed and secrets set — see [`CREEM.md`](CREEM.md).
 - [x] Verified with remote queries (RLS enabled+forced, own-row policies, anon has no table privileges).
 
 ## Quick smoke tests

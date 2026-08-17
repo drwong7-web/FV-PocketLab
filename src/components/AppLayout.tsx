@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
-import { Link, NavLink, Outlet } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { Link, NavLink, Outlet, useSearchParams } from "react-router-dom";
 import fvLogo from "@/assets/fv-logo.png";
-import { Activity, Check, Download, Home, LogOut, Moon, RefreshCw, Settings as SettingsIcon, Sun, Upload, Users } from "lucide-react";
+import { Activity, CalendarDays, Check, CloudUpload, CreditCard, Download, Gem, Home, Lock, LogOut, Moon, RefreshCw, Settings as SettingsIcon, Sun, Upload, Users } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
+import { openBillingPortal, startCheckout } from "@/lib/billing";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -13,16 +14,19 @@ import {
   getPublicConfig,
   getSyncState,
   detectPreferredProvider,
+  isAccountSyncAvailable,
   managedGoogleClientId,
   type SyncProvider,
 } from "@/lib/sync/config";
 import {
+  connectAccountSync,
   connectGDrive,
   connectICloud,
   connectFileSync,
   disconnectCloud,
 } from "@/lib/sync/adapters";
 import { syncPushNow, syncPullNow, syncBothNow } from "@/lib/sync/manager";
+import { maybeAutoRestore } from "@/lib/sync/autoRestore";
 import { resetOnboarding } from "@/lib/onboarding";
 import type { PlanId, PlanStatus } from "@/lib/plan";
 
@@ -39,6 +43,7 @@ const navItems: { to: string; labelKey: TKey; icon: typeof Home; end?: boolean }
 const PLAN_LABEL: Record<PlanId, TKey> = {
   free: "planFree",
   pro_monthly: "planProMonthly",
+  pro_yearly: "planProYearly",
   lifetime: "planLifetime",
 };
 
@@ -53,14 +58,19 @@ const PLAN_STATUS_LABEL: Record<PlanStatus, TKey> = {
 export default function AppLayout() {
   const { user, signOut, entitlements, offlineMode, refreshEntitlements } = useAuth();
   const { lang, theme, accent, setLang, setTheme, setAccent, t } = useSettings();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [planBusy, setPlanBusy] = useState(false);
+  const [checkoutBusy, setCheckoutBusy] = useState<null | "pro_monthly" | "pro_yearly" | "lifetime" | "portal">(null);
   const [exportDir, setExportDir] = useState<string | null>(null);
   const [syncProvider, setSyncProviderState] = useState<SyncProvider>("none");
   const [syncBusy, setSyncBusy] = useState<null | "push" | "pull" | "both" | "connect">(null);
   const [lastSyncAt, setLastSyncAt] = useState<number | undefined>(undefined);
   const preferredProvider = detectPreferredProvider();
   const gdriveAvailable = !!managedGoogleClientId();
+  const accountSyncAvailable = isAccountSyncAvailable(!!user, entitlements.fullAccess);
+  const autoRestoreRan = useRef(false);
+  const billingHandled = useRef(false);
 
   useEffect(() => {
     if (settingsOpen) {
@@ -69,6 +79,36 @@ export default function AppLayout() {
       setLastSyncAt(getSyncState().lastSyncAt);
     }
   }, [settingsOpen]);
+
+  // Nouvel appareil : si rien n'est stocké en local, on récupère la sauvegarde
+  // du compte avant que l'utilisateur ne croie avoir tout perdu.
+  useEffect(() => {
+    if (!user || autoRestoreRan.current) return;
+    autoRestoreRan.current = true;
+    void (async () => {
+      const outcome = await maybeAutoRestore(user.id);
+      if (outcome.status === "restored") {
+        setLastSyncAt(getSyncState().lastSyncAt);
+        setSyncProviderState(getPublicConfig().provider);
+        toast.success(`${t("autoRestoreDone")} — ${outcome.report.totalKeys} keys`);
+      }
+    })();
+  }, [user, t]);
+
+  useEffect(() => {
+    if (searchParams.get("billing") !== "success" || !user) return;
+    if (billingHandled.current) return;
+    billingHandled.current = true;
+    toast.success(t("planCheckoutSuccess"));
+    setSearchParams({}, { replace: true });
+    void (async () => {
+      for (let i = 0; i < 8; i++) {
+        const next = await refreshEntitlements();
+        if (next.fullAccess) return;
+        await new Promise((r) => setTimeout(r, 1500));
+      }
+    })();
+  }, [searchParams, setSearchParams, user, refreshEntitlements, t]);
 
   const refreshSyncUi = () => {
     const cfg = getPublicConfig();
@@ -97,6 +137,12 @@ export default function AppLayout() {
     }
   };
 
+  const connectAccount = () => {
+    connectAccountSync();
+    toast.success(t("syncConnectedAccount"));
+    refreshSyncUi();
+  };
+
   const connectFileOnly = () => {
     connectFileSync();
     toast.success(t("syncConnectedFile"));
@@ -121,7 +167,11 @@ export default function AppLayout() {
     try {
       const fn = kind === "push" ? syncPushNow : kind === "pull" ? () => syncPullNow("merge") : syncBothNow;
       const res = await fn();
-      if (!res.ok) { toast.error(res.error || t("syncError")); return; }
+      if (!res.ok) {
+        // Renvoyé quand les règles RLS refusent l'upload (abonnement expiré).
+        toast.error(res.error === "BACKUP_NOT_ALLOWED" ? t("syncProRequired") : res.error || t("syncError"));
+        return;
+      }
       setLastSyncAt(getSyncState().lastSyncAt);
       if (kind === "pull" && res.pulled) {
         toast.success(`${t("pulledOk")} — ${res.pulled.totalKeys} keys (${res.pulled.added} added)`);
@@ -246,9 +296,87 @@ export default function AppLayout() {
                 </p>
               </div>
 
+              {!offlineMode && entitlements.plan !== "lifetime" && (
+                <div className="grid gap-2">
+                  {entitlements.plan !== "pro_monthly" && (
+                    <Button
+                      size="sm"
+                      variant={entitlements.plan === "free" ? "default" : "outline"}
+                      disabled={!!checkoutBusy}
+                      onClick={async () => {
+                        setCheckoutBusy("pro_monthly");
+                        try {
+                          await startCheckout("pro_monthly");
+                        } catch (err) {
+                          toast.error((err as Error).message || t("planCheckoutError"));
+                          setCheckoutBusy(null);
+                        }
+                      }}
+                    >
+                      <CreditCard className="h-3.5 w-3.5" />
+                      {t("planBuyPro")}
+                    </Button>
+                  )}
+                  {entitlements.plan !== "pro_yearly" && (
+                    <Button
+                      size="sm"
+                      variant={entitlements.plan === "pro_monthly" ? "default" : "outline"}
+                      disabled={!!checkoutBusy}
+                      onClick={async () => {
+                        setCheckoutBusy("pro_yearly");
+                        try {
+                          await startCheckout("pro_yearly");
+                        } catch (err) {
+                          toast.error((err as Error).message || t("planCheckoutError"));
+                          setCheckoutBusy(null);
+                        }
+                      }}
+                    >
+                      <CalendarDays className="h-3.5 w-3.5" />
+                      {t("planBuyYearly")}
+                    </Button>
+                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={!!checkoutBusy}
+                    onClick={async () => {
+                      setCheckoutBusy("lifetime");
+                      try {
+                        await startCheckout("lifetime");
+                      } catch (err) {
+                        toast.error((err as Error).message || t("planCheckoutError"));
+                        setCheckoutBusy(null);
+                      }
+                    }}
+                  >
+                    <Gem className="h-3.5 w-3.5" />
+                    {t("planBuyLifetime")}
+                  </Button>
+                  {(entitlements.plan === "pro_monthly" || entitlements.plan === "pro_yearly") && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={!!checkoutBusy}
+                      onClick={async () => {
+                        setCheckoutBusy("portal");
+                        try {
+                          await openBillingPortal();
+                        } catch (err) {
+                          toast.error((err as Error).message || t("planPortalError"));
+                          setCheckoutBusy(null);
+                        }
+                      }}
+                    >
+                      {t("planManageBilling")}
+                    </Button>
+                  )}
+                </div>
+              )}
+
               <div className="flex items-center justify-between gap-2">
                 <p className="text-[11px] text-muted-foreground">
-                  {offlineMode ? t("planOfflineNote") : t("planUpgradeSoon")}
+                  {offlineMode ? t("planOfflineNote") : t("planPaymentsNote")}
                 </p>
                 <Button
                   variant="outline"
@@ -382,11 +510,34 @@ export default function AppLayout() {
 
               {syncProvider === "none" ? (
                 <div className="space-y-2">
+                  {accountSyncAvailable ? (
+                    <>
+                      <Button
+                        onClick={() => connectAccount()}
+                        disabled={!!syncBusy}
+                        className="w-full bg-gradient-primary text-primary-foreground"
+                      >
+                        <CloudUpload className="h-4 w-4" />
+                        {t("connectAccountSync")}
+                      </Button>
+                      <p className="text-[11px] text-muted-foreground">{t("accountSyncDesc")}</p>
+                    </>
+                  ) : (
+                    <>
+                      <Button disabled className="w-full" variant="outline">
+                        <Lock className="h-4 w-4" />
+                        {t("connectAccountSync")}
+                      </Button>
+                      <p className="text-[11px] text-muted-foreground">{t("accountSyncProOnly")}</p>
+                    </>
+                  )}
+
                   {preferredProvider === "icloud" ? (
                     <Button
+                      variant="outline"
                       onClick={() => connectCloud()}
                       disabled={!!syncBusy}
-                      className="w-full bg-gradient-primary text-primary-foreground"
+                      className="w-full"
                     >
                       {syncBusy === "connect" ? (
                         <RefreshCw className="h-4 w-4 animate-spin" />
@@ -396,9 +547,10 @@ export default function AppLayout() {
                     </Button>
                   ) : gdriveAvailable ? (
                     <Button
+                      variant="outline"
                       onClick={() => connectCloud()}
                       disabled={!!syncBusy}
-                      className="w-full bg-gradient-primary text-primary-foreground"
+                      className="w-full"
                     >
                       {syncBusy === "connect" ? (
                         <RefreshCw className="h-4 w-4 animate-spin" />
@@ -406,34 +558,23 @@ export default function AppLayout() {
                         t("connectGDrive")
                       )}
                     </Button>
-                  ) : (
-                    <>
-                      <Button
-                        onClick={() => connectFileOnly()}
-                        disabled={!!syncBusy}
-                        className="w-full bg-gradient-primary text-primary-foreground"
-                      >
-                        {t("useSlfvFile")}
-                      </Button>
-                      <p className="text-[11px] text-muted-foreground">{t("gdriveUnavailable")}</p>
-                    </>
-                  )}
-                  {(preferredProvider === "icloud" || gdriveAvailable) && (
-                    <button
-                      type="button"
-                      onClick={() => connectFileOnly()}
-                      disabled={!!syncBusy}
-                      className="w-full text-[11px] text-muted-foreground hover:text-primary underline underline-offset-2 disabled:opacity-50"
-                    >
-                      {t("useSlfvFile")}
-                    </button>
-                  )}
+                  ) : null}
+
+                  <button
+                    type="button"
+                    onClick={() => connectFileOnly()}
+                    disabled={!!syncBusy}
+                    className="w-full text-[11px] text-muted-foreground hover:text-primary underline underline-offset-2 disabled:opacity-50"
+                  >
+                    {t("useSlfvFile")}
+                  </button>
                 </div>
               ) : (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-xs gap-2">
                     <span className="text-muted-foreground">
                       <span className="text-foreground font-medium">
+                        {syncProvider === "supabase" && t("accountSyncLabel")}
                         {syncProvider === "gdrive" && "Google Drive"}
                         {syncProvider === "icloud" && "iCloud Drive"}
                         {syncProvider === "file" && ".slfv"}
@@ -463,6 +604,9 @@ export default function AppLayout() {
                     </Button>
                   </div>
 
+                  {syncProvider === "supabase" && (
+                    <p className="text-[11px] text-muted-foreground">{t("accountSyncHint")}</p>
+                  )}
                   {syncProvider === "icloud" && (
                     <p className="text-[11px] text-muted-foreground">{t("iCloudHint")}</p>
                   )}

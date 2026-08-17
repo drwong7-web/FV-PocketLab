@@ -2,7 +2,7 @@
 
 > **Living specification.** Update this file in the SAME turn as any change to architecture, routes, data model, libraries, calculation protocols, or product behavior. If a change doesn't affect any of those, no update needed. Kept so another agent (Cursor, Claude Code, Codex, etc.) can continue the work with the exact same architecture and plan.
 
-**Last updated:** 2026-08-09
+**Last updated:** 2026-08-17
 **Owner:** local maintainers
 **Related docs:** `DESIGN.md` (visual system), `mem://index.md` (agent memory rules when present)
 
@@ -14,7 +14,7 @@ Local-first web app to plan, capture and analyze athletic performance tests (lin
 
 **Split of responsibilities:** identity and subscription state live in Supabase; all performance data (teams, athletes, tests, videos) stays on the device, with optional native drive sync (Google Drive on Android/desktop, iCloud Drive on iOS/iPadOS, `.slfv` file fallback).
 
-**Plans:** `free` (limited features, ads), `pro_monthly` (recurring, full access, no ads), `lifetime` (one-time purchase, full access, no ads). Payments will be handled by Creem; the schema is already shaped for it (`plan_source`, `creem_customer_id`, `creem_subscription_id`, `plan_events`) but no checkout is wired yet.
+**Plans:** `free` (limited features, ads), `pro_monthly` (recurring monthly, full access, no ads), `pro_yearly` (recurring yearly, same access), `lifetime` (one-time purchase, full access, no ads). Payments go through Creem (Merchant of Record). The Vite client never holds the Creem API key: `creem-checkout` / `creem-portal` Edge Functions create hosted sessions; `creem-webhook` verifies HMAC and calls `apply_creem_event()`. Setup: `supabase/CREEM.md`.
 
 Core user flows:
 1. Create a team → add athletes (manual or import from PDF/DOCX/image via local OCR).
@@ -28,7 +28,11 @@ Core user flows:
 - **Runtime:** Vite 5 + React 18 + TypeScript 5, TailwindCSS v3, shadcn/ui (Radix), lucide-react.
 - **Router:** react-router-dom v6. **State/data:** @tanstack/react-query + React context.
 - **Persistence:** IndexedDB via **Dexie** (`src/lib/db/kvStore.ts`, DB `slfv`, table `kv`) with a synchronous in-memory cache hydrated at boot (`bootstrapKvStore()` called in `main.tsx` before render). App data (`slfv:users|orgs|teams|players|tests`, `fv:*`) lives in IndexedDB — much larger quota than `localStorage`, no eviction in private mode. **Login session** (`slfv:session`) is stored in **`sessionStorage` only** so closing the PWA / killing it from the app switcher logs the user out; teams and tests remain on device. `src/lib/storage.ts` is a thin façade over the cache and keeps its historical synchronous API. Legacy `localStorage` keys are auto-migrated one-shot on first boot (backup kept in `slfv:__backup-v0`). Falls back to `localStorage` transparently if IndexedDB fails to open. No cloud backend — local-first only. A native SQLite adapter via `@capacitor-community/sqlite` can be plugged into the same façade for Capacitor builds.
-- **Sync (drive natif du téléphone) :** `src/lib/sync/` — un seul bouton dans Réglages. `detectPreferredProvider()` choisit iCloud sur iOS/iPadOS, Google Drive sinon (fallback fichier `.slfv`). Google Drive utilise un Client ID managé (`VITE_SLFV_GDRIVE_CLIENT_ID`) + scope `drive.appdata` ; iCloud passe par l'app Fichiers d'iOS (download « Enregistrer dans Fichiers » + `<input type=file>`). Aucun compte FV PocketLab, aucune saisie d'URL/mot de passe. WebDAV supprimé.
+- **Sync :** `src/lib/sync/`. Quatre providers derrière la même interface `SyncAdapter` (`push(blob)` / `pull()`), tous alimentés par le snapshot JSON de `snapshot.ts`.
+  - **`supabase` (recommandé, payant)** — objet privé `{auth.uid()}/pocketlab.slfv` dans le bucket Storage `user-backups`. Seul mode réellement automatique et identique sur toutes les plateformes. Réservé aux formules payantes (`pro_monthly` / `pro_yearly` / `lifetime`) : les règles RLS du bucket exigent `public.has_full_access()` à l'upload (le **download reste ouvert** à tout propriétaire, pour qu'un abonnement expiré n'enferme jamais les données). `isAccountSyncAvailable()` ne fait que masquer un bouton qui échouerait.
+  - **`gdrive` / `icloud` / `file`** — providers d'appareil, inchangés. `detectPreferredProvider()` choisit iCloud sur iOS/iPadOS, Google Drive sinon (Client ID managé `VITE_SLFV_GDRIVE_CLIENT_ID` + scope `drive.appdata`), fallback fichier `.slfv`. iCloud passe par l'app Fichiers d'iOS et reste donc manuel : Apple n'expose aucune API web.
+  - **Restauration automatique** (`src/lib/sync/autoRestore.ts`, appelée depuis `AppLayout`) : à la connexion, si l'appareil ne contient **aucune** équipe/athlète/test, la sauvegarde du compte est téléchargée et fusionnée, puis le provider passe à `supabase`. Marqueur `slfv:auto-restore-done` (par user id) pour ne pas rejouer. Jamais déclenchée quand des données locales existent → aucun risque d'écrasement. Le push reste manuel.
+  - **Jamais exporté** (`EXCLUDED_KEYS` dans `snapshot.ts`) : `slfv:offline-auth` (vérificateurs PBKDF2) et `slfv:entitlements` (cache d'abonnement), en plus de la session et des clés device-local.
 - **Video / vision:** `@mediapipe/tasks-vision` for pose (jump apex detection). `requestVideoFrameCallback` / `requestAnimationFrame` for timeline. Custom video filters (`videoFilters.ts`) + stabilizer (`videoStabilizer.ts`) + One-Euro / Butterworth signal smoothing (`signalFilters.ts`).
 - **Local document parsing (no API):**
   - PDF text + rasterization: `pdfjs-dist`
@@ -70,6 +74,7 @@ src/
       client.ts                configured Supabase client, isSupabaseConfigured, isOnline
       types.ts                 hand-written DB types (regenerate with supabase gen types)
     plan.ts                    plan model, entitlement derivation, offline cache
+    billing.ts                 invoke creem-checkout / creem-portal Edge Functions
     offlineAuth.ts             PBKDF2 verifier cache enabling offline sign-in
     storage.ts                 local repo (orgs, teams, players, tests) + Supabase→local bridge
     types.ts                   User, Organization, Team, Player, TestSession
@@ -101,6 +106,10 @@ src/
     NewTest.tsx (chooser) → JumpTest.tsx | SprintTest.tsx
     TestList.tsx, TestResults.tsx
     NotFound.tsx
+supabase/
+  functions/               Creem: creem-checkout, creem-portal, creem-webhook
+  CREEM.md                 products, secrets, webhook URL
+  ADMIN_PLANS.md           grant/revoke a plan by hand from the dashboard
 ```
 
 ---
@@ -138,17 +147,24 @@ Migrations:
 
 1. `20260809000000_auth_profiles_plans.sql` — tables, triggers, base own-row RLS, admin RPC.
 2. `20260809000001_rls_hardening.sql` — revoke `anon`/`PUBLIC`, `FORCE ROW LEVEL SECURITY`, explicit deny policies for deletes / plan_events mutations.
+3. `20260809000002_storage_user_backups.sql` — private `user-backups` bucket (25 MB cap) plus four `storage.objects` policies scoped to `(storage.foldername(name))[1] = auth.uid()::text`. SELECT/DELETE for any owner; INSERT/UPDATE additionally require `public.has_full_access(auth.uid())`.
+4. `20260816000000_creem_apply_event.sql` — `plan_events.provider_event_id` (unique) and `apply_creem_event(...)` (service_role only). Lifetime plans are sticky unless the webhook sets `p_allow_lifetime_downgrade`.
+5. `20260816000001_pro_yearly.sql` — `pro_yearly` on `profiles.plan`, `has_full_access()`, and `apply_creem_event`.
+6. `20260817000000_admin_plan_console.sql` — `is_privileged_admin()`, `admin_set_plan` v2, `admin_set_plan_by_email()`, `admin_revoke_plan()`, the `admin_user_plans` view, and the manual-grant lock in `apply_creem_event`.
 
-Operator helpers: `supabase/VERIFY_RLS.sql` (SQL checks), `supabase/AUTH_CHECKLIST.md` (Auth dashboard settings).
+Operator helpers: `supabase/VERIFY_RLS.sql` (SQL checks), `supabase/AUTH_CHECKLIST.md` (Auth dashboard settings), `supabase/CREEM.md` (Creem products, secrets, webhook URL), `supabase/ADMIN_PLANS.md` (grant/revoke a plan by hand).
 
 - **`public.profiles`** — one row per `auth.users` row, created by the `on_auth_user_created` trigger.
   `id, email, full_name, avatar_url, plan, plan_status, plan_source, current_period_end, cancel_at, creem_customer_id, creem_subscription_id, is_admin, created_at, updated_at`.
-  `plan ∈ (free, pro_monthly, lifetime)`, `plan_status ∈ (active, trialing, past_due, canceled, expired)`, `plan_source ∈ (system, manual, creem)`.
+  `plan ∈ (free, pro_monthly, pro_yearly, lifetime)`, `plan_status ∈ (active, trialing, past_due, canceled, expired)`, `plan_source ∈ (system, manual, creem)`.
 - **`public.plan_events`** — append-only audit of plan/status transitions, written automatically by the `log_plan_change` trigger and by `admin_set_plan`. This is where Creem webhooks should log their payloads.
-- **Functions:** `is_admin()`, `has_full_access(uuid)`, `my_entitlements()` (single RPC the client calls on sign-in), `admin_set_plan(target_user, new_plan, new_status, period_end, note)`.
-- **Security model:** RLS lets a signed-in user SELECT/INSERT/UPDATE **their own** profile (`id = auth.uid()`), and SELECT their own `plan_events`. Deletes and plan_events mutations are denied. A `BEFORE UPDATE` trigger (`guard_profile_billing_columns`) raises `PLAN_CHANGE_NOT_ALLOWED` if a non-privileged caller touches billing columns or `is_admin`. Plans change only via the service role (webhook) or `admin_set_plan` called by an admin. Never grant a paid feature on the strength of the client-side check alone. Teams/athletes/tests stay on-device and are outside Postgres RLS.
+- **`public.admin_user_plans`** — read-only view over `profiles` (email, plan, status, source, derived `full_access`, period end, `has_creem_customer`). Declared `security_invoker = true`, so RLS still applies: a normal user sees only their own row, an admin sees everyone. This is the Table Editor console.
+- **Functions:** `is_admin()`, `is_privileged_admin()`, `has_full_access(uuid)`, `my_entitlements()` (single RPC the client calls on sign-in), `admin_set_plan(target_user, new_plan, new_status, period_end, note)`, `admin_set_plan_by_email(target_email, new_plan, months, note)`, `admin_revoke_plan(target_email, note)`, `apply_creem_event(...)` (service_role / webhook only).
+- **Admin authorization:** the `admin_*` functions are `SECURITY DEFINER`, so `current_user` there is the owner and is useless as a check. `is_privileged_admin()` uses **`session_user`** instead — true for an `is_admin` profile, or for a direct DB connection (`postgres` / dashboard SQL editor / CLI / `service_role`), false for PostgREST callers (`authenticator`).
+- **Manual grants outrank Creem:** `admin_set_plan` writes `plan_source = 'manual'`. While that holds and the plan is not `free`, `apply_creem_event` logs but does not apply a revoking event (target plan `free`, or status `canceled` / `expired` / `past_due`). A real purchase still applies and resets `plan_source` to `creem`, which releases the lock; so does `admin_revoke_plan`.
+- **Security model:** RLS lets a signed-in user SELECT/INSERT/UPDATE **their own** profile (`id = auth.uid()`), and SELECT their own `plan_events`. Deletes and plan_events mutations are denied. A `BEFORE UPDATE` trigger (`guard_profile_billing_columns`) raises `PLAN_CHANGE_NOT_ALLOWED` if a non-privileged caller touches billing columns or `is_admin`. Plans change only via the service role (`apply_creem_event` from the Creem webhook) or `admin_set_plan` called by an admin. Never grant a paid feature on the strength of the client-side check alone. Teams/athletes/tests stay on-device and are outside Postgres RLS.
 - **Live verification (2026-08-09):** REST probe with the project anon key — `GET /rest/v1/profiles` and `/plan_events` returned `[]`; anon `POST` to both returned `42501` (“violates row-level security policy”). So base RLS from migration 000 is **already applied** on the project. Still run migration 001 for revoke/`FORCE` hardening, then `VERIFY_RLS.sql`.
-- **Editing a user's status by hand:** set `is_admin = true` on your own profile once from the SQL editor, then call `select public.admin_set_plan('<user-uuid>', 'lifetime', 'active', null, 'comped');`.
+- **Editing a user's status by hand:** browse `public.admin_user_plans` in the Table Editor, then run `select public.admin_set_plan_by_email('user@example.com', 'pro_yearly', 12, 'comped');` in the SQL editor. Full recipes in `supabase/ADMIN_PLANS.md`. The user must hit Settings → Refresh afterwards (entitlements are cached under `slfv:entitlements`).
 
 ---
 

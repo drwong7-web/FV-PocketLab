@@ -9,13 +9,19 @@
 import { kvGet, kvKeys, kvSet } from "@/lib/db/kvStore";
 
 const DATA_PREFIXES = ["slfv:", "fv:"];
-// Clés à NE PAS exporter (device-local uniquement)
+// Clés à NE PAS exporter (device-local uniquement).
+// `slfv:offline-auth` contient les vérificateurs PBKDF2 des mots de passe et
+// `slfv:entitlements` le cache d'abonnement : ni l'un ni l'autre ne doit
+// quitter l'appareil ni voyager vers un autre poste.
 const EXCLUDED_KEYS = new Set([
   "fv:ai-key:v2",
   "fv:sync:secrets-v1",
   "fv:sync:state-v1",
   "slfv:session",
   "slfv:profile-ready",
+  "slfv:offline-auth",
+  "slfv:entitlements",
+  "slfv:auto-restore-done",
 ]);
 
 const MERGEABLE_COLLECTIONS: Record<string, "id" | "createdAt"> = {

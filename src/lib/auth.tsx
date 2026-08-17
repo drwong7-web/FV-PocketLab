@@ -67,7 +67,7 @@ interface AuthContextValue {
   signOut: () => Promise<void>;
   sendPasswordReset: (email: string) => Promise<void>;
   updatePassword: (newPassword: string) => Promise<void>;
-  refreshEntitlements: () => Promise<void>;
+  refreshEntitlements: () => Promise<Entitlements>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -113,22 +113,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   /** Remembered from the sign-in form so a fresh session can store its verifier. */
   const pendingPassword = useRef<{ email: string; password: string } | null>(null);
 
-  const loadEntitlements = useCallback(async (userId: string) => {
+  const loadEntitlements = useCallback(async (userId: string): Promise<Entitlements> => {
     const cached = readCachedEntitlements(userId);
     if (cached) setEntitlements(cached);
 
-    if (!isSupabaseConfigured || !isOnline()) return;
+    if (!isSupabaseConfigured || !isOnline()) return cached ?? FREE_ENTITLEMENTS;
     try {
       const { data, error } = await supabase.rpc("my_entitlements");
       if (error) throw error;
-      if (!data) return;
+      if (!data) return cached ?? FREE_ENTITLEMENTS;
       const row = Array.isArray(data) ? data[0] : data;
-      if (!row) return;
+      if (!row) return cached ?? FREE_ENTITLEMENTS;
       const next = entitlementsFromRow(row);
       setEntitlements(next);
       cacheEntitlements(userId, next);
+      return next;
     } catch {
       // Offline or RPC missing — the cached value (or free tier) stands.
+      return cached ?? FREE_ENTITLEMENTS;
     }
   }, []);
 
@@ -325,7 +327,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
 
       refreshEntitlements: async () => {
-        if (user) await loadEntitlements(user.id);
+        if (user) return loadEntitlements(user.id);
+        return FREE_ENTITLEMENTS;
       },
     }),
     [

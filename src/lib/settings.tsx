@@ -72,6 +72,40 @@ const TR = {
     en: ".slfv file mode enabled.",
     ar: "تم تفعيل وضع ملف .slfv.",
   },
+
+  // Sauvegarde sur le compte (Supabase Storage)
+  accountSyncLabel: { fr: "Mon compte", en: "My account", ar: "حسابي" },
+  connectAccountSync: { fr: "Sauvegarder sur mon compte", en: "Back up to my account", ar: "النسخ الاحتياطي إلى حسابي" },
+  accountSyncDesc: {
+    fr: "Vos données sont enregistrées dans un fichier privé lié à votre compte. Reconnectez-vous sur un autre appareil pour les retrouver.",
+    en: "Your data is stored in a private file tied to your account. Sign in on another device to get it back.",
+    ar: "تُحفظ بياناتك في ملف خاص مرتبط بحسابك. سجّل الدخول على جهاز آخر لاستعادتها.",
+  },
+  accountSyncProOnly: {
+    fr: "La sauvegarde sur le compte est incluse dans les formules Pro et Achat unique. En gratuit, exportez un fichier .slfv.",
+    en: "Account backup is included with the Pro and Lifetime plans. On the free plan, export a .slfv file instead.",
+    ar: "النسخ الاحتياطي على الحساب متاح في خطتي «برو» و«الشراء لمرة واحدة». في الخطة المجانية، صدّر ملف .slfv.",
+  },
+  accountSyncHint: {
+    fr: "Un seul fichier par compte, écrasé à chaque envoi. La récupération est automatique sur un appareil vide.",
+    en: "One file per account, overwritten on every push. Restore happens automatically on an empty device.",
+    ar: "ملف واحد لكل حساب، يُستبدل عند كل إرسال. الاستعادة تلقائية على جهاز فارغ.",
+  },
+  syncConnectedAccount: {
+    fr: "Sauvegarde sur le compte activée.",
+    en: "Account backup enabled.",
+    ar: "تم تفعيل النسخ الاحتياطي على الحساب.",
+  },
+  syncProRequired: {
+    fr: "Votre formule ne permet plus l'envoi. Vos données restent téléchargeables.",
+    en: "Your plan no longer allows uploads. Your data can still be downloaded.",
+    ar: "خطتك لم تعد تسمح بالرفع. لا يزال بإمكانك تنزيل بياناتك.",
+  },
+  autoRestoreDone: {
+    fr: "Données restaurées depuis votre compte",
+    en: "Data restored from your account",
+    ar: "تمت استعادة البيانات من حسابك",
+  },
   syncConnectedStatus: { fr: "Connecté", en: "Connected", ar: "متصل" },
   syncDisconnected: {
     fr: "Cloud déconnecté.",
@@ -232,6 +266,7 @@ const TR = {
   planLabel: { fr: "Formule", en: "Plan", ar: "الخطة" },
   planFree: { fr: "Gratuit", en: "Free", ar: "مجاني" },
   planProMonthly: { fr: "Pro mensuel", en: "Pro monthly", ar: "برو شهري" },
+  planProYearly: { fr: "Pro annuel", en: "Pro yearly", ar: "برو سنوي" },
   planLifetime: { fr: "Achat unique", en: "Lifetime", ar: "شراء لمرة واحدة" },
   planStatusActive: { fr: "Actif", en: "Active", ar: "نشط" },
   planStatusTrialing: { fr: "Essai", en: "Trial", ar: "تجريبي" },
@@ -243,7 +278,14 @@ const TR = {
   planLimitedNote: { fr: "Fonctionnalités limitées, avec publicités.", en: "Limited features, with ads.", ar: "مزايا محدودة مع إعلانات." },
   planRefresh: { fr: "Actualiser", en: "Refresh", ar: "تحديث" },
   planOfflineNote: { fr: "Formule affichée d'après la dernière vérification en ligne.", en: "Plan shown from the last online check.", ar: "الخطة معروضة حسب آخر تحقق عبر الإنترنت." },
-  planUpgradeSoon: { fr: "Paiements bientôt disponibles.", en: "Payments coming soon.", ar: "المدفوعات قريباً." },
+  planPaymentsNote: { fr: "Paiement sécurisé via Creem.", en: "Secure checkout via Creem.", ar: "دفع آمن عبر Creem." },
+  planBuyPro: { fr: "Passer en Pro mensuel", en: "Upgrade to Pro monthly", ar: "الترقية إلى برو شهري" },
+  planBuyYearly: { fr: "Passer en Pro annuel", en: "Upgrade to Pro yearly", ar: "الترقية إلى برو سنوي" },
+  planBuyLifetime: { fr: "Acheter à vie", en: "Buy lifetime", ar: "شراء مدى الحياة" },
+  planManageBilling: { fr: "Gérer l'abonnement", en: "Manage billing", ar: "إدارة الفوترة" },
+  planCheckoutSuccess: { fr: "Paiement reçu. La formule se met à jour dans un instant.", en: "Payment received. Your plan will update in a moment.", ar: "تم استلام الدفع. ستُحدَّث خطتك خلال لحظات." },
+  planCheckoutError: { fr: "Impossible d'ouvrir le paiement.", en: "Could not start checkout.", ar: "تعذّر بدء الدفع." },
+  planPortalError: { fr: "Impossible d'ouvrir le portail de facturation.", en: "Could not open the billing portal.", ar: "تعذّر فتح بوابة الفوترة." },
   deviceUnlockTitle: {
     fr: "Sécuriser la réinitialisation",
     en: "Protect password reset",

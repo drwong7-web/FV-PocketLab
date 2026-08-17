@@ -1,10 +1,13 @@
 /**
- * Adaptateurs de sync natifs :
+ * Adaptateurs de sync :
+ *   - supabaseAdapter : compte FV PocketLab → objet privé dans Storage.
+ *     Seul mode automatique et identique sur iOS, Android et desktop.
  *   - fileAdapter   : téléchargement/upload d'un fichier .slfv (fallback universel).
  *   - icloudAdapter : iOS/iPadOS → utilise l'app Fichiers (iCloud Drive) via
  *     un download (« Enregistrer dans Fichiers ») et un <input type=file>.
  *   - gdriveAdapter : OAuth Google natif, dossier appData privé de l'app.
  */
+import { supabase } from "@/lib/supabase/client";
 import {
   getPublicConfig,
   setPublicConfig,
@@ -23,6 +26,56 @@ export interface SyncAdapter {
 
 function fileNameOf(): string {
   return (getPublicConfig().fileName || "sprintlab.slfv").trim() || "sprintlab.slfv";
+}
+
+// ---------- Compte FV PocketLab (Supabase Storage) ----------
+export const BACKUP_BUCKET = "user-backups";
+export const BACKUP_FILE = "pocketlab.slfv";
+
+/** `{auth.uid()}/pocketlab.slfv` — le premier segment porte la propriété (RLS). */
+export async function accountBackupPath(): Promise<string> {
+  const { data, error } = await supabase.auth.getUser();
+  if (error || !data.user) throw new Error("NOT_SIGNED_IN");
+  return `${data.user.id}/${BACKUP_FILE}`;
+}
+
+function isMissingObject(err: { message?: string; name?: string } | null): boolean {
+  const msg = `${err?.message ?? ""} ${err?.name ?? ""}`.toLowerCase();
+  return msg.includes("not found") || msg.includes("does not exist");
+}
+
+export const supabaseAdapter: SyncAdapter = {
+  id: "supabase",
+  label: "FV PocketLab",
+  async push(blob) {
+    const path = await accountBackupPath();
+    const { error } = await supabase.storage.from(BACKUP_BUCKET).upload(path, blob, {
+      upsert: true,
+      contentType: "application/json",
+    });
+    // RLS refuse l'upload sans abonnement actif — message explicite côté UI.
+    if (error) {
+      const msg = error.message?.toLowerCase() ?? "";
+      if (msg.includes("row-level security") || msg.includes("unauthorized")) {
+        throw new Error("BACKUP_NOT_ALLOWED");
+      }
+      throw error;
+    }
+  },
+  async pull() {
+    const path = await accountBackupPath();
+    const { data, error } = await supabase.storage.from(BACKUP_BUCKET).download(path);
+    if (error) {
+      if (isMissingObject(error)) return null; // première sauvegarde
+      throw error;
+    }
+    return data ?? null;
+  },
+};
+
+/** Active la sauvegarde sur le compte (aucun OAuth : la session suffit). */
+export function connectAccountSync(): void {
+  setPublicConfig({ provider: "supabase", fileName: BACKUP_FILE, linked: true });
 }
 
 // ---------- Fichier local (download/upload) ----------
@@ -222,6 +275,7 @@ export const gdriveAdapter: SyncAdapter = {
 };
 
 export function getAdapter(id: string): SyncAdapter | null {
+  if (id === "supabase") return supabaseAdapter;
   if (id === "file") return fileAdapter;
   if (id === "icloud") return icloudAdapter;
   if (id === "gdrive") return gdriveAdapter;

@@ -21,7 +21,7 @@ export interface Entitlements {
   fullAccess: boolean;
   /** Convenience inverse of `fullAccess` — drives ad placements. */
   adsEnabled: boolean;
-  /** End of the paid period for `pro_monthly`. */
+  /** End of the paid period for recurring Pro plans. */
   periodEnd: string | null;
   /** Set when a subscription is cancelled but still running out its period. */
   cancelAt: string | null;
@@ -59,7 +59,7 @@ export function deriveFullAccess(
   periodEnd: string | null
 ): boolean {
   if (plan === "lifetime") return status === "active";
-  if (plan === "pro_monthly") {
+  if (plan === "pro_monthly" || plan === "pro_yearly") {
     if (status !== "active" && status !== "trialing") return false;
     if (!periodEnd) return true;
     return new Date(periodEnd).getTime() > Date.now();
