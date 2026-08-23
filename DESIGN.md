@@ -2,7 +2,7 @@
 
 > **Living design reference.** Update this file in the SAME turn as any change to design tokens, gradients, shadows, typography classes, component patterns, brand assets, or global UX rules. Companion to `SPEC.md` (architecture) — read both before working on the app.
 
-**Last updated:** 2026-07-20
+**Last updated:** 2026-08-23
 **Owner:** Lovable agent (auto-maintained)
 **Related docs:** `SPEC.md`, `mem://index.md`, `src/index.css` (source of truth for tokens).
 
@@ -225,6 +225,10 @@ Drop-shadow stack giving the neon FV logo a deboss with primary underlight.
 - Test pages (JumpTest, SprintTest) include a back link at the top: `ArrowLeft` icon + label, preserving the `athleteId` query parameter.
 - Trash icon (`lucide-react` `Trash2`) is the standard destructive affordance in list rows (Teams, TestList).
 
+### 12.1 Marketing landing (`/`)
+
+Public first-visit page in `src/pages/Landing.tsx` + `src/components/landing/`. Same cockpit tokens: `glass-card`, `logo-well`, `engraved-logo`, `section-label`, `font-display`, `metric-value`. Brand marks: `fv-logo.png`, `logo-sprint-neon.png`, `logo-jump-neon.png`. Motion (Tailwind, paused under `prefers-reduced-motion`): `animate-landing-verb` (hero word field), `animate-landing-marquee` (audience chips), `animate-landing-reveal` (section enter via `useInView`). Do not add a separate marketing palette or stock video. Prices live in `src/lib/landingPrices.ts`.
+
 ---
 
 ## 13. Onboarding
@@ -236,7 +240,7 @@ Drop-shadow stack giving the neon FV logo a deboss with primary underlight.
 
 ## 14. PWA presentation
 
-- Install modal (`src/components/pwa/InstallModal.tsx`) and reminder banner (`src/components/pwa/InstallBanner.tsx`) — glass-card surface, primary CTA, dismissible.
+- Install modal (`src/components/pwa/InstallModal.tsx`) and reminder banner (`src/components/pwa/InstallBanner.tsx`) — glass-card surface, dismissible. If the browser captured `beforeinstallprompt`, show an enabled **Install now** button. Otherwise show numbered Chrome/Edge (or iOS Safari) steps — never a disabled primary button.
 - Splash background `#0f1419` (matches dark `--background`).
 - iOS standalone: no browser chrome — respect safe-area padding, never place actionable UI inside `env(safe-area-inset-bottom)`.
 
@@ -244,9 +248,9 @@ Drop-shadow stack giving the neon FV logo a deboss with primary underlight.
 
 ## 15. Internationalization
 
-- All strings live in `src/lib/settings.tsx` (`translations` map, currently FR + EN).
+- All strings live in `src/lib/settings.tsx` (`translations` map: FR, EN, AR).
 - Components consume via the `t(key)` helper from `useSettings()`.
-- Sport labels, shoe types, protocol names, section titles — everything goes through `t()`. When adding a string, add both language variants in the same edit.
+- Sport labels, shoe types, protocol names, section titles, marketing landing — everything goes through `t()`. When adding a string, add FR, EN, and AR in the same edit.
 
 ---
 

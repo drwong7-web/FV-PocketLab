@@ -2,6 +2,37 @@ import { supabase } from "@/lib/supabase/client";
 
 export type CheckoutProduct = "pro_monthly" | "pro_yearly" | "lifetime";
 
+const PENDING_KEY = "slfv:pending-checkout";
+
+export function parseCheckoutProduct(raw: string | null | undefined): CheckoutProduct | null {
+  if (raw === "pro_monthly" || raw === "pro_yearly" || raw === "lifetime") return raw;
+  return null;
+}
+
+export function setPendingCheckout(product: CheckoutProduct): void {
+  try {
+    sessionStorage.setItem(PENDING_KEY, product);
+  } catch { /* */ }
+}
+
+export function peekPendingCheckout(): CheckoutProduct | null {
+  try {
+    return parseCheckoutProduct(sessionStorage.getItem(PENDING_KEY));
+  } catch {
+    return null;
+  }
+}
+
+export function takePendingCheckout(): CheckoutProduct | null {
+  try {
+    const product = parseCheckoutProduct(sessionStorage.getItem(PENDING_KEY));
+    sessionStorage.removeItem(PENDING_KEY);
+    return product;
+  } catch {
+    return null;
+  }
+}
+
 function extractErrorMessage(data: unknown): string | null {
   if (!data || typeof data !== "object") return null;
   const err = (data as { error?: unknown }).error;

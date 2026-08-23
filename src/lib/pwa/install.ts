@@ -18,6 +18,14 @@ type BIPEvent = Event & {
 let deferredPrompt: BIPEvent | null = null;
 const listeners = new Set<() => void>();
 
+const INSTALLED_KEY = "slfv:pwa-installed";
+
+function markInstalled(): void {
+  try {
+    localStorage.setItem(INSTALLED_KEY, "1");
+  } catch { /* */ }
+}
+
 export function isStandalone(): boolean {
   if (typeof window === "undefined") return false;
   try {
@@ -26,6 +34,19 @@ export function isStandalone(): boolean {
   // iOS Safari
   const nav = navigator as unknown as { standalone?: boolean };
   return nav.standalone === true;
+}
+
+/** True when launched as a PWA, or after a previous install on this device. */
+export function isPwaInstalled(): boolean {
+  if (isStandalone()) {
+    markInstalled();
+    return true;
+  }
+  try {
+    return localStorage.getItem(INSTALLED_KEY) === "1";
+  } catch {
+    return false;
+  }
 }
 
 export function isRefusedContext(): boolean {
@@ -51,6 +72,7 @@ export function getPlatform(): PwaPlatform {
 
 export function initInstallCapture(): void {
   if (typeof window === "undefined") return;
+  if (isStandalone()) markInstalled();
   window.addEventListener("beforeinstallprompt", (e) => {
     e.preventDefault();
     deferredPrompt = e as BIPEvent;
@@ -58,6 +80,7 @@ export function initInstallCapture(): void {
   });
   window.addEventListener("appinstalled", () => {
     deferredPrompt = null;
+    markInstalled();
     listeners.forEach((fn) => { try { fn(); } catch { /* */ } });
   });
 }

@@ -2,7 +2,7 @@
 
 > **Living specification.** Update this file in the SAME turn as any change to architecture, routes, data model, libraries, calculation protocols, or product behavior. If a change doesn't affect any of those, no update needed. Kept so another agent (Cursor, Claude Code, Codex, etc.) can continue the work with the exact same architecture and plan.
 
-**Last updated:** 2026-08-17
+**Last updated:** 2026-08-22
 **Owner:** local maintainers
 **Related docs:** `DESIGN.md` (visual system), `mem://index.md` (agent memory rules when present)
 
@@ -59,6 +59,7 @@ src/
     AppLayout.tsx              shell (sidebar + <Outlet/>)
     ProtectedRoute.tsx         gate → /auth if no local user
     NavLink.tsx, MetricCard.tsx, FVChart.tsx
+    landing/                   public marketing page sections
     camera/
       CameraTimer.tsx          jump countdown
       CameraCalibration.tsx    horizontal draggable markers (jump ref height)
@@ -74,7 +75,9 @@ src/
       client.ts                configured Supabase client, isSupabaseConfigured, isOnline
       types.ts                 hand-written DB types (regenerate with supabase gen types)
     plan.ts                    plan model, entitlement derivation, offline cache
+    landingPrices.ts           public pricing display amounts (4,99 € / 49 € / 129 €)
     billing.ts                 invoke creem-checkout / creem-portal Edge Functions
+    pwa/install.ts             standalone + persisted `slfv:pwa-installed`
     offlineAuth.ts             PBKDF2 verifier cache enabling offline sign-in
     storage.ts                 local repo (orgs, teams, players, tests) + Supabase→local bridge
     types.ts                   User, Organization, Team, Player, TestSession
@@ -98,6 +101,7 @@ src/
     import/
       athletes.ts              PDF/DOCX/image → ParsedAthlete[] (100% local)
   pages/
+    Landing.tsx                public marketing landing (first-visit browser only)
     Auth.tsx                   email/password sign in + sign up, reset-link request
     AuthCallback.tsx           email-confirmation redirect target
     ResetPassword.tsx          password-reset link target
@@ -116,7 +120,7 @@ supabase/
 
 ## 4. Routes (`src/App.tsx`)
 
-Public: `/auth` (email + password), `/auth/callback` (email-confirmation landing; the Supabase client consumes the code via `detectSessionInUrl`), `/auth/reset` (password-reset link target). Root `/` redirects to `/app` if a session exists, else `/auth` (no marketing landing in this project).
+Public: `/` (marketing landing for logged-out browser visits — `src/pages/Landing.tsx`; anchors `#features`, `#how`, `#pricing`), `/auth` (email + password; `?mode=signup` or `?mode=login` selects the form, query wins over `hasAnyProfile`; `?plan=pro_monthly|pro_yearly|lifetime` is stored in `sessionStorage` as `slfv:pending-checkout` and Creem checkout starts once the user is enrolled), `/auth/callback` (email-confirmation landing; the Supabase client consumes the code via `detectSessionInUrl`; if `slfv:pending-checkout` is set, continues to `/auth` so Creem can start), `/auth/reset` (password-reset link target). Root `/` skips the landing and goes to `/app` only when the user is signed in (`enrolled`) or the app is opened as an installed PWA (`isStandalone()`). A stored profile or `slfv:pwa-installed` in a normal browser tab does not skip it. `ProtectedRoute` still sends a logged-out `/app` visit to `/auth`. Hero Get started scrolls to `#pricing`. Landing Free CTA goes to `/auth?mode=signup`; Pro CTA goes to `/auth?mode=signup&plan=…`; Sign in goes to `/auth?mode=login`. Display prices live in `src/lib/landingPrices.ts`.
 Protected under `/app` (wraps `AppLayout`):
 - `` → Dashboard
 - `teams` / `teams/:teamId` / `players/:playerId`

@@ -11,7 +11,7 @@ import {
   onInstallStateChange,
   promptInstall,
 } from "@/lib/pwa/install";
-import { Download, Share2, Plus, Check } from "lucide-react";
+import { Download, Share2, Plus, Check, MoreVertical } from "lucide-react";
 import fvLogo from "@/assets/fv-logo.png";
 
 const SEEN_KEY = "slfv:install-modal-seen";
@@ -87,12 +87,13 @@ export default function InstallModal({ open: openProp, onClose, forced }: Props)
 
           {(platform === "android-chromium" || platform === "desktop-chromium") && (
             <div className="space-y-3">
-              <Button className="w-full h-12 text-base" onClick={doInstall} disabled={!canPrompt}>
-                <Download className="w-5 h-5 mr-2" />
-                {t("installAndroidCta")}
-              </Button>
-              {!canPrompt && (
-                <p className="text-xs text-muted-foreground text-center">{t("installAndroidHint")}</p>
+              {canPrompt ? (
+                <Button className="w-full h-12 text-base" onClick={doInstall}>
+                  <Download className="w-5 h-5 mr-2" />
+                  {t("installAndroidCta")}
+                </Button>
+              ) : (
+                <ManualInstallSteps />
               )}
             </div>
           )}
@@ -101,9 +102,7 @@ export default function InstallModal({ open: openProp, onClose, forced }: Props)
             <p className="text-sm text-muted-foreground text-center">{t("installFirefoxHint")}</p>
           )}
 
-          {platform === "other" && (
-            <p className="text-sm text-muted-foreground text-center">{t("installAndroidHint")}</p>
-          )}
+          {platform === "other" && <ManualInstallSteps />}
         </div>
 
         <div className="flex justify-center pt-2">
@@ -116,5 +115,31 @@ export default function InstallModal({ open: openProp, onClose, forced }: Props)
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function ManualInstallSteps() {
+  const { t } = useSettings();
+  return (
+    <ol className="space-y-3 text-sm">
+      <li className="flex items-start gap-3">
+        <div className="w-7 h-7 rounded-full bg-primary/15 text-primary grid place-items-center shrink-0">
+          <Download className="w-4 h-4" />
+        </div>
+        <span className="pt-1">{t("installManualStep1")}</span>
+      </li>
+      <li className="flex items-start gap-3">
+        <div className="w-7 h-7 rounded-full bg-primary/15 text-primary grid place-items-center shrink-0">
+          <MoreVertical className="w-4 h-4" />
+        </div>
+        <span className="pt-1">{t("installManualStep2")}</span>
+      </li>
+      <li className="flex items-start gap-3">
+        <div className="w-7 h-7 rounded-full bg-primary/15 text-primary grid place-items-center shrink-0">
+          <Check className="w-4 h-4" />
+        </div>
+        <span className="pt-1">{t("installManualStep3")}</span>
+      </li>
+    </ol>
   );
 }

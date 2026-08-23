@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import fvLogo from "@/assets/fv-logo.png";
+import { peekPendingCheckout } from "@/lib/billing";
 import { useAuth } from "@/lib/auth";
 import { useSettings } from "@/lib/settings";
 
@@ -28,7 +29,9 @@ export default function AuthCallback() {
   }, []);
 
   useEffect(() => {
-    if (enrolled) navigate("/app", { replace: true });
+    if (enrolled) {
+      navigate(peekPendingCheckout() ? "/auth" : "/app", { replace: true });
+    }
   }, [enrolled, navigate]);
 
   useEffect(() => {

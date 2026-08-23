@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import AppLayout from "@/components/AppLayout";
+import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
 import AuthCallback from "./pages/AuthCallback";
 import ResetPassword from "./pages/ResetPassword";
@@ -21,13 +22,17 @@ import TestResults from "./pages/TestResults";
 import NotFound from "./pages/NotFound";
 import InstallModal from "@/components/pwa/InstallModal";
 import InstallBanner from "@/components/pwa/InstallBanner";
+import { isStandalone } from "@/lib/pwa/install";
 
 const queryClient = new QueryClient();
 
 function RootRedirect() {
   const { loading, enrolled } = useAuth();
   if (loading) return <div className="min-h-svh bg-background" aria-hidden />;
-  return <Navigate to={enrolled ? "/app" : "/auth"} replace />;
+  if (enrolled || isStandalone()) {
+    return <Navigate to="/app" replace />;
+  }
+  return <Landing />;
 }
 
 const App = () => (

@@ -1,5 +1,5 @@
 import { useEffect, useState, FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import fvLogo from "@/assets/fv-logo.png";
 import { Loader2, WifiOff } from "lucide-react";
 import { AuthError, useAuth, type AuthErrorCode } from "@/lib/auth";
@@ -7,6 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import {
+  parseCheckoutProduct,
+  peekPendingCheckout,
+  setPendingCheckout,
+  startCheckout,
+  takePendingCheckout,
+} from "@/lib/billing";
 import { useSettings, type TKey } from "@/lib/settings";
 
 type Mode = "login" | "signup" | "forgot";
@@ -25,12 +32,20 @@ const ERROR_COPY: Record<AuthErrorCode, TKey> = {
   UNKNOWN: "genericAuthError",
 };
 
+function modeFromQuery(raw: string | null): Mode | null {
+  if (raw === "signup" || raw === "login") return raw;
+  return null;
+}
+
 export default function Auth() {
   const { enrolled, hasAnyProfile, signUp, signIn, sendPasswordReset } = useAuth();
   const { t } = useSettings();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
-  const [mode, setMode] = useState<Mode>(hasAnyProfile ? "login" : "signup");
+  const [mode, setMode] = useState<Mode>(
+    () => modeFromQuery(searchParams.get("mode")) ?? (hasAnyProfile ? "login" : "signup")
+  );
   const [online, setOnline] = useState(() => navigator.onLine !== false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -38,12 +53,50 @@ export default function Auth() {
   const [confirm, setConfirm] = useState("");
 
   useEffect(() => {
+    const fromQuery = modeFromQuery(searchParams.get("mode"));
+    if (fromQuery) {
+      setMode(fromQuery);
+      return;
+    }
     setMode(hasAnyProfile ? "login" : "signup");
-  }, [hasAnyProfile]);
+  }, [hasAnyProfile, searchParams]);
 
   useEffect(() => {
-    if (enrolled) navigate("/app", { replace: true });
-  }, [enrolled, navigate]);
+    const product = parseCheckoutProduct(searchParams.get("plan"));
+    if (product) setPendingCheckout(product);
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (!enrolled) return;
+    let cancelled = false;
+    const run = async () => {
+      const product = peekPendingCheckout();
+      if (!product) {
+        navigate("/app", { replace: true });
+        return;
+      }
+      try {
+        await startCheckout(product);
+        takePendingCheckout();
+      } catch {
+        if (cancelled) return;
+        toast.error(t("planCheckoutError"));
+        navigate("/app", { replace: true });
+      }
+    };
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [enrolled, navigate, t]);
+
+  const goMode = (next: Mode) => {
+    setMode(next);
+    if (next !== "signup" && next !== "login") return;
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set("mode", next);
+    setSearchParams(nextParams, { replace: true });
+  };
 
   useEffect(() => {
     const sync = () => setOnline(navigator.onLine !== false);
@@ -72,7 +125,7 @@ export default function Auth() {
       try {
         await sendPasswordReset(email);
         toast.success(t("resetEmailSent"));
-        setMode("login");
+        goMode("login");
       } catch (err) {
         fail(err);
       } finally {
@@ -100,7 +153,7 @@ export default function Auth() {
         const { needsEmailConfirmation } = await signUp({ email, password, name });
         if (needsEmailConfirmation) {
           toast.success(t("confirmEmailSent"));
-          setMode("login");
+          goMode("login");
           setPassword("");
           setConfirm("");
         } else {
@@ -118,6 +171,14 @@ export default function Auth() {
 
   const title =
     mode === "signup" ? t("signUp") : mode === "forgot" ? t("forgotPasswordTitle") : t("welcomeBack");
+
+  if (enrolled) {
+    return (
+      <div className="min-h-svh flex items-center justify-center px-4 py-10">
+        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-svh flex items-center justify-center px-4 py-10">
@@ -221,7 +282,7 @@ export default function Auth() {
           {mode === "login" && (
             <button
               type="button"
-              onClick={() => setMode("forgot")}
+              onClick={() => goMode("forgot")}
               className="w-full text-xs text-primary hover:underline mt-3"
             >
               {t("forgotPassword")}
@@ -231,7 +292,7 @@ export default function Auth() {
           <button
             type="button"
             onClick={() => {
-              setMode(mode === "signup" ? "login" : mode === "forgot" ? "login" : "signup");
+              goMode(mode === "signup" ? "login" : mode === "forgot" ? "login" : "signup");
               setPassword("");
               setConfirm("");
             }}
