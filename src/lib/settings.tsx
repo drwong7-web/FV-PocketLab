@@ -798,7 +798,7 @@ const TR = {
   landStartFree: { fr: "Commencer gratuitement", en: "Start for free", ar: "ابدأ مجاناً" },
 
   landWhoOverline: { fr: "Public", en: "Audience", ar: "الجمهور" },
-  landWhoTitle: { fr: "Pour qui ?", en: "Who is PocketLab for?", ar: "لمن PocketLab؟" },
+  landWhoTitle: { fr: "Pour qui FV PocketLab ?", en: "Who is FV PocketLab for ?", ar: "لمن FV PocketLab ؟" },
   landWhoCoach: { fr: "Entraîneurs", en: "Coaches", ar: "مدربون" },
   landWhoSC: { fr: "Préparation physique", en: "S&C staff", ar: "الإعداد البدني" },
   landWhoLab: { fr: "Laboratoires", en: "Labs", ar: "مختبرات" },
@@ -806,7 +806,7 @@ const TR = {
   landWhoResearch: { fr: "Chercheurs", en: "Researchers", ar: "باحثون" },
   landWhoAthlete: { fr: "Athlètes", en: "Athletes", ar: "رياضيون" },
 
-  landProtoOverline: { fr: "Protocoles", en: "Protocols", ar: "البروتوكولات" },
+  landProtoOverline: { fr: "Avantages", en: "Advantages", ar: "المزايا" },
   landProtoTitle: { fr: "Rapport Test Sprint Saut", en: "Sprint Jump Test Report", ar: "تقرير اختبار العدو والقفز" },
   landFeatWordSprint: { fr: "Sprint", en: "Sprint", ar: "عدو" },
   landFeatWordJump: { fr: "Saut", en: "Jump", ar: "قفز" },
@@ -832,9 +832,9 @@ const TR = {
 
   landFeatOverline: { fr: "Fonctionnalités", en: "Features", ar: "المزايا" },
   landFeatTitle: {
-    fr: "Un instrument, pas une liasse de fichiers",
-    en: "An instrument, not a pile of files",
-    ar: "أداة قياس لا كومة ملفات",
+    fr: "Pourquoi choisir FV PocketLab ?",
+    en: "Why choosing FV PocketLab ?",
+    ar: "لماذا تختار FV PocketLab ؟",
   },
   landFeatVideoTitle: { fr: "Analyse vidéo sur l'appareil", en: "On-device video analysis", ar: "تحليل فيديو على الجهاز" },
   landFeatVideoBody: {
@@ -904,8 +904,8 @@ const TR = {
 
   landCtaTitle: {
     fr: "Prêt à profiler depuis votre poche ?",
-    en: "Ready to profile from your pocket?",
-    ar: "مستعد للتحليل من جيبك؟",
+    en: "Ready to profile from your pocket ?",
+    ar: "مستعد للتحليل من جيبك ؟",
   },
   landCtaSub: {
     fr: "Créez un profil gratuit. Passez en Pro quand les rapports et la sauvegarde deviennent utiles.",

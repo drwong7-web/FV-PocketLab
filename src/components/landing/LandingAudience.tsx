@@ -21,7 +21,7 @@ export function LandingAudience() {
       <p className="section-label text-center">{t("landWhoOverline")}</p>
       <CenterFlickerTitle
         text={t("landWhoTitle")}
-        className="font-display text-2xl sm:text-3xl tracking-tight text-center mt-2"
+        className="font-display text-2xl sm:text-3xl tracking-tight mt-2 flex w-full flex-wrap items-center justify-center leading-none"
       />
       <div
         className="mt-8 -mx-4 sm:-mx-6 overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_8%,black_92%,transparent)] [-webkit-mask-image:linear-gradient(to_right,transparent,black_8%,black_92%,transparent)]"

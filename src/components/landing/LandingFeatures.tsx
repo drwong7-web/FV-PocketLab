@@ -18,7 +18,7 @@ export function LandingFeatures() {
       <p className="section-label text-center">{t("landProtoOverline")}</p>
       <CenterFlickerTitle
         text={t("landFeatTitle")}
-        className="font-display text-3xl sm:text-4xl tracking-tight text-center mt-2"
+        className="font-display text-3xl sm:text-4xl tracking-tight mt-2 flex w-full flex-wrap items-center justify-center leading-none"
       />
       <div className="mt-10 grid gap-4 md:grid-cols-2">
         {FEATURES.map(({ icon: Icon, title, body }) => (
