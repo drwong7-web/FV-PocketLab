@@ -39,6 +39,9 @@ import {
 } from "@/lib/localHistory";
 import { toast } from "sonner";
 import { useSettings } from "@/lib/settings";
+import { canExportReport, canSaveTest } from "@/lib/freeLimits";
+import { isFreeLimitError } from "@/lib/plan";
+import { notifyFreeLimit } from "@/lib/upgradePrompt";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -46,6 +49,7 @@ import {
   Collapsible, CollapsibleContent, CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { getPlayer, getTeam } from "@/lib/storage";
+import { dataUrlImageKind } from "@/lib/imagePick";
 
 interface TestRecord {
   id: string;
@@ -70,6 +74,12 @@ function resolveAthleteSnapshot(snapshot: AthleteSnapshot | null, athleteId: str
   };
 }
 
+function resolveReportMedia(athleteId: string): { logoDataUrl?: string; photoDataUrl?: string } {
+  const player = getPlayer(athleteId);
+  const team = player ? getTeam(player.teamId) : null;
+  return { logoDataUrl: team?.logoDataUrl, photoDataUrl: player?.photoDataUrl };
+}
+
 type Tfn = (k: TKey) => string;
 
 async function generateStructuredPDF(
@@ -78,6 +88,7 @@ async function generateStructuredPDF(
   t: Tfn,
   lang: Lang,
   logoDataUrl?: string,
+  photoDataUrl?: string,
 ): Promise<Blob> {
   const localeFor = (l: Lang) => (l === "fr" ? "fr-FR" : l === "ar" ? "ar" : "en-US");
   const pdf = new jsPDF("p", "mm", "a4");
@@ -96,7 +107,10 @@ async function generateStructuredPDF(
 
   // ===== HEADER: logo (left) + title (blue, centered) + date (right) =====
   if (logoDataUrl) {
-    try { pdf.addImage(logoDataUrl, "PNG", margin, y, 24, 24); } catch { /* */ }
+    try {
+      const kind = dataUrlImageKind(logoDataUrl);
+      pdf.addImage(logoDataUrl, kind === "jpeg" ? "JPEG" : "PNG", margin, y, 24, 24);
+    } catch { /* */ }
   }
   const title = test.type === "jump" ? t("reportTitleJump") : t("reportTitleSprint");
   pdf.setFont("helvetica", "bold");
@@ -116,6 +130,13 @@ async function generateStructuredPDF(
   const athleteName = test.athletes
     ? `${test.athletes.first_name} ${test.athletes.last_name}`.trim().toUpperCase()
     : t("unknownAthlete");
+  const athleteTop = y;
+  if (photoDataUrl) {
+    try {
+      const kind = dataUrlImageKind(photoDataUrl);
+      pdf.addImage(photoDataUrl, kind === "jpeg" ? "JPEG" : "PNG", pageW - margin - 22, athleteTop - 2, 22, 22);
+    } catch { /* */ }
+  }
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(13);
   pdf.text(`${t("nameLabel")}: ${athleteName}`, margin, y);
@@ -126,6 +147,7 @@ async function generateStructuredPDF(
   y += 5;
   pdf.text(`${t("massLabelUp")}: ${test.athletes?.body_mass ?? "—"} kg`, margin, y);
   y += 8;
+  if (photoDataUrl) y = Math.max(y, athleteTop - 2 + 22 + 4);
   pdf.setFont("helvetica", "normal");
 
   const sectionTitle = (title: string) => {
@@ -315,6 +337,10 @@ export default function TestResults() {
   const inIframe = isInIframe();
 
   const openExportDialog = (format: "pdf" | "docx") => {
+    if (!canExportReport()) {
+      notifyFreeLimit(t, "export");
+      return;
+    }
     setPendingFormat(format);
     setExportDir(getExportDirectoryLabel());
     setExportDialogOpen(true);
@@ -366,7 +392,13 @@ export default function TestResults() {
   }, [test]);
 
   useEffect(() => {
+    if (!test) return;
     let cancelled = false;
+    const teamLogo = resolveReportMedia(test.athlete_id).logoDataUrl;
+    if (teamLogo) {
+      setLogoDataUrl(teamLogo);
+      return;
+    }
     (async () => {
       try {
         const res = await fetch(fvLogo);
@@ -380,7 +412,7 @@ export default function TestResults() {
       } catch { /* ignore */ }
     })();
     return () => { cancelled = true; };
-  }, []);
+  }, [test]);
 
   const captureChartDataUrl = async (): Promise<string | undefined> => {
     if (!chartRef.current) return undefined;
@@ -491,20 +523,29 @@ export default function TestResults() {
 
   const doExport = async (format: "pdf" | "docx") => {
     if (!test) return;
+    if (!canExportReport()) {
+      notifyFreeLimit(t, "export");
+      return;
+    }
     setExporting(true);
     try {
       const athlete = test.athletes ?? { first_name: "athlete", last_name: "", sport: null, body_mass: null };
       const filename = fileNameFor(athlete, test.test_date, format);
       const chartDataUrl = await captureChartDataUrl();
       let blob: Blob;
-      if (format === "pdf") blob = await generateStructuredPDF(test, chartDataUrl, t, lang, logoDataUrl);
+      const photoDataUrl = resolveReportMedia(test.athlete_id).photoDataUrl;
+      if (format === "pdf") blob = await generateStructuredPDF(test, chartDataUrl, t, lang, logoDataUrl, photoDataUrl);
       else {
         const chartPng = dataUrlToBytes(chartDataUrl);
         const logoPng = dataUrlToBytes(logoDataUrl);
+        const photoBytes = dataUrlToBytes(photoDataUrl);
         blob = await generateDOCX({
           type: test.type, test_date: test.test_date, results: test.results, raw_data: test.raw_data,
           athlete: { first_name: athlete.first_name, last_name: athlete.last_name, sport: athlete.sport, body_mass: athlete.body_mass },
-          chartPng, logoPng, t, lang,
+          chartPng, logoPng, photoBytes,
+          logoType: logoDataUrl && dataUrlImageKind(logoDataUrl) === "jpeg" ? "jpg" : "png",
+          photoType: photoDataUrl && dataUrlImageKind(photoDataUrl) === "jpeg" ? "jpg" : "png",
+          t, lang,
         });
       }
       const dest = await saveBlobToTarget(blob, filename);
@@ -524,16 +565,26 @@ export default function TestResults() {
   const saveToHistory = () => {
     if (!test) return;
     if (savedInHistory) { toast.info(t("alreadySaved")); return; }
-    if (!markLocalTestSaved(test.id)) {
-      saveLocalTest({
-        id: test.id,
-        type: test.type, test_date: test.test_date, athlete_id: test.athlete_id,
-        athlete_snapshot: test.athletes ?? { first_name: "", last_name: "", sport: null, body_mass: null },
-        raw_data: test.raw_data, results: test.results, saved: true,
-      });
+    const alreadyStored = !!getLocalTest(test.id);
+    if (!alreadyStored && !canSaveTest(test.athlete_id, test.id)) {
+      notifyFreeLimit(t, "test");
+      return;
     }
-    setSavedInHistory(true);
-    toast.success(t("addedToHistory"));
+    try {
+      if (!markLocalTestSaved(test.id)) {
+        saveLocalTest({
+          id: test.id,
+          type: test.type, test_date: test.test_date, athlete_id: test.athlete_id,
+          athlete_snapshot: test.athletes ?? { first_name: "", last_name: "", sport: null, body_mass: null },
+          raw_data: test.raw_data, results: test.results, saved: true,
+        });
+      }
+      setSavedInHistory(true);
+      toast.success(t("addedToHistory"));
+    } catch (err) {
+      if (isFreeLimitError(err)) notifyFreeLimit(t, err.reason);
+      else toast.error((err as Error).message);
+    }
   };
 
   if (loading) return <div className="py-12 text-center text-sm text-muted-foreground">{t("loadingEllipsis")}</div>;
@@ -633,16 +684,23 @@ export default function TestResults() {
 }
 
 function HeaderCard({ test, label }: { test: TestRecord; label: string }) {
+  const photo = resolveReportMedia(test.athlete_id).photoDataUrl;
+  const initials = `${test.athletes?.first_name?.[0] ?? ""}${test.athletes?.last_name?.[0] ?? ""}`;
   return (
     <Card className="overflow-hidden">
-      <div className="gradient-dark p-5 text-white">
-        <p className="text-xs uppercase tracking-widest text-primary">{label}</p>
-        <h1 className="font-display text-2xl font-bold uppercase">
-          {test.athletes?.first_name} {test.athletes?.last_name}
-        </h1>
-        <p className="mt-1 text-xs text-white/70">
-          {test.athletes?.sport ?? ""} · {new Date(test.test_date).toLocaleDateString()}
-        </p>
+      <div className="gradient-dark p-5 text-white flex items-center gap-4">
+        <div className="h-16 w-16 rounded-2xl overflow-hidden shrink-0 bg-white/10 flex items-center justify-center font-display text-xl font-bold">
+          {photo ? <img src={photo} alt="" className="h-full w-full object-cover" /> : initials}
+        </div>
+        <div className="min-w-0">
+          <p className="text-xs uppercase tracking-widest text-primary">{label}</p>
+          <h1 className="font-display text-2xl font-bold uppercase truncate">
+            {test.athletes?.first_name} {test.athletes?.last_name}
+          </h1>
+          <p className="mt-1 text-xs text-white/70">
+            {test.athletes?.sport ?? ""} · {new Date(test.test_date).toLocaleDateString()}
+          </p>
+        </div>
       </div>
     </Card>
   );

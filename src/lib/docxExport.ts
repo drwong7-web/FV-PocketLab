@@ -16,6 +16,9 @@ interface ExportTest {
   athlete: { first_name: string; last_name: string; sport: string | null; body_mass: number | null };
   chartPng?: Uint8Array;
   logoPng?: Uint8Array;
+  photoBytes?: Uint8Array;
+  logoType?: "png" | "jpg";
+  photoType?: "png" | "jpg";
   t?: T;
   lang?: Lang;
 }
@@ -78,7 +81,7 @@ export async function generateDOCX(test: ExportTest): Promise<Blob> {
       alignment: AlignmentType.LEFT,
       children: test.logoPng && test.logoPng.byteLength > 0
         ? [new ImageRun({
-            type: "png",
+            type: test.logoType === "jpg" ? "jpg" : "png",
             data: test.logoPng,
             transformation: { width: 70, height: 70 },
             altText: { title: "Logo", description: "Logo", name: "logo" },
@@ -115,17 +118,58 @@ export async function generateDOCX(test: ExportTest): Promise<Blob> {
   }));
 
   // ===== ATHLETE BLOCK =====
-  children.push(new Paragraph({
-    spacing: { before: 240, after: 0 },
-    children: [new TextRun({ text: `${t("nameLabel")}: ${athleteName}`, bold: true, size: 26 })],
-  }));
-  children.push(new Paragraph({
+  const nameRuns = [new TextRun({ text: `${t("nameLabel")}: ${athleteName}`, bold: true, size: 26 })];
+  const sportPara = new Paragraph({
     spacing: { after: 0 },
     children: [new TextRun({ text: `${t("sportLabel")}: ${test.athlete.sport ?? "—"} ·`, italics: true })],
-  }));
-  children.push(new Paragraph({
+  });
+  const massPara = new Paragraph({
     children: [new TextRun({ text: `${t("massLabelUp")}: ${test.athlete.body_mass ?? "—"} kg`, italics: true })],
-  }));
+  });
+  if (test.photoBytes && test.photoBytes.byteLength > 0) {
+    children.push(new Table({
+      width: { size: 9000, type: WidthType.DXA },
+      columnWidths: [7200, 1800],
+      borders: {
+        top: noBorder, bottom: noBorder, left: noBorder, right: noBorder,
+        insideHorizontal: noBorder, insideVertical: noBorder,
+      },
+      rows: [new TableRow({
+        children: [
+          new TableCell({
+            borders: bordersNone,
+            width: { size: 7200, type: WidthType.DXA },
+            children: [
+              new Paragraph({ spacing: { before: 240, after: 0 }, children: nameRuns }),
+              sportPara,
+              massPara,
+            ],
+          }),
+          new TableCell({
+            borders: bordersNone,
+            width: { size: 1800, type: WidthType.DXA },
+            verticalAlign: "center",
+            children: [new Paragraph({
+              alignment: AlignmentType.RIGHT,
+              children: [new ImageRun({
+                type: test.photoType === "png" ? "png" : "jpg",
+                data: test.photoBytes,
+                transformation: { width: 64, height: 64 },
+                altText: { title: "Athlete", description: "Athlete photo", name: "athlete" },
+              })],
+            })],
+          }),
+        ],
+      })],
+    }));
+  } else {
+    children.push(new Paragraph({
+      spacing: { before: 240, after: 0 },
+      children: nameRuns,
+    }));
+    children.push(sportPara);
+    children.push(massPara);
+  }
 
   if (test.type === "jump") {
     const r = test.results as JumpResults;

@@ -1,6 +1,9 @@
 import { useState, ChangeEvent } from "react";
 import { Upload, Loader2, Trash2 } from "lucide-react";
 import { createPlayer } from "@/lib/storage";
+import { canImportAthletes, remainingAthleteSlots } from "@/lib/freeLimits";
+import { isFreeLimitError } from "@/lib/plan";
+import { notifyFreeLimit } from "@/lib/upgradePrompt";
 import { AthleteImportError, parseAthletesFile } from "@/lib/import/athletes";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
+import { useSettings } from "@/lib/settings";
 
 interface ParsedAthlete {
   firstName: string;
@@ -31,9 +35,11 @@ const MAX_SIZE = 10 * 1024 * 1024;
 const ACCEPT = ".pdf,.docx,.doc,.png,.jpg,.jpeg,.webp";
 
 export default function ImportPlayersDialog({ teamId, organizationId, onImported }: Props) {
+  const { t } = useSettings();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [rows, setRows] = useState<Row[]>([]);
+  const slots = remainingAthleteSlots(teamId);
 
   const reset = () => { setRows([]); setLoading(false); };
 
@@ -41,6 +47,10 @@ export default function ImportPlayersDialog({ teamId, organizationId, onImported
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
+    if (!canImportAthletes()) {
+      notifyFreeLimit(t, "import");
+      return;
+    }
     if (file.size > MAX_SIZE) {
       toast.error("Fichier trop volumineux (max 10 MB).");
       return;
@@ -70,34 +80,73 @@ export default function ImportPlayersDialog({ teamId, organizationId, onImported
   const removeRow = (i: number) => setRows((rs) => rs.filter((_, idx) => idx !== i));
 
   const confirm = () => {
+    if (!canImportAthletes()) {
+      notifyFreeLimit(t, "import");
+      return;
+    }
     const toCreate = rows.filter((r) => r.selected && r.firstName.trim() && r.lastName.trim());
     if (toCreate.length === 0) {
       toast.error("Aucun athlète sélectionné.");
       return;
     }
     let n = 0;
+    let skipped = 0;
+    let blocked = false;
     for (const r of toCreate) {
-      createPlayer({
-        teamId,
-        organizationId,
-        firstName: r.firstName.trim(),
-        lastName: r.lastName.trim(),
-        mass: r.mass && r.mass > 0 ? r.mass : 75,
-        height: r.height && r.height > 0 ? r.height : undefined,
-        birthDate: r.birthDate?.trim() || undefined,
-      });
-      n++;
+      if (remainingAthleteSlots(teamId) <= 0) {
+        skipped += toCreate.length - n;
+        blocked = true;
+        break;
+      }
+      try {
+        createPlayer({
+          teamId,
+          organizationId,
+          firstName: r.firstName.trim(),
+          lastName: r.lastName.trim(),
+          mass: r.mass && r.mass > 0 ? r.mass : 75,
+          height: r.height && r.height > 0 ? r.height : undefined,
+          birthDate: r.birthDate?.trim() || undefined,
+        });
+        n++;
+      } catch (err) {
+        if (isFreeLimitError(err)) {
+          skipped += toCreate.length - n;
+          blocked = true;
+          break;
+        }
+        throw err;
+      }
     }
-    toast.success(`${n} athlète(s) ajouté(s)`);
+    if (n > 0) toast.success(`${n} athlète(s) ajouté(s)`);
+    if (blocked || skipped > 0) notifyFreeLimit(t, "athlete");
+    if (n === 0 && skipped === 0) return;
     setOpen(false);
     reset();
     onImported();
   };
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) reset(); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        if (v && !canImportAthletes()) {
+          notifyFreeLimit(t, "import");
+          return;
+        }
+        if (v && remainingAthleteSlots(teamId) <= 0) {
+          notifyFreeLimit(t, "athlete");
+          return;
+        }
+        setOpen(v);
+        if (!v) reset();
+      }}
+    >
       <DialogTrigger asChild>
-        <Button className="bg-gradient-primary text-primary-foreground font-semibold">
+        <Button
+          disabled={canImportAthletes() && slots <= 0}
+          className="bg-gradient-primary text-primary-foreground font-semibold"
+        >
           <Upload className="w-4 h-4 mr-1" /> Importer
         </Button>
       </DialogTrigger>

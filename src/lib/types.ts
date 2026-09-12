@@ -21,6 +21,8 @@ export interface Team {
   name: string;
   organizationId: string;
   sport?: string;
+  /** Compressed JPEG data URL picked from the device. */
+  logoDataUrl?: string;
   createdAt: number;
 }
 
@@ -34,6 +36,8 @@ export interface Player {
   mass: number; // kg
   height?: number; // cm
   position?: string;
+  /** Compressed JPEG data URL picked from the device. */
+  photoDataUrl?: string;
   createdAt: number;
 }
 

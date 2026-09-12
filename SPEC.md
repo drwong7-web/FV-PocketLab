@@ -17,7 +17,7 @@ Local-first web app to plan, capture and analyze athletic performance tests (lin
 **Plans:** `free` (limited features, ads), `pro_monthly` (recurring monthly, full access, no ads), `pro_yearly` (recurring yearly, same access), `lifetime` (one-time purchase, full access, no ads). Payments go through Creem (Merchant of Record). The Vite client never holds the Creem API key: `creem-checkout` / `creem-portal` Edge Functions create hosted sessions; `creem-webhook` verifies HMAC and calls `apply_creem_event()`. Setup: `supabase/CREEM.md`.
 
 Core user flows:
-1. Create a team → add athletes (manual or import from PDF/DOCX/image via local OCR).
+1. Create a team (optional logo from the device) → add athletes (optional photo from the device, or import from PDF/DOCX/image via local OCR).
 2. Run a test (Sprint linéaire or Saut vertical) → record video → auto or manual analysis.
 3. Consult results (FV profile, quality score, phases, charts) → export PDF/DOCX.
 
@@ -42,7 +42,8 @@ Core user flows:
 - **Auth:** Supabase Auth (`@supabase/supabase-js`) — **email + password only**, no OAuth providers. Client in `src/lib/supabase/client.ts`, provider in `src/lib/auth.tsx`. Session persists in `localStorage` (key `slfv:supabase-auth`) so a signed-in user keeps working offline. Password reset goes through Supabase's email link (`/auth/reset`); the old WebAuthn device-unlock reset and `src/lib/webauthn.ts` are removed.
   - **Offline sign-in:** sign-up requires a connection. On each successful online password sign-in, a PBKDF2-SHA256 verifier (210k iterations, random salt) is cached in `src/lib/offlineAuth.ts` under `slfv:offline-auth`, so the same email can sign in again with no network.
   - **Local bridge:** `ensureLocalUserForRemote()` in `storage.ts` mirrors the Supabase identity into the local repo, reusing the `organizationId` already present on the device so existing teams/tests are never orphaned. The local `User` id **is** the Supabase auth user id.
-- **Entitlements:** `src/lib/plan.ts` derives `fullAccess` / `adsEnabled` from plan + status + period end, mirroring the `public.has_full_access` SQL function so the rules also work offline. Cached per user under `slfv:entitlements`. `FREE_LIMITS` is declared but **not enforced yet** — it waits on the ad/limit spec.
+- **Entitlements:** `src/lib/plan.ts` derives `fullAccess` / `adsEnabled` from plan + status + period end, mirroring the `public.has_full_access` SQL function so the rules also work offline. Cached per user under `slfv:entitlements`. `FREE_LIMITS` is enforced **client-side on create** (1 team, 3 athletes per team, 3 tests per athlete per calendar month). PDF/DOCX report export and athlete-list import from PDF/Word/image are Pro-only (`pdfExport` / `docxExport` / `athleteImport` false on free; `canExportReport()` / `canImportAthletes()` in `src/lib/freeLimits.ts`). Hitting a free ceiling shows the matching toast and opens Settings (in-app checkout) via `notifyFreeLimit` / `pocketlab:upgrade`. Paid `fullAccess` is unlimited. This is not a server-side quota (local-first data). Existing over-limit records are left in place. Manual athlete add on free still uses the 3-per-team cap.
+- **Team logo / athlete photo:** optional compressed JPEG data URLs on `Team.logoDataUrl` and `Player.photoDataUrl`, picked from the device (`src/lib/imagePick.ts`, max 384 px). Shown in team/player lists and on PDF/DOCX reports (FV logo remains the report fallback). Not copied into each test `athlete_snapshot`.
 
 Explicitly **removed / not used**: any AI-key based feature (Gemini/OpenAI), encryption-at-rest, WebAuthn.
 
@@ -68,6 +69,7 @@ src/
       SprintVideoAnalyzer.tsx  playback + draggable 0m/ref markers + crop range for AI window
     players/
       ImportPlayersDialog.tsx  PDF/DOCX/image → athletes preview → save
+    ImagePicker.tsx            device image pick + JPEG preview (team logo / athlete photo)
     ui/                        shadcn primitives
   lib/
     auth.tsx                   Supabase auth provider (+ offline sign-in, entitlements)
@@ -75,12 +77,15 @@ src/
       client.ts                configured Supabase client, isSupabaseConfigured, isOnline
       types.ts                 hand-written DB types (regenerate with supabase gen types)
     plan.ts                    plan model, entitlement derivation, offline cache
-    landingPrices.ts           public pricing display amounts (4,99 € / 49 € / 129 €)
+    freeLimits.ts              client-side free-plan ceilings (team / athlete / tests / PDF+DOCX export / list import)
+    upgradePrompt.ts           toast + open Settings checkout (`pocketlab:upgrade`)
+    landingPrices.ts           public pricing display amounts (4,99 € / 49 € / 159 €)
     billing.ts                 invoke creem-checkout / creem-portal Edge Functions
     pwa/install.ts             standalone + persisted `slfv:pwa-installed`
     offlineAuth.ts             PBKDF2 verifier cache enabling offline sign-in
     storage.ts                 local repo (orgs, teams, players, tests) + Supabase→local bridge
     types.ts                   User, Organization, Team, Player, TestSession
+    imagePick.ts               device image → compressed JPEG data URL (max 384 px)
     settings.tsx               user prefs (units, sync target)
     sprintEngine.ts            Sprint analysis pipeline (splits or position/time → SprintAnalysis)
     fvCalculations.ts          FV profiling: F0, V0, Pmax, RFmax, DRF, RFmean, phases, quality score
@@ -102,6 +107,7 @@ src/
       athletes.ts              PDF/DOCX/image → ParsedAthlete[] (100% local)
   pages/
     Landing.tsx                public marketing landing (first-visit browser only)
+    Legal.tsx                  public privacy, terms, and contact pages
     Auth.tsx                   email/password sign in + sign up, reset-link request
     AuthCallback.tsx           email-confirmation redirect target
     ResetPassword.tsx          password-reset link target
@@ -120,7 +126,7 @@ supabase/
 
 ## 4. Routes (`src/App.tsx`)
 
-Public: `/` (marketing landing for logged-out browser visits — `src/pages/Landing.tsx`; anchors `#features`, `#how`, `#pricing`), `/auth` (email + password; `?mode=signup` or `?mode=login` selects the form, query wins over `hasAnyProfile`; `?plan=pro_monthly|pro_yearly|lifetime` is stored in `sessionStorage` as `slfv:pending-checkout` and Creem checkout starts once the user is enrolled), `/auth/callback` (email-confirmation landing; the Supabase client consumes the code via `detectSessionInUrl`; if `slfv:pending-checkout` is set, continues to `/auth` so Creem can start), `/auth/reset` (password-reset link target). Root `/` skips the landing and goes to `/app` only when the user is signed in (`enrolled`) or the app is opened as an installed PWA (`isStandalone()`). A stored profile or `slfv:pwa-installed` in a normal browser tab does not skip it. `ProtectedRoute` still sends a logged-out `/app` visit to `/auth`. Hero Get started scrolls to `#pricing`. Landing Free CTA goes to `/auth?mode=signup`; Pro CTA goes to `/auth?mode=signup&plan=…`; Sign in goes to `/auth?mode=login`. Display prices live in `src/lib/landingPrices.ts`.
+Public: `/` (marketing landing for logged-out browser visits — `src/pages/Landing.tsx`; anchors `#features` (Sprint / Jump / Test reports cards), `#how` (four-card instrument block), `#pricing`), `/privacy`, `/terms`, `/contact` (legal pages in `src/pages/Legal.tsx`; footer links, not the top nav), `/auth` (email + password; `?mode=signup` or `?mode=login` selects the form, query wins over `hasAnyProfile`; `?plan=pro_monthly|pro_yearly|lifetime` is stored in `sessionStorage` as `slfv:pending-checkout` and Creem checkout starts once the user is enrolled), `/auth/callback` (email-confirmation landing; the Supabase client consumes the code via `detectSessionInUrl`; if `slfv:pending-checkout` is set, continues to `/auth` so Creem can start), `/auth/reset` (password-reset link target). Root `/` skips the landing and goes to `/app` only when the user is signed in (`enrolled`) or the app is opened as an installed PWA (`isStandalone()`). A stored profile or `slfv:pwa-installed` in a normal browser tab does not skip it. `ProtectedRoute` still sends a logged-out `/app` visit to `/auth`. Hero and bottom CTA Get started scroll to `#pricing`. Landing Free CTA goes to `/auth?mode=signup`; Pro CTA goes to `/auth?mode=signup&plan=…`. Display prices live in `src/lib/landingPrices.ts`.
 Protected under `/app` (wraps `AppLayout`):
 - `` → Dashboard
 - `teams` / `teams/:teamId` / `players/:playerId`
@@ -217,7 +223,7 @@ Entry: `parseAthletesFile(file) → ParsedAthlete[]`.
 - **Text/CSV** — split on tabs / 2+ spaces / `;|,`.
 - Header detection (`Nom/Prénom/Taille/Poids/…`) maps columns to fields; heuristic fallback otherwise. Title rows + continuation rows (multi-line names) handled. If OCR collapses a table into single lines, a compact “liste nominative” parser extracts numbered rows like `.15. NOM PRENOM DATE TAILLE POIDS`. Dedup on `lastName|firstName|birthDate`.
 
-UI: `components/players/ImportPlayersDialog.tsx` (dropzone + editable preview table before save).
+UI: `components/players/ImportPlayersDialog.tsx` (dropzone + editable preview table before save). **Pro-only** (`canImportAthletes()`); free users get `notifyFreeLimit` and Settings instead of the picker.
 
 ---
 

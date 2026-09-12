@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Check, Minus } from "lucide-react";
+import { Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LANDING_PRICES } from "@/lib/landingPrices";
 import { FREE_LIMITS } from "@/lib/plan";
 import { useSettings } from "@/lib/settings";
 import { cn } from "@/lib/utils";
+import { CenterFlickerTitle } from "./CenterFlickerTitle";
 import { LandingSection } from "./LandingSection";
 
 type Billing = "monthly" | "yearly" | "lifetime";
@@ -21,9 +22,10 @@ export function LandingPricing() {
   const freeRows: { ok: boolean; label: string }[] = [
     { ok: true, label: fill(t("landFeatTeams"), FREE_LIMITS.maxTeams) },
     { ok: true, label: fill(t("landFeatAthletes"), FREE_LIMITS.maxAthletesPerTeam) },
-    { ok: true, label: fill(t("landFeatTests"), FREE_LIMITS.maxTestsPerMonth) },
+    { ok: true, label: fill(t("landFeatTests"), FREE_LIMITS.maxTestsPerAthletePerMonth) },
     { ok: FREE_LIMITS.videoAnalysis, label: t("landFeatVideoOn") },
     { ok: FREE_LIMITS.pdfExport, label: t("landFeatReportsOn") },
+    { ok: FREE_LIMITS.athleteImport, label: t("landFeatImportOn") },
     { ok: FREE_LIMITS.cloudSync, label: t("landFeatBackupOn") },
     { ok: false, label: t("planLimitedNote") },
   ];
@@ -34,7 +36,9 @@ export function LandingPricing() {
     { ok: true, label: t("landFeatTestsUnlim") },
     { ok: true, label: t("landFeatVideoOn") },
     { ok: true, label: t("landFeatReportsOn") },
+    { ok: true, label: t("landFeatImportOn") },
     { ok: true, label: t("landFeatBackupOn") },
+    { ok: true, label: t("landFeatEarlyAccess") },
     { ok: true, label: t("planFullAccessNote") },
   ];
 
@@ -54,9 +58,10 @@ export function LandingPricing() {
   return (
     <LandingSection id="pricing">
       <p className="section-label text-center">{t("landPriceOverline")}</p>
-      <h2 className="font-display text-3xl sm:text-4xl tracking-tight text-center mt-2">
-        {t("landPriceTitle")}
-      </h2>
+      <CenterFlickerTitle
+        text={t("landPriceTitle")}
+        className="font-display text-3xl sm:text-4xl tracking-tight text-center mt-2"
+      />
       <p className="text-muted-foreground text-center mt-3 max-w-xl mx-auto">{t("landPriceSub")}</p>
 
       <div className="mt-8 grid gap-4 lg:grid-cols-2">
@@ -75,12 +80,12 @@ export function LandingPricing() {
           cta={t("landStartPro")}
           ctaTo={`/auth?mode=signup&plan=${proPlan}`}
           featured
+          exclTax
           badge={billing === "yearly" ? t("landPriceBest") : undefined}
           billing={billing}
           onBilling={setBilling}
         />
       </div>
-      <p className="text-xs text-muted-foreground text-center mt-6">{t("landPriceCheckoutNote")}</p>
     </LandingSection>
   );
 }
@@ -93,6 +98,7 @@ function PlanCard({
   cta,
   ctaTo = "/auth?mode=signup",
   featured,
+  exclTax,
   badge,
   billing,
   onBilling,
@@ -104,6 +110,7 @@ function PlanCard({
   cta: string;
   ctaTo?: string;
   featured?: boolean;
+  exclTax?: boolean;
   badge?: string;
   billing?: Billing;
   onBilling?: (id: Billing) => void;
@@ -147,9 +154,14 @@ function PlanCard({
           ))}
         </div>
       )}
-      <p className="mt-4 flex items-baseline gap-2">
+      <p className="mt-4 flex items-baseline gap-2 flex-wrap">
         <span className="metric-value">{price}</span>
         {period ? <span className="text-sm text-muted-foreground">{period}</span> : null}
+        {exclTax ? (
+          <span className="text-xs text-muted-foreground uppercase tracking-wide">
+            ({t("landPriceExclTax")})
+          </span>
+        ) : null}
       </p>
       <ul className="mt-5 space-y-2.5 flex-1">
         {rows.map((row) => (
@@ -157,7 +169,7 @@ function PlanCard({
             {row.ok ? (
               <Check className="h-4 w-4 mt-0.5 shrink-0 text-primary" />
             ) : (
-              <Minus className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
+              <X className="h-4 w-4 mt-0.5 shrink-0 text-destructive" />
             )}
             <span className={row.ok ? "text-foreground" : "text-muted-foreground"}>{row.label}</span>
           </li>

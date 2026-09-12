@@ -10,6 +10,7 @@
 
 import type { Organization, Player, Team, TestSession, User } from "./types";
 import { kvGet, kvSet, kvRemove } from "./db/kvStore";
+import { FREE_LIMITS, FreeLimitError, isInCurrentCalendarMonth, isPaidUser } from "./plan";
 
 const KEYS = {
   users: "slfv:users",
@@ -132,6 +133,10 @@ export function currentUser(): User | null {
   return listUsers().find((u) => u.id === s.userId) ?? null;
 }
 
+function isPaidSession(): boolean {
+  return isPaidUser(currentUser()?.id);
+}
+
 export function signOut() {
   clearSession();
 }
@@ -147,12 +152,26 @@ export function listTeams(orgId: string): Team[] {
 export function getTeam(id: string) {
   return read<Team[]>(KEYS.teams, []).find((t) => t.id === id) ?? null;
 }
-export function createTeam(orgId: string, name: string, sport?: string): Team {
+export function createTeam(orgId: string, name: string, sport?: string, logoDataUrl?: string): Team {
+  if (!isPaidSession() && listTeams(orgId).length >= FREE_LIMITS.maxTeams) {
+    throw new FreeLimitError("team");
+  }
   const teams = read<Team[]>(KEYS.teams, []);
   const team: Team = { id: uid(), name, sport, organizationId: orgId, createdAt: Date.now() };
+  if (logoDataUrl) team.logoDataUrl = logoDataUrl;
   teams.push(team);
   write(KEYS.teams, teams);
   return team;
+}
+export function updateTeam(id: string, patch: Partial<Pick<Team, "name" | "sport" | "logoDataUrl">>): Team | null {
+  const teams = read<Team[]>(KEYS.teams, []);
+  const i = teams.findIndex((t) => t.id === id);
+  if (i < 0) return null;
+  const next: Team = { ...teams[i], ...patch };
+  if ("logoDataUrl" in patch && !patch.logoDataUrl) delete next.logoDataUrl;
+  teams[i] = next;
+  write(KEYS.teams, teams);
+  return next;
 }
 export function deleteTeam(id: string) {
   write(KEYS.teams, read<Team[]>(KEYS.teams, []).filter((t) => t.id !== id));
@@ -171,6 +190,9 @@ export function getPlayer(id: string) {
   return read<Player[]>(KEYS.players, []).find((p) => p.id === id) ?? null;
 }
 export function createPlayer(p: Omit<Player, "id" | "createdAt">): Player {
+  if (!isPaidSession() && listPlayers(p.teamId).length >= FREE_LIMITS.maxAthletesPerTeam) {
+    throw new FreeLimitError("athlete");
+  }
   const players = read<Player[]>(KEYS.players, []);
   const player: Player = { ...p, id: uid(), createdAt: Date.now() };
   players.push(player);
@@ -180,6 +202,19 @@ export function createPlayer(p: Omit<Player, "id" | "createdAt">): Player {
 export function deletePlayer(id: string) {
   write(KEYS.players, read<Player[]>(KEYS.players, []).filter((p) => p.id !== id));
   write(KEYS.tests, read<TestSession[]>(KEYS.tests, []).filter((t) => t.playerId !== id));
+}
+export function updatePlayer(
+  id: string,
+  patch: Partial<Pick<Player, "firstName" | "lastName" | "birthDate" | "mass" | "height" | "position" | "photoDataUrl">>
+): Player | null {
+  const players = read<Player[]>(KEYS.players, []);
+  const i = players.findIndex((p) => p.id === id);
+  if (i < 0) return null;
+  const next: Player = { ...players[i], ...patch };
+  if ("photoDataUrl" in patch && !patch.photoDataUrl) delete next.photoDataUrl;
+  players[i] = next;
+  write(KEYS.players, players);
+  return next;
 }
 
 // ----- Tests -----
@@ -195,6 +230,10 @@ export function getTest(id: string) {
   return read<TestSession[]>(KEYS.tests, []).find((t) => t.id === id) ?? null;
 }
 export function saveTest(t: Omit<TestSession, "id" | "createdAt">): TestSession {
+  if (!isPaidSession()) {
+    const n = listTests(t.playerId).filter((x) => isInCurrentCalendarMonth(x.createdAt)).length;
+    if (n >= FREE_LIMITS.maxTestsPerAthletePerMonth) throw new FreeLimitError("test");
+  }
   const tests = read<TestSession[]>(KEYS.tests, []);
   const test: TestSession = { ...t, id: uid(), createdAt: Date.now() };
   tests.push(test);

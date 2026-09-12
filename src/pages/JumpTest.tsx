@@ -17,6 +17,9 @@ import {
 } from "@/lib/localHistory";
 import { toast } from "sonner";
 import { useSettings } from "@/lib/settings";
+import { canSaveTest, freeLimitKey } from "@/lib/freeLimits";
+import { isFreeLimitError } from "@/lib/plan";
+import { notifyFreeLimit } from "@/lib/upgradePrompt";
 
 export default function JumpTest() {
   const navigate = useNavigate();
@@ -91,6 +94,11 @@ export default function JumpTest() {
     const hPO = parseFloat(pushOff);
     const valid = trials.filter((tr) => tr.jumpHeight > 0);
     if (valid.length < 2 || !mass || !hPO) { setError(t("needJumps")); return; }
+    if (!canSaveTest(athleteId)) {
+      notifyFreeLimit(t, "test");
+      setError(t("freeLimitTests"));
+      return;
+    }
 
     setBusy(true);
     try {
@@ -114,8 +122,13 @@ export default function JumpTest() {
       });
       navigate(`/app/tests/${local.id}`);
     } catch (e) {
-      setError((e as Error).message);
-      toast.error((e as Error).message);
+      if (isFreeLimitError(e)) {
+        setError(t(freeLimitKey(e.reason)));
+        notifyFreeLimit(t, e.reason);
+      } else {
+        setError((e as Error).message);
+        toast.error((e as Error).message);
+      }
     } finally {
       setBusy(false);
     }

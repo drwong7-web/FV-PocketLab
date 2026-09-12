@@ -1,6 +1,7 @@
 import type { JumpResults, SprintResults } from "./fvCalculations";
-import { currentUser } from "./storage";
+import { currentUser, listTests } from "./storage";
 import { kvGet, kvRemove } from "./db/kvStore";
+import { FREE_LIMITS, FreeLimitError, isInCurrentCalendarMonth, isPaidUser } from "./plan";
 
 const BASE_KEY = "fv:local-tests:v1";
 const LEGACY_KEY = "fv:local-tests:v1";
@@ -74,6 +75,23 @@ export function saveLocalTest(t: Omit<LocalTest, "id"> & { id?: string }): Local
   const items = read();
   const id = t.id ?? `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const full: LocalTest = { ...t, id } as LocalTest;
+  const existing = items.findIndex((x) => x.id === id);
+  if (existing >= 0) {
+    items[existing] = full;
+    write(items);
+    return full;
+  }
+  if (!isPaidUser(currentUser()?.id)) {
+    const localN = items.filter(
+      (x) =>
+        x.athlete_id === t.athlete_id &&
+        isInCurrentCalendarMonth(new Date(x.test_date).getTime() || 0)
+    ).length;
+    const legacyN = listTests(t.athlete_id).filter((x) => isInCurrentCalendarMonth(x.createdAt)).length;
+    if (localN + legacyN >= FREE_LIMITS.maxTestsPerAthletePerMonth) {
+      throw new FreeLimitError("test");
+    }
+  }
   items.unshift(full);
   write(items);
   return full;

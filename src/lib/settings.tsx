@@ -276,6 +276,31 @@ const TR = {
   planRenewsOn: { fr: "Renouvellement le", en: "Renews on", ar: "يتجدد في" },
   planFullAccessNote: { fr: "Accès complet, sans publicité.", en: "Full access, no ads.", ar: "وصول كامل بدون إعلانات." },
   planLimitedNote: { fr: "Fonctionnalités limitées, avec publicités.", en: "Limited features, with ads.", ar: "مزايا محدودة مع إعلانات." },
+  freeLimitTeam: {
+    fr: "Le plan gratuit autorise 1 équipe. Passez à Pro pour en ajouter.",
+    en: "Free plan allows 1 team. Upgrade for more.",
+    ar: "الخطة المجانية تسمح بفريق واحد. رقِّ لإضافة المزيد.",
+  },
+  freeLimitAthletes: {
+    fr: "Le plan gratuit autorise 3 athlètes par équipe. Passez à Pro pour en ajouter.",
+    en: "Free plan allows 3 athletes per team. Upgrade for more.",
+    ar: "الخطة المجانية تسمح بـ 3 رياضيين لكل فريق. رقِّ لإضافة المزيد.",
+  },
+  freeLimitTests: {
+    fr: "Le plan gratuit autorise 3 tests par athlète ce mois-ci. Passez à Pro pour en ajouter.",
+    en: "Free plan allows 3 tests per athlete this month. Upgrade for more.",
+    ar: "الخطة المجانية تسمح بـ 3 اختبارات لكل رياضي هذا الشهر. رقِّ لإضافة المزيد.",
+  },
+  freeLimitExport: {
+    fr: "Le plan gratuit n'inclut pas les rapports PDF et Word. Passez à Pro pour exporter.",
+    en: "Free plan does not include PDF and Word reports. Upgrade to export.",
+    ar: "الخطة المجانية لا تشمل تقارير PDF وWord. رقِّ للتصدير.",
+  },
+  freeLimitImport: {
+    fr: "Le plan gratuit n'inclut pas l'import de listes d'athlètes (PDF, Word ou image). Passez à Pro pour importer.",
+    en: "Free plan does not include athlete list import from PDF, Word, or images. Upgrade to import.",
+    ar: "الخطة المجانية لا تشمل استيراد قوائم الرياضيين من PDF أو Word أو الصور. رقِّ للاستيراد.",
+  },
   planRefresh: { fr: "Actualiser", en: "Refresh", ar: "تحديث" },
   planOfflineNote: { fr: "Formule affichée d'après la dernière vérification en ligne.", en: "Plan shown from the last online check.", ar: "الخطة معروضة حسب آخر تحقق عبر الإنترنت." },
   planPaymentsNote: { fr: "Paiement sécurisé via Creem.", en: "Secure checkout via Creem.", ar: "دفع آمن عبر Creem." },
@@ -421,6 +446,14 @@ const TR = {
   positionPlaceholder: { fr: "Sprinter, Ailier…", en: "Sprinter, Winger…", ar: "عدّاء، جناح…" },
   add: { fr: "Ajouter", en: "Add", ar: "إضافة" },
   fillNameAndMass: { fr: "Remplissez le nom et une masse valide.", en: "Please fill name and a valid mass.", ar: "يرجى إدخال الاسم ووزن صالح." },
+  teamLogo: { fr: "Logo de l'équipe", en: "Team logo", ar: "شعار الفريق" },
+  athletePhoto: { fr: "Photo de l'athlète", en: "Athlete photo", ar: "صورة الرياضي" },
+  imageChoose: { fr: "Choisir", en: "Choose", ar: "اختيار" },
+  imageChange: { fr: "Changer", en: "Change", ar: "تغيير" },
+  imageRemove: { fr: "Retirer", en: "Remove", ar: "إزالة" },
+  imageTooLarge: { fr: "Image trop volumineuse (max 10 MB).", en: "Image too large (max 10 MB).", ar: "الصورة كبيرة جداً (الحد 10 MB)." },
+  imageNotImage: { fr: "Choisissez un fichier image.", en: "Please choose an image file.", ar: "يرجى اختيار ملف صورة." },
+  imagePickFailed: { fr: "Impossible de lire cette image.", en: "Could not read that image.", ar: "تعذر قراءة هذه الصورة." },
 
   // ---- Player detail ----
   playerNotFound: { fr: "Joueur introuvable.", en: "Player not found.", ar: "اللاعب غير موجود." },
@@ -715,9 +748,9 @@ const TR = {
   landNavFeatures: { fr: "Fonctionnalités", en: "Features", ar: "المزايا" },
   landNavHow: { fr: "Méthode", en: "How it works", ar: "كيف يعمل" },
   landNavPricing: { fr: "Tarifs", en: "Pricing", ar: "الأسعار" },
-  landSignIn: { fr: "Connexion", en: "Sign in", ar: "تسجيل الدخول" },
   landMenu: { fr: "Menu", en: "Menu", ar: "القائمة" },
   landCloseMenu: { fr: "Fermer le menu", en: "Close menu", ar: "إغلاق القائمة" },
+  landLangMenu: { fr: "Langue", en: "Language", ar: "اللغة" },
 
   landVerbProfile: { fr: "Profiler.", en: "Profile.", ar: "كوّن الملف." },
   landVerbTest: { fr: "Tester.", en: "Test.", ar: "اختبر." },
@@ -733,27 +766,36 @@ const TR = {
   landVerbMeasure: { fr: "Mesurer.", en: "Measure.", ar: "قِس." },
 
   landHeroTitle: {
-    fr: "Le profil force-vitesse, dans votre poche",
-    en: "Force–velocity profiling in your pocket",
-    ar: "تحليل القوة-السرعة في جيبك",
+    fr: "Laboratoire de performance de poche",
+    en: "Performance Pocket size Laboratory",
+    ar: "مختبر أداء بحجم الجيب",
+  },
+  landHeroSub: {
+    fr: "N'importe quand, n'importe où, le profilage de performance n'a jamais été aussi simple.",
+    en: "Anytime, anywhere, performance profiling has never been easier.",
+    ar: "في أي وقت وأي مكان، لم يكن تحليل الأداء أسهل من الآن.",
+  },
+  landHeroFvForceTitle: {
+    fr: "Développement de la puissance force",
+    en: "Force-power development",
+    ar: "تنمية قدرة القوة",
+  },
+  landHeroFvSpeedTitle: {
+    fr: "Développement de la puissance vitesse",
+    en: "Velocity-power development",
+    ar: "تنمية قدرة السرعة",
+  },
+  landHeroFvAthlete: {
+    fr: "Profil force-vitesse de l'athlète",
+    en: "Athlete force–velocity profile",
+    ar: "ملف القوة-السرعة للرياضي",
+  },
+  landHeroFvOptimal: {
+    fr: "Profil force-vitesse optimal",
+    en: "Optimal force–velocity profile",
+    ar: "ملف القوة-السرعة الأمثل",
   },
   landStartFree: { fr: "Commencer gratuitement", en: "Start for free", ar: "ابدأ مجاناً" },
-
-  landValueOverline: { fr: "Espace de test", en: "Testing workspace", ar: "مساحة الاختبار" },
-  landValueTitle: {
-    fr: "Tout le pipeline F–V, au même endroit",
-    en: "The full F–V pipeline, in one place",
-    ar: "مسار F–V كاملاً في مكان واحد",
-  },
-  landValueSub: {
-    fr: "Les tests se dispersent entre chronos, tableurs et dossiers partagés. PocketLab garde l'équipe, l'athlète, la vidéo et le profil dans un instrument local.",
-    en: "Tests fall apart when timers, spreadsheets, and shared folders live in different places. PocketLab keeps the team, the athlete, the video, and the profile in one on-device instrument.",
-    ar: "تتفكك الاختبارات عندما تتوزع المؤقتات والجداول والمجلدات. يُبقي PocketLab الفريق والرياضي والفيديو والملف في أداة واحدة على الجهاز.",
-  },
-  landValueBullet1: { fr: "Équipe → athlète → test → profil", en: "Team → athlete → test → profile", ar: "فريق → رياضي → اختبار → ملف" },
-  landValueBullet2: { fr: "Les données restent sur l'appareil", en: "Data stays on this device", ar: "تبقى البيانات على هذا الجهاز" },
-  landValueBullet3: { fr: "Analyse vidéo sur l'appareil", en: "On-device video analysis", ar: "تحليل فيديو على الجهاز" },
-  landValueBullet4: { fr: "Le statut de chaque athlète reste lisible", en: "Each athlete's status stays readable", ar: "تبقى حالة كل رياضي واضحة" },
 
   landWhoOverline: { fr: "Public", en: "Audience", ar: "الجمهور" },
   landWhoTitle: { fr: "Pour qui ?", en: "Who is PocketLab for?", ar: "لمن PocketLab؟" },
@@ -765,24 +807,27 @@ const TR = {
   landWhoAthlete: { fr: "Athlètes", en: "Athletes", ar: "رياضيون" },
 
   landProtoOverline: { fr: "Protocoles", en: "Protocols", ar: "البروتوكولات" },
-  landProtoTitle: { fr: "Sprint, saut, rapport", en: "Sprint, jump, report", ar: "عدو، قفز، تقرير" },
-  landProtoSprintTitle: { fr: "Sprint linéaire", en: "Linear sprint", ar: "العدو الخطي" },
+  landProtoTitle: { fr: "Rapport Test Sprint Saut", en: "Sprint Jump Test Report", ar: "تقرير اختبار العدو والقفز" },
+  landFeatWordSprint: { fr: "Sprint", en: "Sprint", ar: "عدو" },
+  landFeatWordJump: { fr: "Saut", en: "Jump", ar: "قفز" },
+  landFeatWordReport: { fr: "Rapport", en: "Report", ar: "تقرير" },
+  landProtoSprintTitle: { fr: "Test de sprint", en: "Sprint test", ar: "اختبار العدو" },
   landProtoSprintBody: {
-    fr: "Splits ou vidéo, modèle exponentiel, F0, V0, Pmax et phases.",
-    en: "Splits or video, exponential model, F0, V0, Pmax, and phases.",
-    ar: "أزمنة أو فيديو، نموذج أسي، F0 وV0 وPmax والمراحل.",
+    fr: "Profil force-vitesse complet pour le sprint linéaire.",
+    en: "Complete Force - Velocity profile for linear sprint",
+    ar: "ملف قوة-سرعة كامل للعدو الخطي.",
   },
-  landProtoJumpTitle: { fr: "Saut chargé", en: "Loaded jump", ar: "قفز محمل" },
+  landProtoJumpTitle: { fr: "Test de saut", en: "Jump test", ar: "اختبار القفز" },
   landProtoJumpBody: {
-    fr: "Essais à charges croissantes, hauteur, profil F–V et FVimb.",
-    en: "Increasing-load trials, jump height, F–V profile, and FVimb.",
-    ar: "محاولات بأحمال متزايدة، ارتفاع القفز، ملف F–V وFVimb.",
+    fr: "Profil force-vitesse complet pour le saut vertical.",
+    en: "Complete Force - Velocity profile for vertical jump",
+    ar: "ملف قوة-سرعة كامل للقفز العمودي.",
   },
-  landProtoReportTitle: { fr: "Rapports", en: "Reports", ar: "التقارير" },
+  landProtoReportTitle: { fr: "Rapports de test", en: "Test reports", ar: "تقارير الاختبار" },
   landProtoReportBody: {
-    fr: "PDF et DOCX prêts à envoyer (formules Pro).",
-    en: "PDF and DOCX ready to send (Pro plans).",
-    ar: "PDF وDOCX جاهزان للإرسال (خطط برو).",
+    fr: "PDF et document Word prêts à modifier et envoyer (formules Pro).",
+    en: "PDF and word document ready to edit and send (Pro plans)",
+    ar: "PDF ومستند Word جاهزان للتحرير والإرسال (خطط برو).",
   },
 
   landFeatOverline: { fr: "Fonctionnalités", en: "Features", ar: "المزايا" },
@@ -819,9 +864,9 @@ const TR = {
   landPriceOverline: { fr: "Tarifs", en: "Pricing", ar: "الأسعار" },
   landPriceTitle: { fr: "Payez ce dont vous avez besoin", en: "Pay for what you need", ar: "ادفع مقابل ما تحتاجه" },
   landPriceSub: {
-    fr: "Commencez gratuitement. Passez en Pro pour les rapports et la sauvegarde de compte.",
-    en: "Start free. Upgrade to Pro for reports and account backup.",
-    ar: "ابدأ مجاناً. ترقَّ إلى برو للتقارير والنسخ الاحتياطي.",
+    fr: "Commencez gratuitement. Passez à l'offre supérieure pour plus d'usage, des fonctionnalités supplémentaires et un accès anticipé aux éléments à venir.",
+    en: "Start free. Upgrade for more usage, additional features and early access for upcoming elements.",
+    ar: "ابدأ مجاناً. رقِّ للمزيد من الاستخدام، وميزات إضافية، ووصول مبكر للعناصر القادمة.",
   },
   landPriceMonthly: { fr: "Mensuel", en: "Monthly", ar: "شهري" },
   landPriceYearly: { fr: "Annuel", en: "Yearly", ar: "سنوي" },
@@ -829,6 +874,7 @@ const TR = {
   landPerMonth: { fr: "/ mois", en: "/ month", ar: "/ شهر" },
   landPerYear: { fr: "/ an", en: "/ year", ar: "/ سنة" },
   landOnce: { fr: "paiement unique", en: "one-time", ar: "دفعة واحدة" },
+  landPriceExclTax: { fr: "hors taxes", en: "excluding tax", ar: "غير شامل الضريبة" },
   landPriceCtaFree: { fr: "Créer un profil", en: "Create a profile", ar: "أنشئ حساباً" },
   landPriceCtaPaid: { fr: "Continuer", en: "Continue", ar: "متابعة" },
   landStartPro: {
@@ -838,17 +884,22 @@ const TR = {
   },
   landFeatTeams: { fr: "{n} équipe", en: "{n} team", ar: "{n} فريق" },
   landFeatAthletes: { fr: "{n} athlètes par équipe", en: "{n} athletes per team", ar: "{n} رياضيين لكل فريق" },
-  landFeatTests: { fr: "{n} tests par mois", en: "{n} tests / month", ar: "{n} اختبارات / شهر" },
+  landFeatTests: { fr: "{n} tests par athlète par mois", en: "{n} tests per athlete / month", ar: "{n} اختبارات لكل رياضي / شهر" },
   landFeatTeamsUnlim: { fr: "Équipes illimitées", en: "Unlimited teams", ar: "فرق بلا حد" },
   landFeatAthletesUnlim: { fr: "Athlètes illimités", en: "Unlimited athletes", ar: "رياضيون بلا حد" },
   landFeatTestsUnlim: { fr: "Tests illimités", en: "Unlimited tests", ar: "اختبارات بلا حد" },
   landFeatVideoOn: { fr: "Analyse vidéo", en: "Video analysis", ar: "تحليل فيديو" },
   landFeatReportsOn: { fr: "Exports PDF et DOCX", en: "PDF and DOCX exports", ar: "تصدير PDF وDOCX" },
+  landFeatImportOn: {
+    fr: "Import automatique de listes d'athlètes",
+    en: "Athletes list automatic import",
+    ar: "استيراد تلقائي لقوائم الرياضيين",
+  },
   landFeatBackupOn: { fr: "Sauvegarde de compte", en: "Account backup", ar: "نسخ احتياطي للحساب" },
-  landPriceCheckoutNote: {
-    fr: "Le paiement s'ouvre après connexion, via Creem.",
-    en: "Checkout opens after you sign in, via Creem.",
-    ar: "يفتح الدفع بعد تسجيل الدخول عبر Creem.",
+  landFeatEarlyAccess: {
+    fr: "Accès anticipé aux fonctionnalités à venir",
+    en: "Early access to upcoming features",
+    ar: "وصول مبكر للميزات القادمة",
   },
 
   landCtaTitle: {
@@ -870,6 +921,70 @@ const TR = {
     fr: "Force–velocity profiler — in your pocket",
     en: "Force–velocity profiler — in your pocket",
     ar: "محلل القوة-السرعة — في جيبك",
+  },
+  landFooterPrivacy: { fr: "Politique de confidentialité", en: "Privacy Policy", ar: "سياسة الخصوصية" },
+  landFooterTerms: { fr: "Conditions d'utilisation", en: "Terms of Service", ar: "شروط الخدمة" },
+  landFooterContact: { fr: "Contactez-nous", en: "Contact us", ar: "اتصل بنا" },
+  landLegalHome: { fr: "Accueil", en: "Home", ar: "الرئيسية" },
+  landContactEmail: { fr: "contact@fvpocketlab.com", en: "contact@fvpocketlab.com", ar: "contact@fvpocketlab.com" },
+  landContactCta: { fr: "Envoyer un e-mail", en: "Send an email", ar: "أرسل بريداً" },
+
+  landPrivacyP1: {
+    fr: "FV PocketLab est local-first. Les vidéos de sprint et de saut sont traitées sur votre appareil. Nous n'envoyons pas la vidéo brute de test vers nos serveurs dans le flux habituel.",
+    en: "FV PocketLab is local-first. Sprint and jump videos are processed on your device. We do not upload raw test video to our servers as part of the default workflow.",
+    ar: "FV PocketLab محلي أولاً. تُعالَج فيديوهات العدو والقفز على جهازك. لا نرفع فيديو الاختبار الخام إلى خوادمنا في المسار الاعتيادي.",
+  },
+  landPrivacyP2: {
+    fr: "Lorsque vous créez un compte, nous enregistrons votre e-mail et votre profil via Supabase pour vous connecter sur cet appareil et sur d'autres.",
+    en: "When you create an account, we store your email and profile with Supabase so you can sign in on this device and others.",
+    ar: "عند إنشاء حساب، نخزّن بريدك وملفك عبر Supabase حتى تتمكن من تسجيل الدخول على هذا الجهاز وغيره.",
+  },
+  landPrivacyP3: {
+    fr: "Si vous passez en Pro ou Lifetime, Creem traite le paiement. Nous recevons l'état de l'abonnement pour débloquer les fonctions. Nous ne stockons pas le numéro complet de votre carte.",
+    en: "If you subscribe to Pro or Lifetime, Creem processes payment. We receive plan status so we can unlock features. We do not store your full card number.",
+    ar: "إذا اشتركت في برو أو مدى الحياة، يعالج Creem الدفع. نتلقى حالة الخطة لفتح الميزات. لا نخزّن رقم بطاقتك كاملاً.",
+  },
+  landPrivacyP4: {
+    fr: "La sauvegarde Pro stocke votre roster et vos tests dans un fichier privé lié à votre compte, pour les restaurer sur un autre appareil.",
+    en: "Pro account backup stores your roster and test data in a private file tied to your account so you can restore it on another device.",
+    ar: "يحفظ النسخ الاحتياطي لبرو قائمتك واختباراتك في ملف خاص مربوط بحسابك لاستعادتها على جهاز آخر.",
+  },
+  landPrivacyP5: {
+    fr: "Pour une question ou une demande de suppression de vos données, utilisez Contactez-nous.",
+    en: "To ask a question or request deletion of your account data, use Contact us.",
+    ar: "للأسئلة أو لطلب حذف بيانات حسابك، استخدم اتصل بنا.",
+  },
+
+  landTermsP1: {
+    fr: "FV PocketLab est un outil d'entraînement pour coachs et athlètes. Ce n'est pas un avis médical et il ne diagnostique ni ne traite une blessure.",
+    en: "FV PocketLab is a training tool for coaches and athletes. It is not medical advice and does not diagnose or treat injury.",
+    ar: "FV PocketLab أداة تدريب للمدربين والرياضيين. ليست استشارة طبية ولا تشخّص الإصابة ولا تعالجها.",
+  },
+  landTermsP2: {
+    fr: "Vous êtes responsable de l'usage des résultats avec vos athlètes, et du consentement lorsque vous filmez des personnes.",
+    en: "You are responsible for how you use results with your athletes, and for consent when you record people.",
+    ar: "أنت مسؤول عن استخدام النتائج مع رياضيك، وعن الموافقة عند تصوير أشخاص.",
+  },
+  landTermsP3: {
+    fr: "Les formules gratuite et payantes n'ont pas les mêmes limites. Le paiement passe par Creem. Un abonnement se renouvelle jusqu'à résiliation.",
+    en: "Free and paid plans have different limits. Paid checkout is handled by Creem. Subscriptions renew until you cancel.",
+    ar: "للخطط المجانية والمدفوعة حدود مختلفة. يتم الدفع عبر Creem. يتجدد الاشتراك حتى تلغيه.",
+  },
+  landTermsP4: {
+    fr: "N'abusez pas du service : pas d'accès non autorisé, pas d'usage des données d'autrui, pas d'usage illégal de l'application.",
+    en: "Do not misuse the service: no unauthorized access, no abuse of other people's data, and no using the app to break the law.",
+    ar: "لا تُسئ استخدام الخدمة: لا وصول غير مصرّح، ولا إساءة لبيانات الآخرين، ولا استخدام يخالف القانون.",
+  },
+  landTermsP5: {
+    fr: "Nous pouvons mettre à jour ces conditions. Continuer à utiliser l'application après un changement vaut acceptation.",
+    en: "We may update these terms. Continued use after a change means you accept the new terms.",
+    ar: "قد نحدّث هذه الشروط. استمرار الاستخدام بعد التغيير يعني قبولك لها.",
+  },
+
+  landContactP1: {
+    fr: "Une question sur le produit, le paiement ou vos données ? Écrivez-nous.",
+    en: "Questions about the product, billing, or your data? Write to us.",
+    ar: "أسئلة عن المنتج أو الدفع أو بياناتك؟ راسلنا.",
   },
 } as const;
 

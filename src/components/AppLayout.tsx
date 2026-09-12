@@ -29,6 +29,7 @@ import { syncPushNow, syncPullNow, syncBothNow } from "@/lib/sync/manager";
 import { maybeAutoRestore } from "@/lib/sync/autoRestore";
 import { resetOnboarding } from "@/lib/onboarding";
 import type { PlanId, PlanStatus } from "@/lib/plan";
+import { UPGRADE_EVENT } from "@/lib/upgradePrompt";
 
 import { cn } from "@/lib/utils";
 
@@ -109,6 +110,20 @@ export default function AppLayout() {
       }
     })();
   }, [searchParams, setSearchParams, user, refreshEntitlements, t]);
+
+  useEffect(() => {
+    const open = () => setSettingsOpen(true);
+    window.addEventListener(UPGRADE_EVENT, open);
+    return () => window.removeEventListener(UPGRADE_EVENT, open);
+  }, []);
+
+  useEffect(() => {
+    if (searchParams.get("upgrade") !== "1") return;
+    setSettingsOpen(true);
+    const next = new URLSearchParams(searchParams);
+    next.delete("upgrade");
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   const refreshSyncUi = () => {
     const cfg = getPublicConfig();

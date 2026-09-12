@@ -1,9 +1,11 @@
 import { Link, useSearchParams } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, type MouseEvent } from "react";
 import { ArrowLeft } from "lucide-react";
 import logoJump from "@/assets/logo-jump-neon.png";
 import logoSprint from "@/assets/logo-sprint-neon.png";
+import { canSaveTest } from "@/lib/freeLimits";
 import { useSettings } from "@/lib/settings";
+import { notifyFreeLimit } from "@/lib/upgradePrompt";
 
 export default function NewTest() {
   const [params] = useSearchParams();
@@ -22,6 +24,13 @@ export default function NewTest() {
     });
   }, []);
 
+  const guardAthlete = (e: MouseEvent) => {
+    if (athleteId && !canSaveTest(athleteId)) {
+      e.preventDefault();
+      notifyFreeLimit(t, "test");
+    }
+  };
+
   return (
     <div className="space-y-6">
       <Link to="/app" className="inline-flex items-center text-xs text-muted-foreground hover:text-foreground">
@@ -34,7 +43,11 @@ export default function NewTest() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <Link to={`/app/tests/new/jump${qs}`} className="glass-card engraved-surface overflow-hidden group hover:border-primary/40 transition-colors bg-gradient-to-br from-primary/10 to-transparent">
+        <Link
+          to={`/app/tests/new/jump${qs}`}
+          onClick={guardAthlete}
+          className="glass-card engraved-surface overflow-hidden group hover:border-primary/40 transition-colors bg-gradient-to-br from-primary/10 to-transparent"
+        >
           <div className="p-4 flex items-center gap-4">
             <div className="logo-well flex-shrink-0 flex items-center justify-center h-28 w-28 p-2">
               <img src={logoJump} alt={t("verticalJump")} loading="eager" decoding="async" fetchPriority="high" className="engraved-logo h-full w-full object-contain" />
@@ -46,7 +59,11 @@ export default function NewTest() {
           </div>
         </Link>
 
-        <Link to={`/app/tests/new/sprint${qs}`} className="glass-card engraved-surface overflow-hidden group hover:border-primary/40 transition-colors bg-gradient-to-br from-primary/10 to-transparent">
+        <Link
+          to={`/app/tests/new/sprint${qs}`}
+          onClick={guardAthlete}
+          className="glass-card engraved-surface overflow-hidden group hover:border-primary/40 transition-colors bg-gradient-to-br from-primary/10 to-transparent"
+        >
           <div className="p-4 flex items-center gap-4">
             <div className="logo-well flex-shrink-0 flex items-center justify-center h-28 w-28 p-2">
               <img src={logoSprint} alt={t("linearSprint")} loading="eager" decoding="async" fetchPriority="high" className="engraved-logo h-full w-full object-contain" />

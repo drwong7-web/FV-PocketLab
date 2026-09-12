@@ -5,6 +5,8 @@ import logoSprint from "@/assets/logo-sprint-neon.png";
 import { Button } from "@/components/ui/button";
 import { useSettings, type TKey } from "@/lib/settings";
 import { cn } from "@/lib/utils";
+import { CenterFlickerTitle } from "./CenterFlickerTitle";
+import { HeroFVProfiles } from "./HeroFVProfiles";
 
 const FIELD: { key: TKey; className: string; delay: string }[] = [
   { key: "landVerbProfile", className: "top-[6%] left-[4%] text-xl sm:text-3xl", delay: "0s" },
@@ -57,13 +59,37 @@ export function LandingHero() {
         <div className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
           <div className="space-y-6 text-center lg:text-start">
             <div className="flex justify-center lg:justify-start">
-              <div className="logo-well inline-flex h-20 w-20 items-center justify-center p-2">
-                <img src={fvLogo} alt="" className="engraved-logo h-full w-full object-contain" />
+              <div className="inline-flex items-center gap-2">
+                <div className="logo-well inline-flex h-20 w-20 items-center justify-center p-2">
+                  <img
+                    src={fvLogo}
+                    alt=""
+                    className="engraved-logo h-full w-full object-contain animate-landing-letter motion-reduce:animate-none"
+                    style={{ animationDelay: "0s" }}
+                  />
+                </div>
+                <span className="font-display text-2xl tracking-tight inline-flex" aria-label="PocketLab">
+                  {Array.from("PocketLab").map((ch, i) => (
+                    <span
+                      key={`${ch}-${i}`}
+                      className="inline-block animate-landing-letter motion-reduce:animate-none"
+                      style={{ animationDelay: `${(i + 1) * 0.14}s` }}
+                      aria-hidden
+                    >
+                      {ch}
+                    </span>
+                  ))}
+                </span>
               </div>
             </div>
-            <h1 className="font-display text-4xl sm:text-5xl lg:text-[3.25rem] leading-[1.1] tracking-tight">
-              {t("landHeroTitle")}
-            </h1>
+            <CenterFlickerTitle
+              as="h1"
+              text={t("landHeroTitle")}
+              className="font-display text-4xl sm:text-5xl lg:text-[3.25rem] leading-[1.1] tracking-tight"
+            />
+            <p className="text-muted-foreground text-center lg:text-start mt-3 max-w-xl mx-auto lg:mx-0">
+              {t("landHeroSub")}
+            </p>
             <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3">
               <Button asChild size="lg">
                 <a href="#pricing">
@@ -75,34 +101,10 @@ export function LandingHero() {
           </div>
 
           <div className="glass-card p-5 sm:p-6 bg-gradient-to-br from-primary/10 to-transparent shadow-elevated">
-            <div className="grid grid-cols-3 gap-3">
-              <MockMetric label="F0" value="7.82" unit="N/kg" className="text-force" />
-              <MockMetric label="V0" value="9.41" unit="m/s" className="text-velocity" />
-              <MockMetric label="Pmax" value="18.4" unit="W/kg" className="text-primary" />
-            </div>
+            <HeroFVProfiles />
           </div>
         </div>
       </div>
     </section>
-  );
-}
-
-function MockMetric({
-  label,
-  value,
-  unit,
-  className,
-}: {
-  label: string;
-  value: string;
-  unit: string;
-  className?: string;
-}) {
-  return (
-    <div className="rounded-xl border border-border/60 bg-background/30 p-3">
-      <p className={cn("section-label", className)}>{label}</p>
-      <p className="metric-value text-xl mt-1">{value}</p>
-      <p className="text-[10px] uppercase tracking-widest text-muted-foreground mt-0.5">{unit}</p>
-    </div>
   );
 }

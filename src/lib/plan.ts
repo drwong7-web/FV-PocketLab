@@ -39,18 +39,44 @@ export const FREE_ENTITLEMENTS: Entitlements = {
 };
 
 /**
- * Feature ceilings for the free tier. Nothing enforces these yet — wire them up
- * together with the ad placements once those are specified.
+ * Feature ceilings for the free tier. Enforced client-side on create
+ * (`src/lib/freeLimits.ts`, `storage.ts`, `localHistory.ts`). Paid `fullAccess` skips them.
  */
 export const FREE_LIMITS = {
   maxTeams: 1,
-  maxAthletesPerTeam: 10,
-  maxTestsPerMonth: 10,
+  maxAthletesPerTeam: 3,
+  maxTestsPerAthletePerMonth: 3,
   videoAnalysis: true,
   pdfExport: false,
   docxExport: false,
+  athleteImport: false,
   cloudSync: false,
 } as const;
+
+export type FreeLimitReason = "team" | "athlete" | "test" | "export" | "import";
+
+export class FreeLimitError extends Error {
+  reason: FreeLimitReason;
+  constructor(reason: FreeLimitReason) {
+    super(reason);
+    this.name = "FreeLimitError";
+    this.reason = reason;
+  }
+}
+
+export function isFreeLimitError(e: unknown): e is FreeLimitError {
+  return e instanceof FreeLimitError;
+}
+
+export function isPaidUser(userId: string | null | undefined): boolean {
+  if (!userId) return false;
+  return !!readCachedEntitlements(userId)?.fullAccess;
+}
+
+export function isInCurrentCalendarMonth(ms: number, now = new Date()): boolean {
+  const d = new Date(ms);
+  return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+}
 
 /** Client mirror of the `has_full_access` SQL function. */
 export function deriveFullAccess(

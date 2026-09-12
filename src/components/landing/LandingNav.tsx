@@ -1,7 +1,14 @@
 import { useEffect, useState } from "react";
-import { Menu, X } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Globe, Menu, X } from "lucide-react";
 import fvLogo from "@/assets/fv-logo.png";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import InstallModal from "@/components/pwa/InstallModal";
 import { toast } from "@/hooks/use-toast";
 import {
@@ -64,7 +71,7 @@ export function LandingNav() {
         <nav className="hidden md:flex items-center gap-1 mx-auto" aria-label="Landing">
           {NAV.map((item) => (
             <a
-              key={item.href}
+              key={item.key}
               href={item.href}
               className="inline-flex min-h-11 items-center rounded-xl px-3 text-sm text-muted-foreground hover:text-foreground hover:bg-primary/10 transition-colors"
             >
@@ -74,6 +81,28 @@ export function LandingNav() {
         </nav>
 
         <div className="ms-auto flex items-center gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className="sm:hidden inline-flex h-11 w-11 items-center justify-center rounded-xl border border-border hover:bg-primary/10"
+                aria-label={t("landLangMenu")}
+              >
+                <Globe className="h-4 w-4" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {LANGS.map((l) => (
+                <DropdownMenuItem
+                  key={l.code}
+                  onClick={() => setLang(l.code)}
+                  className={cn(lang === l.code && "bg-primary/10 text-primary")}
+                >
+                  {l.native}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
           <div className="hidden sm:flex items-center rounded-lg border border-border bg-background/40 p-0.5">
             {LANGS.map((l) => (
               <button
@@ -111,27 +140,9 @@ export function LandingNav() {
 
       {open && (
         <div className="md:hidden border-t border-border/60 bg-background/95 px-4 py-3 space-y-1">
-          <div className="flex sm:hidden items-center gap-1 pb-2">
-            {LANGS.map((l) => (
-              <button
-                key={l.code}
-                type="button"
-                onClick={() => setLang(l.code)}
-                aria-pressed={lang === l.code}
-                className={cn(
-                  "min-h-11 flex-1 rounded-lg border text-sm font-medium transition-colors",
-                  lang === l.code
-                    ? "border-primary bg-primary/10 text-primary"
-                    : "border-border text-muted-foreground"
-                )}
-              >
-                {l.native}
-              </button>
-            ))}
-          </div>
           {NAV.map((item) => (
             <a
-              key={item.href}
+              key={item.key}
               href={item.href}
               onClick={() => setOpen(false)}
               className="flex min-h-11 items-center rounded-xl px-3 text-sm text-foreground hover:bg-primary/10"
@@ -139,6 +150,13 @@ export function LandingNav() {
               {t(item.key)}
             </a>
           ))}
+          <Link
+            to="/contact"
+            onClick={() => setOpen(false)}
+            className="flex min-h-11 items-center rounded-xl px-3 text-sm text-foreground hover:bg-primary/10"
+          >
+            {t("landFooterContact")}
+          </Link>
         </div>
       )}
       {modalOpen && <InstallModal open={modalOpen} onClose={() => setModalOpen(false)} />}

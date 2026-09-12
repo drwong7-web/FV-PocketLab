@@ -4,7 +4,11 @@ import { CoachMark } from "@/components/onboarding/CoachMark";
 import { getTourStep, setTourStep } from "@/lib/onboardingTour";
 import { ChevronRight, Plus, Trash2, Users } from "lucide-react";
 import { useAuth } from "@/lib/auth";
+import { canCreateTeam } from "@/lib/freeLimits";
+import { isFreeLimitError } from "@/lib/plan";
+import { notifyFreeLimit } from "@/lib/upgradePrompt";
 import { createTeam, deleteTeam, listPlayers, listTeams } from "@/lib/storage";
+import { ImagePicker } from "@/components/ImagePicker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -36,6 +40,7 @@ export default function Teams() {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [sport, setSport] = useState("");
+  const [logoDataUrl, setLogoDataUrl] = useState<string | undefined>(undefined);
   const [, force] = useState(0);
   const newBtnRef = useRef<HTMLButtonElement>(null);
   const [showCoach, setShowCoach] = useState(false);
@@ -47,19 +52,29 @@ export default function Teams() {
   if (!user) return <div className="min-h-[60vh]" aria-hidden />;
   const teams = listTeams(user.organizationId);
   const allPlayers = listPlayers(undefined, user.organizationId);
+  const allowNewTeam = canCreateTeam(user.organizationId);
 
   const onCreate = (e: FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
-    const team = createTeam(user.organizationId, name.trim(), sport || undefined);
-    setName(""); setSport(""); setOpen(false);
-    force((n) => n + 1);
-    toast.success(t("teamCreated"));
-    if (getTourStep() === "team-create") {
-      setShowCoach(false);
-      setTourStep("player-add");
-      const id = (team as any)?.id;
-      if (id) navigate(`/app/teams/${id}`);
+    try {
+      const team = createTeam(user.organizationId, name.trim(), sport || undefined, logoDataUrl);
+      setName(""); setSport(""); setLogoDataUrl(undefined); setOpen(false);
+      force((n) => n + 1);
+      toast.success(t("teamCreated"));
+      if (getTourStep() === "team-create") {
+        setShowCoach(false);
+        setTourStep("player-add");
+        const id = (team as any)?.id;
+        if (id) navigate(`/app/teams/${id}`);
+      }
+    } catch (err) {
+      if (isFreeLimitError(err)) {
+        notifyFreeLimit(t, err.reason);
+        setOpen(false);
+        return;
+      }
+      throw err;
     }
   };
 
@@ -70,9 +85,23 @@ export default function Teams() {
           <h1 className="text-2xl font-bold tracking-tight">{t("teams")}</h1>
           <p className="text-sm text-muted-foreground">{t("teamsSubtitle")}</p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog
+          open={open}
+          onOpenChange={(v) => {
+            if (v && !allowNewTeam) {
+              notifyFreeLimit(t, "team");
+              return;
+            }
+            if (!v) { setName(""); setSport(""); setLogoDataUrl(undefined); }
+            setOpen(v);
+          }}
+        >
           <DialogTrigger asChild>
-            <Button ref={newBtnRef} className="bg-gradient-primary text-primary-foreground font-bold uppercase tracking-wide">
+            <Button
+              ref={newBtnRef}
+              disabled={!allowNewTeam}
+              className="bg-gradient-primary text-primary-foreground font-bold uppercase tracking-wide"
+            >
               <Plus className="w-4 h-4 mr-1 stroke-[3]" /> {t("new")}
             </Button>
           </DialogTrigger>
@@ -116,6 +145,18 @@ export default function Teams() {
                   </SelectContent>
                 </Select>
               </div>
+              <div>
+                <Label>{t("teamLogo")}</Label>
+                <div className="mt-2">
+                  <ImagePicker
+                    value={logoDataUrl}
+                    onChange={setLogoDataUrl}
+                    label={t("teamLogo")}
+                    shape="square"
+                    size="md"
+                  />
+                </div>
+              </div>
               <Button type="submit" className="w-full bg-gradient-primary text-primary-foreground font-semibold">{t("create")}</Button>
             </form>
           </DialogContent>
@@ -138,10 +179,19 @@ export default function Teams() {
                 to={`/app/teams/${tm.id}`}
                 className="glass-card p-5 flex items-center justify-between group hover:border-primary/40 transition-colors bg-gradient-to-br from-primary/10 to-transparent"
               >
-                <div>
-                  <div className="font-semibold">{tm.name}</div>
-                  <div className="text-xs text-muted-foreground mt-0.5">
-                    {sportLabel ? sportLabel + " · " : ""}{count} {count === 1 ? t("player").toLowerCase() : t("players").toLowerCase()}
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="h-12 w-12 rounded-2xl overflow-hidden shrink-0 border border-border/60 bg-secondary/50 flex items-center justify-center">
+                    {tm.logoDataUrl ? (
+                      <img src={tm.logoDataUrl} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      <Users className="h-5 w-5 text-primary" />
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="font-semibold truncate">{tm.name}</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                      {sportLabel ? sportLabel + " · " : ""}{count} {count === 1 ? t("player").toLowerCase() : t("players").toLowerCase()}
+                    </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-1">

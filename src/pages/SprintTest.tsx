@@ -27,6 +27,9 @@ import { CameraTimer } from "@/components/camera/CameraTimer";
 import { SprintVideoAnalyzer } from "@/components/camera/SprintVideoAnalyzer";
 import { saveLocalTest, consumeTestDraft } from "@/lib/localHistory";
 import { useSettings } from "@/lib/settings";
+import { canSaveTest, freeLimitKey } from "@/lib/freeLimits";
+import { isFreeLimitError } from "@/lib/plan";
+import { notifyFreeLimit } from "@/lib/upgradePrompt";
 
 type SplitRow = SprintSplit & {
   source?: "manual" | "video" | "ai";
@@ -164,6 +167,11 @@ export default function SprintTest() {
     const h = parseFloat(height);
     const valid = splits.filter((s) => s.time > 0 && s.distance > 0);
     if (valid.length < 3 || !mass || !h) { setError(t("needSplits")); return; }
+    if (!canSaveTest(athleteId)) {
+      notifyFreeLimit(t, "test");
+      setError(t("freeLimitTests"));
+      return;
+    }
 
     setBusy(true);
     try {
@@ -199,8 +207,13 @@ export default function SprintTest() {
       });
       navigate(`/app/tests/${local.id}`);
     } catch (e) {
-      setError((e as Error).message);
-      toast.error((e as Error).message);
+      if (isFreeLimitError(e)) {
+        setError(t(freeLimitKey(e.reason)));
+        notifyFreeLimit(t, e.reason);
+      } else {
+        setError((e as Error).message);
+        toast.error((e as Error).message);
+      }
     } finally {
       setBusy(false);
     }

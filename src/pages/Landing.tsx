@@ -1,6 +1,5 @@
 import { LandingNav } from "@/components/landing/LandingNav";
 import { LandingHero } from "@/components/landing/LandingHero";
-import { LandingValue } from "@/components/landing/LandingValue";
 import { LandingAudience } from "@/components/landing/LandingAudience";
 import { LandingProtocols } from "@/components/landing/LandingProtocols";
 import { LandingFeatures } from "@/components/landing/LandingFeatures";
@@ -14,7 +13,6 @@ export default function Landing() {
       <LandingNav />
       <main>
         <LandingHero />
-        <LandingValue />
         <LandingAudience />
         <LandingProtocols />
         <LandingFeatures />

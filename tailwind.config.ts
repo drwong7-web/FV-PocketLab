@@ -98,16 +98,28 @@ export default {
         },
         "pulse-glow": { "0%,100%": { boxShadow: "0 0 0 0 hsl(var(--primary)/0.4)" }, "50%": { boxShadow: "0 0 20px 4px hsl(var(--primary)/0.2)" } },
         "landing-marquee": {
-          from: { transform: "translateX(0)" },
-          to: { transform: "translateX(-50%)" },
+          from: { transform: "translate3d(0,0,0)" },
+          to: { transform: "translate3d(-50%,0,0)" },
         },
         "landing-verb": {
           "0%, 100%": { opacity: "0.18" },
           "45%, 55%": { opacity: "0.7" },
         },
+        "landing-letter": {
+          "0%, 100%": { opacity: "0.42" },
+          "40%, 55%": { opacity: "1" },
+        },
         "landing-reveal": {
           from: { opacity: "0", transform: "translateY(16px)" },
           to: { opacity: "1", transform: "translateY(0)" },
+        },
+        "landing-word-squeeze-in": {
+          from: { opacity: "0", transform: "perspective(420px) rotateY(-80deg) scaleX(0.12)" },
+          to: { opacity: "1", transform: "perspective(420px) rotateY(0deg) scaleX(1)" },
+        },
+        "landing-word-squeeze-out": {
+          from: { opacity: "1", transform: "perspective(420px) rotateY(0deg) scaleX(1)" },
+          to: { opacity: "0", transform: "perspective(420px) rotateY(80deg) scaleX(0.12)" },
         },
       },
       animation: {
@@ -118,7 +130,10 @@ export default {
         "pulse-glow": "pulse-glow 2.4s ease-in-out infinite",
         "landing-marquee": "landing-marquee 28s linear infinite",
         "landing-verb": "landing-verb 5.6s ease-in-out infinite",
+        "landing-letter": "landing-letter 2.8s ease-in-out infinite",
         "landing-reveal": "landing-reveal 0.7s cubic-bezier(0.22, 1, 0.36, 1) both",
+        "landing-word-squeeze-in": "landing-word-squeeze-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both",
+        "landing-word-squeeze-out": "landing-word-squeeze-out 0.55s cubic-bezier(0.22, 1, 0.36, 1) both",
       },
     },
   },

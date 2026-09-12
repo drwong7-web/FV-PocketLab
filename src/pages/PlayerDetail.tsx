@@ -1,13 +1,16 @@
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useState, type MouseEvent } from "react";
 import { useAuth } from "@/lib/auth";
-import { deleteTest, getPlayer, getTeam } from "@/lib/storage";
+import { deleteTest, getPlayer, getTeam, updatePlayer } from "@/lib/storage";
+import { ImagePicker } from "@/components/ImagePicker";
 import { listUnifiedTests } from "@/lib/unifiedTests";
 import { deleteLocalTest } from "@/lib/localHistory";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useSettings } from "@/lib/settings";
+import { canSaveTest } from "@/lib/freeLimits";
+import { notifyFreeLimit } from "@/lib/upgradePrompt";
 
 export default function PlayerDetail() {
   const { playerId = "" } = useParams();
@@ -26,6 +29,14 @@ export default function PlayerDetail() {
   }
   const team = getTeam(player.teamId);
   const tests = listUnifiedTests(user.organizationId, player.id);
+  const allowNewTest = canSaveTest(player.id);
+
+  const guardNewTest = (e: MouseEvent) => {
+    if (!allowNewTest) {
+      e.preventDefault();
+      notifyFreeLimit(t, "test");
+    }
+  };
 
   return (
     <div className="space-y-5">
@@ -34,16 +45,24 @@ export default function PlayerDetail() {
       </Link>
 
       <div className="flex items-center gap-4">
-        <div className="w-14 h-14 rounded-2xl bg-gradient-primary flex items-center justify-center text-primary-foreground font-bold text-xl shadow-glow">
-          {player.firstName[0]}{player.lastName[0]}
-        </div>
-        <div className="flex-1">
-          <h1 className="text-xl font-bold tracking-tight">{player.firstName} {player.lastName}</h1>
+        <div className="flex-1 min-w-0">
+          <ImagePicker
+            value={player.photoDataUrl}
+            onChange={(url) => {
+              updatePlayer(player.id, { photoDataUrl: url });
+              force((n) => n + 1);
+            }}
+            label={t("athletePhoto")}
+            fallback={`${player.firstName[0]}${player.lastName[0]}`}
+            shape="circle"
+            size="lg"
+          />
+          <h1 className="text-xl font-bold tracking-tight mt-3">{player.firstName} {player.lastName}</h1>
           <p className="text-xs text-muted-foreground">
             {player.mass} kg{player.height ? ` · ${player.height} cm` : ""}
           </p>
         </div>
-        <Link to={`/app/tests/new?playerId=${player.id}`}>
+        <Link to={`/app/tests/new?playerId=${player.id}`} onClick={guardNewTest}>
           <Button className="bg-gradient-primary text-primary-foreground font-semibold">
             {t("test")}
           </Button>
@@ -58,7 +77,7 @@ export default function PlayerDetail() {
         {tests.length === 0 ? (
           <div className="glass-card p-8 text-center">
             <p className="text-sm text-muted-foreground">{t("noTestsYet")}</p>
-            <Link to={`/app/tests/new?playerId=${player.id}`}>
+            <Link to={`/app/tests/new?playerId=${player.id}`} onClick={guardNewTest}>
               <Button className="mt-3 bg-gradient-primary text-primary-foreground font-bold uppercase tracking-wide">
                 <Plus className="w-4 h-4 mr-1 stroke-[3]" /> {t("newTest")}
               </Button>
