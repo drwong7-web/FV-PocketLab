@@ -87,9 +87,10 @@ export function LandingHero() {
               text={t("landHeroTitle")}
               className="font-display text-4xl sm:text-5xl lg:text-[3.25rem] leading-[1.1] tracking-tight"
             />
-            <p className="text-muted-foreground text-center lg:text-start mt-3 max-w-xl mx-auto lg:mx-0">
-              {t("landHeroSub")}
-            </p>
+            <div className="text-muted-foreground text-center lg:text-start max-w-xl mx-auto lg:mx-0 leading-snug">
+              <p>{t("landHeroSub")}</p>
+              <p>{t("landHeroSub2")}</p>
+            </div>
             <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3">
               <Button asChild size="lg">
                 <a href="#pricing">

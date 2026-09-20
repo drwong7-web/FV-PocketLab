@@ -746,7 +746,7 @@ const TR = {
 
   // ---- Marketing landing ----
   landNavFeatures: { fr: "Fonctionnalités", en: "Features", ar: "المزايا" },
-  landNavHow: { fr: "Méthode", en: "How it works", ar: "كيف يعمل" },
+  landNavHow: { fr: "Valeur ajoutée", en: "Added value", ar: "قيمة مضافة" },
   landNavPricing: { fr: "Tarifs", en: "Pricing", ar: "الأسعار" },
   landMenu: { fr: "Menu", en: "Menu", ar: "القائمة" },
   landCloseMenu: { fr: "Fermer le menu", en: "Close menu", ar: "إغلاق القائمة" },
@@ -774,6 +774,11 @@ const TR = {
     fr: "N'importe quand, n'importe où, le profilage de performance n'a jamais été aussi simple.",
     en: "Anytime, anywhere, performance profiling has never been easier.",
     ar: "في أي وقت وأي مكان، لم يكن تحليل الأداء أسهل من الآن.",
+  },
+  landHeroSub2: {
+    fr: "Aidez vos athlètes à libérer tout leur potentiel.",
+    en: "Help your athletes to unlock their full potential",
+    ar: "ساعد رياضيك على إطلاق كامل إمكاناتهم.",
   },
   landHeroFvForceTitle: {
     fr: "Développement de la puissance force",
@@ -825,9 +830,9 @@ const TR = {
   },
   landProtoReportTitle: { fr: "Rapports de test", en: "Test reports", ar: "تقارير الاختبار" },
   landProtoReportBody: {
-    fr: "PDF et document Word prêts à modifier et envoyer (formules Pro).",
-    en: "PDF and word document ready to edit and send (Pro plans)",
-    ar: "PDF ومستند Word جاهزان للتحرير والإرسال (خطط برو).",
+    fr: "PDF et document Word prêts à modifier et partager (formules Pro).",
+    en: "PDF and word document ready to edit and share (Pro plans)",
+    ar: "PDF ومستند Word جاهزان للتحرير والمشاركة (خطط برو).",
   },
 
   landFeatOverline: { fr: "Fonctionnalités", en: "Features", ar: "المزايا" },
@@ -836,29 +841,29 @@ const TR = {
     en: "Why choosing FV PocketLab ?",
     ar: "لماذا تختار FV PocketLab ؟",
   },
-  landFeatVideoTitle: { fr: "Analyse vidéo sur l'appareil", en: "On-device video analysis", ar: "تحليل فيديو على الجهاز" },
+  landFeatVideoTitle: { fr: "Analyse vidéo IA", en: "AI video analysis", ar: "تحليل فيديو بالذكاء الاصطناعي" },
   landFeatVideoBody: {
-    fr: "Pose, splits et hauteur de saut se calculent dans le navigateur. Rien n'est envoyé pour être analysé ailleurs.",
-    en: "Pose, splits, and jump height are computed in the browser. Nothing is sent away to be analyzed.",
-    ar: "يُحسب الوضع والأزمنة وارتفاع القفز في المتصفح. لا يُرسل شيء لتحليله في مكان آخر.",
+    fr: "Analyse vidéo assistée par l'IA pour plus de précision, de simplicité et une meilleure qualité.",
+    en: "Video analysis powered by AI for more precision, simplicity and better quality",
+    ar: "تحليل فيديو مدعوم بالذكاء الاصطناعي لمزيد من الدقة والبساطة وجودة أفضل.",
   },
-  landFeatLocalTitle: { fr: "Local d'abord", en: "Local-first", ar: "محلي أولاً" },
+  landFeatLocalTitle: { fr: "Hors ligne ? Pas de problème", en: "Off-line?\u00a0 No problem", ar: "دون اتصال؟ لا مشكلة" },
   landFeatLocalBody: {
-    fr: "Équipes, athlètes et tests vivent dans IndexedDB. Fermer l'onglet ne les efface pas. Pas de compte cloud obligatoire pour travailler.",
-    en: "Teams, athletes, and tests live in IndexedDB. Closing the tab does not wipe them. You do not need a cloud account to work.",
-    ar: "تعيش الفرق والرياضيون والاختبارات في IndexedDB. إغلاق التبويب لا يمسحها. لا تحتاج حساب سحابة للعمل.",
+    fr: "Fonctionne hors ligne : les équipes, les athlètes et les résultats de tests ne quittent jamais la base de données de votre appareil tant que vous ne choisissez pas de synchroniser.",
+    en: "Works off-line: Teams, athletes and test results never leave your device database until you choose to sync",
+    ar: "يعمل دون اتصال: الفرق والرياضيون ونتائج الاختبارات لا تغادر قاعدة بيانات جهازك حتى تختار المزامنة.",
   },
-  landFeatReportTitle: { fr: "Exports PDF et Word", en: "PDF and Word exports", ar: "تصدير PDF وWord" },
-  landFeatReportBody: {
-    fr: "Un rapport de séance avec profil, graphiques et notes — sur les formules Pro.",
-    en: "A session report with profile, charts, and notes — on Pro plans.",
-    ar: "تقرير جلسة بالملف والرسوم والملاحظات — على خطط برو.",
+  landFeatScienceTitle: { fr: "Fondé sur la science", en: "Science backed", ar: "مدعوم علميًا" },
+  landFeatScienceBody: {
+    fr: "S'appuie sur les études de scientifiques de la performance de rang mondial : Samozino et Morin, Jiménez-Reyes, Cross, Haugen, Slawinski, Giroux...",
+    en: "Based on studies by world class performance scientists: Samozino and Morin, Jiménez-Reyes, Cross, Haugen, Slawinski, Giroux...",
+    ar: "مبني على دراسات لعلماء أداء عالميين: ساموزينو وموران، خيمينيز-رييس، كروس، هوغن، سلافينسكي، جيرو...",
   },
   landFeatBackupTitle: { fr: "Sauvegarde de compte", en: "Account backup", ar: "نسخ احتياطي للحساب" },
   landFeatBackupBody: {
-    fr: "Les formules Pro enregistrent un fichier privé lié au compte pour retrouver le roster sur un autre appareil.",
-    en: "Pro plans store a private file on your account so you can restore the roster on another device.",
-    ar: "تحفظ خطط برو ملفاً خاصاً على حسابك لاستعادة القائمة على جهاز آخر.",
+    fr: "Synchronisation de compte possible sur les formules Pro pour le restaurer sur un autre appareil.",
+    en: "Account synchronisation possible in Pro plans to be able to restore it in another device",
+    ar: "مزامنة الحساب ممكنة في خطط برو لاستعادته على جهاز آخر.",
   },
 
   landPriceOverline: { fr: "Tarifs", en: "Pricing", ar: "الأسعار" },
@@ -917,11 +922,7 @@ const TR = {
     en: "© {y} FV PocketLab. All rights reserved.",
     ar: "© {y} FV PocketLab. جميع الحقوق محفوظة.",
   },
-  landFooterTag: {
-    fr: "Force–velocity profiler — in your pocket",
-    en: "Force–velocity profiler — in your pocket",
-    ar: "محلل القوة-السرعة — في جيبك",
-  },
+  landFooterMethod: { fr: "Méthode", en: "Method", ar: "المنهج" },
   landFooterPrivacy: { fr: "Politique de confidentialité", en: "Privacy Policy", ar: "سياسة الخصوصية" },
   landFooterTerms: { fr: "Conditions d'utilisation", en: "Terms of Service", ar: "شروط الخدمة" },
   landFooterContact: { fr: "Contactez-nous", en: "Contact us", ar: "اتصل بنا" },

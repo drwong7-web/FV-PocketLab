@@ -1,32 +1,36 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 import { FileText } from "lucide-react";
 import logoJump from "@/assets/logo-jump-neon.png";
 import logoSprint from "@/assets/logo-sprint-neon.png";
+import jumpImage from "@/assets/landing/protocol-jump.png";
+import reportImage from "@/assets/landing/protocol-report.png";
+import sprintImage from "@/assets/landing/protocol-sprint.png";
 import { useSettings, type TKey } from "@/lib/settings";
 import { LandingSection } from "./LandingSection";
 
-const PROTOCOLS: { title: TKey; body: TKey; visual: ReactNode }[] = [
+const PROTOCOLS: {
+  title: TKey;
+  body: TKey;
+  image: string;
+  objectPosition: string;
+}[] = [
   {
     title: "landProtoSprintTitle",
     body: "landProtoSprintBody",
-    visual: (
-      <img src={logoSprint} alt="" className="engraved-logo h-full w-full object-contain" />
-    ),
+    image: sprintImage,
+    objectPosition: "68% center",
   },
   {
     title: "landProtoJumpTitle",
     body: "landProtoJumpBody",
-    visual: <img src={logoJump} alt="" className="engraved-logo h-full w-full object-contain" />,
+    image: jumpImage,
+    objectPosition: "68% center",
   },
   {
     title: "landProtoReportTitle",
     body: "landProtoReportBody",
-    visual: (
-      <FileText
-        className="engraved-logo h-[85%] w-[85%] text-primary-glow"
-        strokeWidth={1.15}
-      />
-    ),
+    image: reportImage,
+    objectPosition: "70% center",
   },
 ];
 
@@ -76,16 +80,33 @@ export function LandingProtocols() {
       <p className="section-label text-center">{t("landFeatOverline")}</p>
       <RotatingTitle />
       <div className="mt-8 grid gap-4 md:grid-cols-3">
-        {PROTOCOLS.map(({ title, body, visual }) => (
+        {PROTOCOLS.map(({ title, body, image, objectPosition }) => (
           <article
             key={title}
-            className="glass-card p-5 bg-gradient-to-br from-primary/10 to-transparent hover:border-primary/40 transition-colors"
+            className="glass-card relative isolate flex min-h-[18rem] flex-col justify-end overflow-hidden p-5 hover:border-primary/40 transition-colors"
           >
-            <div className="logo-well inline-flex h-24 w-24 items-center justify-center p-2">
-              {visual}
+            <img
+              src={image}
+              alt=""
+              aria-hidden="true"
+              loading="lazy"
+              decoding="async"
+              className="absolute inset-0 -z-20 h-full w-full scale-[1.02] object-cover opacity-80 rtl:-scale-x-[1.02]"
+              style={{ objectPosition }}
+            />
+            <div
+              aria-hidden="true"
+              className="absolute inset-0 -z-10 bg-gradient-to-r from-background/55 via-background/25 to-transparent rtl:bg-gradient-to-l"
+            />
+            <div
+              aria-hidden="true"
+              className="absolute inset-0 -z-10 bg-gradient-to-t from-background via-background/80 to-transparent"
+            />
+
+            <div className="relative z-10 max-w-[92%] sm:max-w-[86%]">
+              <h3 className="font-display text-lg">{t(title)}</h3>
+              <p className="text-sm text-muted-foreground mt-2 leading-relaxed">{t(body)}</p>
             </div>
-            <h3 className="font-display text-lg mt-4">{t(title)}</h3>
-            <p className="text-sm text-muted-foreground mt-2 leading-relaxed">{t(body)}</p>
           </article>
         ))}
       </div>
