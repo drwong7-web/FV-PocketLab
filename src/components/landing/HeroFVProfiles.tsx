@@ -5,26 +5,31 @@ type Kind = "force" | "velocity";
 
 export function HeroFVProfiles() {
   const { t } = useSettings();
+  const cardClass =
+    "glass-card p-5 sm:p-6 bg-gradient-to-br from-primary/10 to-transparent shadow-elevated hover:border-primary/40 transition-colors";
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-      <Panel
-        kind="force"
-        className="hidden sm:block"
-        title={t("landHeroFvForceTitle")}
-        forceLabel={t("forceNkg")}
-        velocityLabel={t("velocityMs")}
-        athlete={t("landHeroFvAthlete")}
-        optimal={t("landHeroFvOptimal")}
-      />
-      <Panel
-        kind="velocity"
-        title={t("landHeroFvSpeedTitle")}
-        forceLabel={t("forceNkg")}
-        velocityLabel={t("velocityMs")}
-        athlete={t("landHeroFvAthlete")}
-        optimal={t("landHeroFvOptimal")}
-      />
+    <div className="mx-auto grid w-full max-w-3xl gap-4 sm:grid-cols-2">
+      <article className={cardClass}>
+        <Panel
+          kind="force"
+          title={t("landHeroFvForceTitle")}
+          forceLabel={t("forceNkg")}
+          velocityLabel={t("velocityMs")}
+          athlete={t("landHeroFvAthlete")}
+          optimal={t("landHeroFvOptimal")}
+        />
+      </article>
+      <article className={cardClass}>
+        <Panel
+          kind="velocity"
+          title={t("landHeroFvSpeedTitle")}
+          forceLabel={t("forceNkg")}
+          velocityLabel={t("velocityMs")}
+          athlete={t("landHeroFvAthlete")}
+          optimal={t("landHeroFvOptimal")}
+        />
+      </article>
     </div>
   );
 }

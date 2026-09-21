@@ -119,8 +119,8 @@ function PlanCard({
   return (
     <article
       className={cn(
-        "glass-card p-5 sm:p-6 flex flex-col bg-gradient-to-br from-primary/10 to-transparent",
-        featured && "border-primary/50 shadow-glow"
+        "glass-card p-5 sm:p-6 flex flex-col bg-gradient-to-br from-primary/10 to-transparent hover:border-primary/40 transition-colors",
+        featured && "shadow-glow"
       )}
     >
       <div className="flex items-center justify-between gap-2 min-h-6">

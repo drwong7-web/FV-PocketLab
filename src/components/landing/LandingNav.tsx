@@ -27,6 +27,7 @@ const LANGS: { code: Lang; native: string }[] = [
 ];
 
 const NAV = [
+  { href: "#audience", key: "landNavAudience" as const },
   { href: "#features", key: "landNavFeatures" as const },
   { href: "#how", key: "landNavHow" as const },
   { href: "#pricing", key: "landNavPricing" as const },

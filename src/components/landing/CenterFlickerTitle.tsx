@@ -1,5 +1,6 @@
 import { type ElementType, type ReactNode } from "react";
 import fvLogo from "@/assets/fv-logo.png";
+import { cn } from "@/lib/utils";
 
 const LETTER_STEP_S = 0.14;
 
@@ -7,10 +8,12 @@ export function CenterFlickerTitle({
   text,
   className,
   as: Tag = "h2",
+  animate = true,
 }: {
   text: string;
   className: string;
   as?: ElementType;
+  animate?: boolean;
 }) {
   const chars = Array.from(text);
   const center = (chars.length - 1) / 2;
@@ -44,8 +47,11 @@ export function CenterFlickerTitle({
           <img
             src={fvLogo}
             alt=""
-            className="engraved-logo block h-[2.5em] w-[2.5em] object-contain mix-blend-screen animate-landing-letter motion-reduce:animate-none"
-            style={{ animationDelay: `${Math.abs(idx + 0.5 - center) * LETTER_STEP_S}s` }}
+            className={cn(
+              "engraved-logo block h-[2.5em] w-[2.5em] object-contain mix-blend-screen",
+              animate && "animate-landing-letter motion-reduce:animate-none"
+            )}
+            style={animate ? { animationDelay: `${Math.abs(idx + 0.5 - center) * LETTER_STEP_S}s` } : undefined}
           />
         </span>
       );
@@ -60,8 +66,11 @@ export function CenterFlickerTitle({
           return (
             <span
               key={idx}
-              className="inline-block animate-landing-letter motion-reduce:animate-none"
-              style={{ animationDelay: `${Math.abs(idx - center) * LETTER_STEP_S}s` }}
+              className={cn(
+                "inline-block",
+                animate && "animate-landing-letter motion-reduce:animate-none"
+              )}
+              style={animate ? { animationDelay: `${Math.abs(idx - center) * LETTER_STEP_S}s` } : undefined}
               aria-hidden
             >
               {ch}

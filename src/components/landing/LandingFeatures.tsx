@@ -90,7 +90,7 @@ export function LandingFeatures() {
         {FEATURES.map(({ icon: Icon, title, body, image, objectPosition }) => (
           <article
             key={title}
-            className="glass-card relative isolate min-h-[19rem] overflow-hidden p-5 sm:p-8"
+            className="glass-card relative isolate min-h-[19rem] overflow-hidden p-5 sm:p-8 hover:border-primary/40 transition-colors"
           >
             <img
               src={image}

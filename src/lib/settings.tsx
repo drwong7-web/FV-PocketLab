@@ -745,6 +745,7 @@ const TR = {
   installedToast: { fr: "FV PocketLab est installée. Merci !", en: "FV PocketLab is installed. Thanks!", ar: "تم تثبيت FV PocketLab. شكراً!" },
 
   // ---- Marketing landing ----
+  landNavAudience: { fr: "Public", en: "Audience", ar: "الجمهور" },
   landNavFeatures: { fr: "Fonctionnalités", en: "Features", ar: "المزايا" },
   landNavHow: { fr: "Valeur ajoutée", en: "Added value", ar: "قيمة مضافة" },
   landNavPricing: { fr: "Tarifs", en: "Pricing", ar: "الأسعار" },

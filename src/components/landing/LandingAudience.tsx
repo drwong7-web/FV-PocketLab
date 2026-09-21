@@ -17,7 +17,7 @@ export function LandingAudience() {
   const { t } = useSettings();
 
   return (
-    <LandingSection className="py-10 sm:py-14">
+    <LandingSection id="audience" className="py-10 sm:py-14">
       <p className="section-label text-center">{t("landWhoOverline")}</p>
       <CenterFlickerTitle
         text={t("landWhoTitle")}
